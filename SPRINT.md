@@ -58,3 +58,20 @@ herramienta completa tendrá 5 módulos:
 - Scanner no instalado → mensaje con instrucciones de instalación
 - Sin archivos IaC → Checkov devuelve lista vacía sin fallar
 - El directorio temporal se elimina siempre (éxito o error)
+
+## Notas de cierre (evidencia de verificación)
+
+- **Tests**: 48/48 pasando (models, ingester, scanners, reporter).
+- **E2E `docker/compose`** (local y contenedor): 148 hallazgos (18 SAST,
+  130 IaC, 0 secretos), 56.672 LOC, 108 archivos de test.
+- **E2E `awslabs/aws-cloudformation-templates`** (réplica local, GitHub online
+  y contenedor Docker): 947 problemas IaC, 0 secretos, 0 SAST.
+- **Metadatos**: `repositoryUrl`, `defaultBranch` y `commitHash` capturados y
+  verificados (p.ej. `main` / `a0f43bc6d208`).
+- **Imagen Docker `vibeaudit:latest`** construida (python:3.12-slim, arm64,
+  gitleaks multi-arch) y probada de punta a punta.
+- **Bug encontrado y resuelto**: checkov 3.3.x crashea con templates CFN que
+  usan `Fn::Rain::Module` (`Type` como dict → `unhashable type: 'dict'`).
+  Fix: exclusión vía `--skip-path` (`_find_unsupported_cfn_files()`).
+- Commits: `2fe7395` (sprint 1), `7b2a6b6` (Docker), `4776d65` (fix checkov),
+  `f8aec64` (metadatos del repo).

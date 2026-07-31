@@ -35,12 +35,17 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    modelo no tiene `populate_by_name = True`. Todos los modelos con alias deben
    tenerlo (`ProjectMetadata`, `Metrics`, `AuditReport`).
 2. **Aliases camelCase**: `iacFiles`, `linesOfCode`, `testFiles`,
-   `dependenciesWithCves`, `vulnerabilitiesBySeverity`, `iacIssues`.
+   `dependenciesWithCves`, `vulnerabilitiesBySeverity`, `iacIssues`,
+   `repositoryUrl`, `defaultBranch`, `commitHash`.
    Serializar SIEMPRE con `model_dump_json(by_alias=True)`.
 3. **Rich 13.7.0**: `TaskProgressColumn(visible=...)` NO existe (da TypeError).
 4. **Typer 0.9**: ver gotcha del callback arriba.
-5. **Checkov**: exit code 0 incluso con hallazgos. El JSON está anidado en
+5. **Checkov**: exit code 0 = sin hallazgos, 1 = hallazgos/warnings (ambos
+   válidos), 2 = error real. JSON 3.x = lista de check_types con
    `results.failed_checks`. Severidad por defecto HIGH si no viene.
+   **Crashea con `unhashable type: 'dict'`** si un template CloudFormation
+   tiene `Type` no-string (p.ej. `Fn::Rain::Module`): el scanner los detecta
+   con `_find_unsupported_cfn_files()` y los excluye vía `--skip-path`.
 6. **Semgrep**: exit 2 = error real; 0/1 válidos. Solo se reportan HIGH/CRITICAL
    (ERROR se mapea a HIGH).
 7. **Gitleaks**: exit 1 = hay hallazgos (NO es error). Reglas críticas

@@ -1,5 +1,8 @@
 # Sprint 1 — Pre-Auditoría Automatizada (Fundación)
 
+> **ESTADO: CERRADO** el 2026-08-01. DoD 8/8 y criterios de aceptación 5/5
+> verificados (ver "Notas de cierre" abajo).
+
 ## Objetivo del Sprint
 
 Construir la base del **VibeAudit & Knowledge Engine**: una herramienta CLI que
@@ -74,4 +77,4 @@ herramienta completa tendrá 5 módulos:
   usan `Fn::Rain::Module` (`Type` como dict → `unhashable type: 'dict'`).
   Fix: exclusión vía `--skip-path` (`_find_unsupported_cfn_files()`).
 - Commits: `2fe7395` (sprint 1), `7b2a6b6` (Docker), `4776d65` (fix checkov),
-  `f8aec64` (metadatos del repo).
+  `f8aec64` (metadatos del repo), `dfd2b97` (docs de cierre).

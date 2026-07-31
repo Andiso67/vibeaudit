@@ -1,0 +1,17 @@
+# GitPython: clonar repositorios y manipular historial de git desde Python
+gitpython==3.1.40
+
+# Pydantic: modelos de datos con validación de tipos en tiempo de ejecución
+pydantic==2.5.0
+
+# Typer: construcción de interfaces de línea de comandos (CLI)
+typer==0.9.0
+
+# Rich: salida de terminal con formato (tablas, colores, barras de progreso)
+rich==13.7.0
+
+# PyYAML: parseo y serialización de archivos YAML (configuración y resultados)
+pyyaml==6.0.1
+
+# Pytest: framework de tests unitarios
+pytest==8.3.4

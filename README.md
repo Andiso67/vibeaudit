@@ -1,0 +1,92 @@
+# VibeAudit
+
+Auditoría automática de repositorios Git para detectar la deuda técnica típica
+del **Vibe Coding**: secrets hardcodeados, vulnerabilidades SAST y configuraciones
+de infraestructura inseguras. Clona el repo, ejecuta Gitleaks, Semgrep y Checkov,
+y genera un JSON maestro con todos los hallazgos.
+
+Primer paso hacia el servicio de "Pre-Auditoría Automatizada en 48 horas".
+Ver `SPRINT.md` para el alcance del sprint 1 y `CONTEXT.md` para la visión completa.
+
+## Requisitos
+
+- Python 3.9+
+- [gitleaks](https://github.com/gitleaks/gitleaks) (`brew install gitleaks`)
+- [semgrep](https://semgrep.dev) (`brew install semgrep`)
+- [checkov](https://www.checkov.io) (`pip install checkov`)
+
+Los scanners se omiten con un mensaje claro si no están instalados.
+
+## Instalación
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+## Uso
+
+```bash
+.venv/bin/python -m vibeaudit.cli scan --repo-url <url> --output report.json
+```
+
+Ejemplo:
+
+```bash
+.venv/bin/python -m vibeaudit.cli scan \
+  --repo-url https://github.com/docker/compose.git \
+  --output /tmp/report.json
+```
+
+### Opciones
+
+| Opción | Descripción |
+|---|---|
+| `--repo-url`, `-u` | URL del repositorio Git a auditar (obligatoria) |
+| `--output`, `-o` | Ruta del archivo JSON de salida (default: `audit-report.json`) |
+
+## Estructura del JSON maestro
+
+```json
+{
+  "project": { "name", "languages", "frameworks", "iacFiles" },
+  "vulnerabilities": [{ "rule", "file", "line", "severity", "snippet" }],
+  "secrets": [{ "type", "file", "line", "severity" }],
+  "iacIssues": [{ ... }],
+  "metrics": { "linesOfCode", "testFiles", "dependenciesWithCves", "vulnerabilitiesBySeverity" }
+}
+```
+
+Severidades: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`. Semgrep solo reporta
+HIGH/CRITICAL; las reglas críticas de Gitleaks (AWS, GitHub, Stripe, SSH...)
+se mapean a CRITICAL.
+
+## Estructura del proyecto
+
+```
+vibeaudit/
+  cli.py          # CLI Typer (comando scan)
+  ingester.py     # RepoIngester: clona a temp dir, detecta lenguajes/iaC
+  models.py       # Esquemas Pydantic (AuditReport, Secret, Vulnerability...)
+  reporter.py     # AuditReporter: métricas, JSON y resumen Rich
+  scanners/
+    gitleaks.py   # Secretos
+    semgrep.py    # SAST
+    checkov.py    # IaC
+tests/            # Suite pytest
+```
+
+## Testing
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Los tests usan `monkeypatch` de `subprocess.run` — no requieren las herramientas
+reales instaladas.
+
+## Roadmap
+
+Motor LLM auditor, memoria vectorial (pgvector/Qdrant), escaneo de nube,
+dashboard de cliente y generador de entregables (diagramas C4, backlog).
+Detalle en `CONTEXT.md`.

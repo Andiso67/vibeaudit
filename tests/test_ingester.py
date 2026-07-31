@@ -70,3 +70,23 @@ class TestRepoIngester:
         metadata = RepoIngester(str(repo_dir)).ingest()
         assert metadata.name == "src"
         assert metadata.languages
+
+    def test_ingest_captura_rama_y_commit(self, tmp_path):
+        repo_dir = tmp_path / "src"
+        repo_dir.mkdir()
+        make_git_repo(repo_dir)
+
+        metadata = RepoIngester(str(repo_dir)).ingest()
+
+        assert metadata.default_branch == "main" or metadata.default_branch == "master"
+        assert metadata.commit_hash
+        assert len(metadata.commit_hash) == 40
+
+    def test_repository_url_conserva_la_original_en_clones_locales(self, tmp_path):
+        repo_dir = tmp_path / "src"
+        repo_dir.mkdir()
+        make_git_repo(repo_dir)
+
+        metadata = RepoIngester(str(repo_dir)).ingest()
+
+        assert metadata.repository_url == str(repo_dir)

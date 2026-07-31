@@ -20,6 +20,21 @@ class ProjectMetadata(BaseModel):
     """Metadatos del proyecto auditado."""
 
     name: str = Field(..., min_length=1, description="Nombre del repositorio")
+    repository_url: Optional[str] = Field(
+        default=None,
+        alias="repositoryUrl",
+        description="URL del repositorio Git",
+    )
+    default_branch: Optional[str] = Field(
+        default=None,
+        alias="defaultBranch",
+        description="Rama por defecto del repositorio",
+    )
+    commit_hash: Optional[str] = Field(
+        default=None,
+        alias="commitHash",
+        description="Hash del commit auditado",
+    )
     languages: List[str] = Field(
         default_factory=list, description="Lenguajes de programación detectados"
     )

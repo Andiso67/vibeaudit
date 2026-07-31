@@ -158,12 +158,47 @@ class RepoIngester:
                 rel_path = os.path.relpath(os.path.join(root, filename), self.repo_path)
                 self._detect_file(rel_path, filename, languages, frameworks, iac_files)
 
+        repository_url = self._capture_repository_url()
+        default_branch = self._capture_default_branch()
+        commit_hash = self._capture_commit_hash()
+
         return ProjectMetadata(
             name=name,
+            repository_url=repository_url,
+            default_branch=default_branch,
+            commit_hash=commit_hash,
             languages=sorted(languages),
             frameworks=sorted(frameworks),
             iac_files=iac_files,
         )
+
+    def _capture_repository_url(self) -> Optional[str]:
+        """Obtiene la URL remota real del repositorio clonado."""
+        try:
+            remote_url = Repo(self.repo_path).remotes.origin.url
+        except Exception:
+            return self.repo_url
+        # Los clones locales resuelven origin a la ruta absoluta; conservar la original
+        if remote_url.startswith(("/", "file://")):
+            return self.repo_url
+        return remote_url
+
+    def _capture_default_branch(self) -> Optional[str]:
+        """Obtiene la rama activa (HEAD) del repositorio clonado."""
+        try:
+            repo = Repo(self.repo_path)
+            if repo.head.is_detached:
+                return None
+            return repo.active_branch.name
+        except Exception:
+            return None
+
+    def _capture_commit_hash(self) -> Optional[str]:
+        """Obtiene el hash del commit clonado (HEAD)."""
+        try:
+            return Repo(self.repo_path).head.commit.hexsha
+        except Exception:
+            return None
 
     def _detect_file(
         self,

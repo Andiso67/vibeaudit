@@ -24,8 +24,13 @@ console = Console()
 
 
 @app.callback()
-def main() -> None:
+def _callback() -> None:
     """Auditoría de seguridad para repositorios Git (secretos, SAST e IaC)."""
+
+
+def main() -> None:
+    """Punto de entrada para el comando instalable `vibeaudit`."""
+    app()
 
 
 @app.command()
@@ -112,4 +117,4 @@ def scan(
 
 
 if __name__ == "__main__":
-    app()
+    main()

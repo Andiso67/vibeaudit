@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vibeaudit"
+version = "0.1.0"
+description = "Auditoría automática de repositorios Git (Vibe Coding Audit): secretos, SAST e IaC"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+authors = [{ name = "DCTechnologies" }]
+
+# Mantener en sync con requirements.txt
+dependencies = [
+    "gitpython==3.1.40",
+    "pydantic==2.13.4",
+    "typer==0.9.0",
+    "rich==13.7.0",
+    "pyyaml==6.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.4"]
+
+[project.scripts]
+vibeaudit = "vibeaudit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vibeaudit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

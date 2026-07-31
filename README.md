@@ -24,6 +24,24 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
+### Como comando instalable
+
+```bash
+.venv/bin/pip install -e .
+.venv/bin/vibeaudit --help
+```
+
+### Con Docker (todo incluido: Python + scanners)
+
+```bash
+docker build -t vibeaudit .
+docker run --rm -v "$PWD:/reports" vibeaudit scan \
+  --repo-url https://github.com/docker/compose.git \
+  --output /reports/report.json
+```
+
+La imagen incluye gitleaks, semgrep y checkov — no hay que instalar nada en la máquina.
+
 ## Uso
 
 ```bash

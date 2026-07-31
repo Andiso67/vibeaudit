@@ -84,6 +84,40 @@ class CheckovScanner:
 
         return False
 
+    def _find_unsupported_cfn_files(self) -> List[str]:
+        """Detecta templates CloudFormation cuyo resource tiene Type no-string.
+
+        Checkov 3.3.x crashea (unhashable type: 'dict') cuando un recurso usa
+        Fn::Rain::Module u otras funciones intrínsecas como Type. Estos archivos
+        se excluyen del escaneo vía --skip-path para no romper la ejecución.
+        """
+        try:
+            from checkov.cloudformation.parser import parse as parse_cfn
+        except ImportError:
+            return []
+
+        unsupported: List[str] = []
+        for root, _dirs, files in os.walk(self.repo_path):
+            if ".git" in root:
+                continue
+            for filename in files:
+                if not (
+                    filename.endswith(IAC_YAML_EXTENSIONS)
+                    or filename.endswith(".json")
+                ):
+                    continue
+                full_path = os.path.join(root, filename)
+                try:
+                    parsed, _ = parse_cfn(full_path)
+                except Exception:
+                    continue
+                resources = (parsed or {}).get("Resources", {}) if isinstance(parsed, dict) else {}
+                for _name, resource in resources.items():
+                    if isinstance(resource, dict) and not isinstance(resource.get("Type"), str):
+                        unsupported.append(os.path.relpath(full_path, self.repo_path))
+                        break
+        return unsupported
+
     def scan(self) -> List[Vulnerability]:
         """Ejecuta checkov si hay IaC y devuelve los problemas como Vulnerability."""
         if not self.is_installed():
@@ -96,17 +130,21 @@ class CheckovScanner:
         if not iac_files:
             return []
 
+        command = [
+            "checkov",
+            "-d",
+            str(self.repo_path),
+            "--output",
+            "json",
+            "--quiet",
+            "--download-external-modules",
+            "false",
+        ]
+        for skip in self._find_unsupported_cfn_files():
+            command.extend(["--skip-path", skip])
+
         result = subprocess.run(
-            [
-                "checkov",
-                "-d",
-                str(self.repo_path),
-                "--output",
-                "json",
-                "--quiet",
-                "--download-external-modules",
-                "false",
-            ],
+            command,
             capture_output=True,
             text=True,
             check=False,

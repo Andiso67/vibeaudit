@@ -19,13 +19,24 @@ class FakeResult:
         self.stderr = stderr
 
 
-def fake_run(monkeypatch, responses):
-    """Sustituye subprocess.run por una función que responde según el argumento."""
-    def _run(args, **kwargs):
-        key = tuple(args[:2])
-        return responses.get(key, responses.get("default", FakeResult(1)))
+class RunRecorder:
+    """Registra las llamadas a subprocess.run para inspección en tests."""
 
-    monkeypatch.setattr("subprocess.run", _run)
+    def __init__(self, responses):
+        self.responses = responses
+        self.calls = []
+
+    def __call__(self, args, **kwargs):
+        self.calls.append(args)
+        key = tuple(args[:2])
+        return self.responses.get(key, self.responses.get("default", FakeResult(1)))
+
+
+def fake_run(monkeypatch, responses):
+    """Sustituye subprocess.run por un recorder que responde según el argumento."""
+    recorder = RunRecorder(responses)
+    monkeypatch.setattr("subprocess.run", recorder)
+    return recorder
 
 
 GITLEAKS_JSON = (
@@ -260,3 +271,45 @@ class TestCheckovScanner:
     def test_checkov_instalado(self, monkeypatch):
         fake_run(monkeypatch, {("checkov", "--version"): FakeResult(0, "3.2.0")})
         assert CheckovScanner.is_installed() is True
+
+    def test_detecta_templates_cfn_con_type_dict(self, tmp_path):
+        # Template con Fn::Rain::Module (Type como dict) rompe checkov 3.3.x
+        template = tmp_path / "vpc.yaml"
+        template.write_text(
+            "AWSTemplateFormatVersion: '2010-09-09'\n"
+            "Resources:\n"
+            "  Network:\n"
+            "    Type: !Rain::Module '../../RainModules/vpc.yml'\n"
+        )
+        scanner = CheckovScanner(tmp_path)
+        assert scanner._find_unsupported_cfn_files() == ["vpc.yaml"]
+
+    def test_no_detecta_templates_cfn_normales(self, tmp_path):
+        (tmp_path / "bucket.yaml").write_text(
+            "AWSTemplateFormatVersion: '2010-09-09'\n"
+            "Resources:\n"
+            "  Bucket:\n"
+            "    Type: AWS::S3::Bucket\n"
+        )
+        scanner = CheckovScanner(tmp_path)
+        assert scanner._find_unsupported_cfn_files() == []
+
+    def test_scan_agrega_skip_path(self, monkeypatch, tmp_path):
+        (tmp_path / "main.tf").write_text('resource "aws_s3_bucket" "b" {}\n')
+        (tmp_path / "vpc.yaml").write_text(
+            "AWSTemplateFormatVersion: '2010-09-09'\n"
+            "Resources:\n"
+            "  Network:\n"
+            "    Type: !Rain::Module '../../RainModules/vpc.yml'\n"
+        )
+        recorder = fake_run(
+            monkeypatch,
+            {
+                ("checkov", "--version"): FakeResult(0, "3.2.0"),
+                ("checkov", "-d"): FakeResult(0, CHECKOV_JSON),
+            },
+        )
+        CheckovScanner(tmp_path).scan()
+        scan_cmd = recorder.calls[-1]
+        assert "--skip-path" in scan_cmd
+        assert "vpc.yaml" in scan_cmd

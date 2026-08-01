@@ -20,21 +20,16 @@ OSV_QUERY_BATCH_URL = "https://api.osv.dev/v1/querybatch"
 OSV_VULN_URL = "https://api.osv.dev/v1/vulns/"
 OSV_TIMEOUT_SECONDS = 15
 
-# Mapeo de ecosistema OSV por tipo de lockfile
+# Mapeo de ecosistema OSV por tipo de lockfile (solo formatos con parser)
 LOCKFILE_ECOSYSTEMS: Dict[str, str] = {
     "package-lock.json": "npm",
     "yarn.lock": "npm",
-    "pnpm-lock.yaml": "npm",
     "poetry.lock": "PyPI",
     "requirements.txt": "PyPI",
     "Pipfile.lock": "PyPI",
     "go.sum": "Go",
-    "Gopkg.lock": "Go",
     "Gemfile.lock": "RubyGems",
     "composer.lock": "Packagist",
-    "pom.xml": "Maven",
-    "build.gradle": "Maven",
-    "build.gradle.kts": "Maven",
     "Cargo.lock": "crates.io",
 }
 
@@ -80,7 +75,7 @@ class DependencyScanner:
         """Localiza y parsea los lockfiles del repositorio."""
         dependencies: List[Dependency] = []
         for root, _dirs, files in os.walk(self.repo_path):
-            if ".git" in root:
+            if ".git" in Path(root).parts:
                 continue
             for filename in files:
                 if filename in LOCKFILE_ECOSYSTEMS:

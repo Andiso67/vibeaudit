@@ -109,6 +109,19 @@ class TestParseLockfiles:
         (tmp_path / "readme.md").write_text("hola")
         assert DependencyScanner(tmp_path)._find_dependencies() == []
 
+    def test_escanea_github_pero_no_git(self, tmp_path):
+        (tmp_path / ".github" / "actions" / "setup").mkdir(parents=True)
+        (tmp_path / ".github" / "actions" / "setup" / "package-lock.json").write_text(
+            json.dumps(NPM_LOCKFILE)
+        )
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".git" / "package-lock.json").write_text(json.dumps(NPM_LOCKFILE))
+        deps = DependencyScanner(tmp_path)._find_dependencies()
+
+        lockfiles = {d.lockfile for d in deps}
+        assert ".github/actions/setup/package-lock.json" in lockfiles
+        assert ".git/package-lock.json" not in lockfiles
+
     def test_lockfile_roto_no_crashea(self, tmp_path, capsys):
         (tmp_path / "package-lock.json").write_text("{json invalido")
         (tmp_path / "requirements.txt").write_text(REQUIREMENTS)

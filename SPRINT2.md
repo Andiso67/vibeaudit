@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: PLANIFICADO** (pendiente de inicio).
+> **ESTADO: EN CURSO** — Ítem 1 completado (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -58,3 +58,25 @@ amplía módulos 1, 2 y 5.
 - `.github/workflows` con `pull_request_target` sin `permissions` → hallazgo CI/CD
 - `--rules` con regla custom → hallazgo de la regla en el reporte
 - `--format html` → archivo abrible en navegador con los hallazgos
+
+## Notas de cierre — Ítem 1 (Dependencias con CVEs) ✅
+
+- **Modelo**: `DependencyVulnerability` (23 campos, incl. `cveIds`, `cweIds`,
+  `cvssScore`, `fixedVersion`, `affectedRange`, `isFixAvailable`, `purl`,
+  `exploitedInWild`/`epssScore` opcionales para futuras fuentes) + campo
+  `dependencyVulnerabilities` en `Metrics`. Aliases camelCase con
+  `populate_by_name = True`.
+- **Scanner**: `vibeaudit/scanners/deps.py` — `DependencyScanner` parsa 9
+  lockfiles (npm/yarn/pnpm, poetry/requirements/Pipfile, go.sum, Gemfile,
+  Cargo.lock, composer, bundles). `direct`/`dependency_type` solo en npm y
+  poetry; resto `unknown`.
+- **OSV**: `POST /v1/querybatch` devuelve solo `id`+`modified` → segundo batch
+  de `GET /v1/vulns/{id}` por advisory. CVSS v3.x calculado desde el vector
+  (`_parse_cvss_vector`) o score directo. Dedup por CVE conservando el más
+  severo (`_dedupe_vulnerabilities`). Sin red → warning + lista vacía.
+- **Integración**: ejecutado en `cli.py scan`, incluido en el resumen Rich
+  (fila "Dependencias con CVEs" y total) y en `metrics.dependencyVulnerabilities`
+  del JSON (serializado con `by_alias=True`).
+- **Validación**: 24 tests nuevos (72 total); E2E con repo npm (lodash 4.17.20 +
+  axios 0.21.1) → 27 vulns únicas con CVSS y fixes correctos (ej. axios → 0.31.1).
+- **Pendiente**: KEV/EPSS cuando exista la fuente (campos ya listos).

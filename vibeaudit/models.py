@@ -81,6 +81,70 @@ class Secret(BaseModel):
     severity: Severity = Field(..., description="Severidad del hallazgo")
 
 
+class DependencyVulnerability(BaseModel):
+    """Vulnerabilidad de una dependencia (datos de OSV)."""
+
+    name: str = Field(..., min_length=1, description="Nombre del paquete")
+    ecosystem: str = Field(..., min_length=1, description="Ecosistema (PyPI, npm, Go...)")
+    version: str = Field(..., min_length=1, description="Versión declarada en el lockfile")
+    direct: bool = Field(..., description="True si es dependencia directa del proyecto")
+    dependency_type: str = Field(
+        default="unknown",
+        alias="dependencyType",
+        description="production | dev | unknown",
+    )
+    purl: Optional[str] = Field(
+        default=None, description="Package URL canónico (pkg:npm/axios@1.0.0)"
+    )
+    cve_ids: List[str] = Field(
+        default_factory=list, alias="cveIds", description="Identificadores CVE"
+    )
+    aliases: List[str] = Field(
+        default_factory=list, description="IDs alternativos (GHSA-xxxx, GMS-xxxx)"
+    )
+    cwe_ids: List[str] = Field(
+        default_factory=list, alias="cweIds", description="Clasificación CWE del problema"
+    )
+    severity: Severity = Field(..., description="Severidad según CVSS de OSV")
+    cvss_score: Optional[float] = Field(
+        default=None, alias="cvssScore", description="Puntuación CVSS (ej. 9.8)"
+    )
+    summary: str = Field(default="", description="Descripción corta de la vulnerabilidad")
+    details: Optional[str] = Field(
+        default=None, description="Descripción completa"
+    )
+    fixed_version: Optional[str] = Field(
+        default=None, alias="fixedVersion", description="Versión que corrige la vulnerabilidad"
+    )
+    affected_range: Optional[str] = Field(
+        default=None, alias="affectedRange", description="Rango de versiones vulnerables (ej. <1.2.3)"
+    )
+    is_fix_available: bool = Field(
+        default=False,
+        alias="isFixAvailable",
+        description="True si existe versión corregida",
+    )
+    exploited_in_wild: Optional[bool] = Field(
+        default=None,
+        alias="exploitedInWild",
+        description="True si figura en CISA KEV (si se integra)",
+    )
+    epss_score: Optional[float] = Field(
+        default=None, alias="epssScore", description="Score EPSS de probabilidad de explotación"
+    )
+    published: Optional[str] = Field(
+        default=None, description="Fecha de publicación del advisory"
+    )
+    modified: Optional[str] = Field(
+        default=None, description="Última actualización del advisory"
+    )
+    references: List[str] = Field(
+        default_factory=list, description="URLs de advisories"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class Metrics(BaseModel):
     """Métricas del repositorio."""
 
@@ -94,6 +158,11 @@ class Metrics(BaseModel):
         default_factory=list,
         alias="dependenciesWithCves",
         description="Dependencias con CVEs conocidos",
+    )
+    dependency_vulnerabilities: List[DependencyVulnerability] = Field(
+        default_factory=list,
+        alias="dependencyVulnerabilities",
+        description="Detalle completo de vulnerabilidades de dependencias",
     )
     vulnerabilities_by_severity: Dict[str, int] = Field(
         default_factory=dict,

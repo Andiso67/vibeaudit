@@ -9,7 +9,15 @@ from typing import List, Optional
 from rich.console import Console
 from rich.table import Table
 
-from vibeaudit.models import AuditReport, Metrics, ProjectMetadata, Secret, Severity, Vulnerability
+from vibeaudit.models import (
+    AuditReport,
+    DependencyVulnerability,
+    Metrics,
+    ProjectMetadata,
+    Secret,
+    Severity,
+    Vulnerability,
+)
 
 console = Console()
 
@@ -52,12 +60,14 @@ class AuditReporter:
         secrets: Optional[List[Secret]] = None,
         iac_issues: Optional[List[Vulnerability]] = None,
         repo_path: Optional[Path] = None,
+        dependency_vulnerabilities: Optional[List[DependencyVulnerability]] = None,
     ):
         self.project = project
         self.vulnerabilities = vulnerabilities or []
         self.secrets = secrets or []
         self.iac_issues = iac_issues or []
         self.repo_path = repo_path
+        self.dependency_vulnerabilities = dependency_vulnerabilities or []
         self._cached_report: Optional[AuditReport] = None
 
     def _count_lines_of_code(self) -> int:
@@ -102,9 +112,15 @@ class AuditReporter:
         all_issues = self.vulnerabilities + self.iac_issues
         severity_counts = Counter(issue.severity.value for issue in all_issues)
 
+        dependency_names = sorted(
+            {v.name for v in self.dependency_vulnerabilities}
+        )
+
         metrics = Metrics(
             lines_of_code=self._count_lines_of_code(),
             test_files=self._count_test_files(),
+            dependencies_with_cves=dependency_names,
+            dependency_vulnerabilities=self.dependency_vulnerabilities,
             vulnerabilities_by_severity=dict(severity_counts),
         )
         self._cached_report = AuditReport(
@@ -134,10 +150,17 @@ class AuditReporter:
         table.add_column("Cantidad", justify="right")
 
         total_vulns = len(report.vulnerabilities)
-        total_issues = total_vulns + len(report.iac_issues)
+        total_issues = (
+            total_vulns
+            + len(report.iac_issues)
+            + len(report.metrics.dependency_vulnerabilities)
+        )
         table.add_row("Vulnerabilidades (SAST)", str(total_vulns))
         table.add_row("Problemas de IaC", str(len(report.iac_issues)))
         table.add_row("Secretos filtrados", str(len(report.secrets)))
+        table.add_row(
+            "Dependencias con CVEs", str(len(report.metrics.dependency_vulnerabilities))
+        )
         table.add_row("Total de hallazgos", str(total_issues))
         table.add_row("Líneas de código", f"{report.metrics.lines_of_code:,}")
         table.add_row("Archivos de test", str(report.metrics.test_files))

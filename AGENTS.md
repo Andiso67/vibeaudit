@@ -33,10 +33,12 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
 ## Gotchas conocidos (leer antes de tocar)
 1. **Pydantic v2.5 ignora silenciosamente kwargs** si el campo tiene `alias` y el
    modelo no tiene `populate_by_name = True`. Todos los modelos con alias deben
-   tenerlo (`ProjectMetadata`, `Metrics`, `AuditReport`).
+   tenerlo (`ProjectMetadata`, `Metrics`, `AuditReport`, `DependencyVulnerability`).
 2. **Aliases camelCase**: `iacFiles`, `linesOfCode`, `testFiles`,
    `dependenciesWithCves`, `vulnerabilitiesBySeverity`, `iacIssues`,
-   `repositoryUrl`, `defaultBranch`, `commitHash`.
+   `repositoryUrl`, `defaultBranch`, `commitHash`, `cveIds`, `cvssScore`,
+   `fixedVersion`, `isFixAvailable`, `dependencyType`, `cweIds`,
+   `affectedRange`, `epssScore`, `exploitedInWild`.
    Serializar SIEMPRE con `model_dump_json(by_alias=True)`.
 3. **Rich 13.7.0**: `TaskProgressColumn(visible=...)` NO existe (da TypeError).
 4. **Typer 0.9**: ver gotcha del callback arriba.
@@ -50,6 +52,12 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    (ERROR se mapea a HIGH).
 7. **Gitleaks**: exit 1 = hay hallazgos (NO es error). Reglas críticas
    (AWS/GitHub/Stripe/SSH...) → CRITICAL, resto → HIGH.
+8. **OSV API**: `POST /v1/querybatch` devuelve SOLO `id` + `modified` por vuln;
+   el detalle completo se trae con `GET /v1/vulns/{id}` por cada ID (deps.py
+   hace batch de IDs → detalle por ID). El score CVSS viene como vector
+   `CVSS:3.1/AV:...` (parseado por `_parse_cvss_vector`) o numérico.
+   Hay advisories duplicados por CVE entre fuentes (GHSA vs NVD): se deduplican
+   en `_dedupe_vulnerabilities` conservando el más severo.
 
 ## Convenciones
 - Docstrings en español en todas las clases/métodos públicos.

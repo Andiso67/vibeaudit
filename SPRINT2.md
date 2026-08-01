@@ -235,3 +235,15 @@ amplía módulos 1, 2 y 5.
   detached + commit del tag (LOC 1, solo la versión taggeada); branch
   inexistente → error limpio; token inválido en URL pública → error sin filtrar
   el token ni en mensajes ni en stderr de git.
+- **Verificación extra** (`f80f075`):
+  - Bug encontrado: `sanitize_url` mutilaba URLs SSH legítimas
+    (`ssh://git@github.com/...` → `ssh://github.com/...`): el `git@` es el
+    usuario del transporte, no una credencial. Fix: solo saneo http/https
+    (igual que `_inject_token`).
+  - Verificado con servidor git HTTP real (git-http-backend + CGI + repo
+    bare con push de main/feature): token inyectado en el clone, origin del
+    repo temporal sin token (`.git/config` limpio), `repositoryUrl` sin token,
+    0 fugas del token en output/JSON/stderr (GitPython redacta la cmdline como
+    `http://*****@...`), `--branch feature --depth 1` remoto → rama/commit/LOC
+    correctos (3 líneas: a.py v1+v2 + b.py v3). Repo 404 → error limpio
+    saneado + exit 1. 184 tests en verde.

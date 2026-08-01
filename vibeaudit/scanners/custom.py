@@ -53,13 +53,25 @@ class CustomRulesScanner:
                 f"El directorio de reglas no existe o no es un directorio: "
                 f"{self.rules_dir}"
             )
+        if not list(self.rules_dir.glob("*.yml")) + list(
+            self.rules_dir.glob("*.yaml")
+        ):
+            console.print(
+                "[bold yellow]Advertencia:[/] el directorio de reglas no tiene "
+                "archivos .yml/.yaml, no se ejecutan reglas custom"
+            )
+            return []
+
+        # Path absoluto: semgrep usa el path del config como namespace del
+        # check_id y con paths relativos lo normaliza de forma impredecible
+        rules_dir = str(self.rules_dir.resolve())
 
         result = subprocess.run(
             [
                 "semgrep",
                 "scan",
                 "--config",
-                str(self.rules_dir),
+                rules_dir,
                 "--json",
                 "--quiet",
                 str(self.repo_path),
@@ -80,7 +92,29 @@ class CustomRulesScanner:
         if not result.stdout.strip():
             return []
 
-        return self._parse_output(result.stdout, str(self.rules_dir))
+        return self._parse_output(result.stdout, rules_dir)
+
+    def _namespaces(self, rules_dir: str) -> List[str]:
+        """Prefijos que semgrep antepone al check_id (dir + subdirectorios).
+
+        semgrep usa el path del config (con `/` → `.`) como namespace y añade
+        los subdirectorios relativos de cada archivo de reglas anidado.
+        """
+        namespace = ".".join(
+            part for part in rules_dir.split(os.sep) if part
+        )
+        prefixes = [f"{namespace}."] if namespace else []
+        yaml_files = (
+            list(Path(rules_dir).glob("*.yml"))
+            + list(Path(rules_dir).glob("*.yaml"))
+            + list(Path(rules_dir).rglob("*.yml"))
+            + list(Path(rules_dir).rglob("*.yaml"))
+        )
+        for yaml_file in sorted(yaml_files):
+            rel_parts = yaml_file.relative_to(rules_dir).parts[:-1]
+            if rel_parts:
+                prefixes.append(f"{namespace}.{'.'.join(rel_parts)}.")
+        return prefixes
 
     def _parse_output(
         self, raw_output: str, rules_dir: str = ""
@@ -93,22 +127,42 @@ class CustomRulesScanner:
             return []
 
         if data.get("errors"):
-            console.print(
-                f"[bold yellow]Advertencia:[/] semgrep reportó {len(data['errors'])} "
-                f"errores de escaneo (archivos no analizados)"
-            )
+            config_errors = [
+                error
+                for error in data["errors"]
+                if "invalid configuration" in str(error.get("message", ""))
+                or "Invalid YAML" in str(error.get("message", ""))
+            ]
+            if config_errors:
+                console.print(
+                    f"[bold red]Error:[/] el bundle de reglas custom tiene "
+                    f"{len(config_errors)} archivo(s) YAML inválido(s). "
+                    f"Corrige las reglas para analizarlas."
+                )
+            else:
+                console.print(
+                    f"[bold yellow]Advertencia:[/] semgrep reportó "
+                    f"{len(data['errors'])} errores de escaneo "
+                    f"(archivos no analizados)"
+                )
 
-        # semgrep antepone el path del directorio como namespace al check_id
-        namespace = ".".join(part for part in rules_dir.split(os.sep) if part)
-        namespace_prefix = f"{namespace}." if namespace else ""
+        # semgrep antepone el path del directorio (resuelto a absoluto) como
+        # namespace al check_id, incluyendo los subdirectorios de reglas.
+        # Probar los prefijos más largos primero: el namespace base también
+        # matchea los check_ids de subdirectorios (y los dejaría sin limpiar)
+        prefixes = sorted(
+            self._namespaces(rules_dir), key=len, reverse=True
+        )
 
         vulnerabilities: List[Vulnerability] = []
         for finding in data.get("results", []):
             severity = self._map_severity(finding.get("extra", {}).get("severity"))
             start = finding.get("start", {})
             check_id = finding.get("check_id", "unknown-rule")
-            if check_id.startswith(namespace_prefix):
-                check_id = check_id[len(namespace_prefix):]
+            for prefix in prefixes:
+                if check_id.startswith(prefix):
+                    check_id = check_id[len(prefix):]
+                    break
             vulnerabilities.append(
                 Vulnerability(
                     rule=check_id,

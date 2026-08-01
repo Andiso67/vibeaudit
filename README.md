@@ -68,6 +68,10 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 |---|---|
 | `--repo-url`, `-u` | URL del repositorio Git a auditar (excluyente con `--path`) |
 | `--path` | Directorio local a auditar sin clonar (excluyente con `--repo-url`) |
+| `--token` | Token de acceso para clonar repositorios privados (solo con `--repo-url`) |
+| `--branch` | Rama a auditar tras el clone (solo con `--repo-url`) |
+| `--tag` | Tag a auditar tras el clone (excluyente con `--branch`) |
+| `--depth` | Profundidad del clone (default: `1`) |
 | `--output`, `-o` | Ruta del archivo de salida (default: `audit-report.<formato>`) |
 | `--format`, `-f` | Formato de salida: `json` (default), `html` o `md` |
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |

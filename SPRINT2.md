@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítems 1, 2, 3, 4 y 5 completados (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1, 2, 3, 4, 5 y 6 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -210,3 +210,28 @@ amplía módulos 1, 2 y 5.
     (regla custom), `--path` + `-f html`, worktree (`.git` como archivo, no
     dir), `~` expandido, reporte guardado dentro del dir auditado, deps OSV
     reales (27 vulns) vía `--path`. 173 tests en verde.
+
+## Notas de cierre — Ítem 6 (Auth y ramas) ✅
+
+- **Ingester**: `RepoIngester` acepta `token`, `branch` y `depth`. El clone
+  inyecta el token en la URL (`https://token@host/...`, solo http/https),
+  pasa `depth`/`branch` a `Repo.clone_from` y después limpia el origin del
+  repo temporal con `set_url()` (el token nunca queda en `.git/config`).
+  `GIT_TERMINAL_PROMPT=0` en el env del clone: git falla limpio sin pedir
+  credenciales por terminal (que imprimiría el token en la URL).
+- **Sanitización**: `sanitize_url()` a nivel módulo quita credenciales
+  embebidas (`https://token@host/...` → `https://host/...`). Se aplica en los
+  mensajes de error del ingester, en el mensaje "▶ Auditando" del CLI y en
+  `repositoryUrl` del JSON (vía `_capture_repository_url`). El `--tag` deja el
+  HEAD detached → `defaultBranch` null (correcto).
+- **CLI**: flags `--token`, `--branch`, `--tag` y `--depth` (min=1, validado
+  por typer). Validaciones: `--branch`+`--tag` → error; `--path` con cualquiera
+  de los 4 → error (solo aplican con `--repo-url`).
+- **Validación**: 15 tests nuevos (184 total): inyección del token en la URL,
+  reemplazo de credenciales previas, kwargs depth/branch/env, origin limpio,
+  modo local rechaza token, sanitize_url, validaciones del CLI (branch+tag,
+  path+token, path+depth, depth inválido) y scan real con `--branch --depth`.
+  E2E: `--branch feature` → rama y commit correctos (v3); `--tag v1.0` →
+  detached + commit del tag (LOC 1, solo la versión taggeada); branch
+  inexistente → error limpio; token inválido en URL pública → error sin filtrar
+  el token ni en mensajes ni en stderr de git.

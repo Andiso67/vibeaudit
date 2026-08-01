@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from vibeaudit.ingester import RepoIngester
+from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -64,6 +64,18 @@ def scan(
         "--rules",
         help="Directorio con reglas semgrep YAML custom 'Vibe Coding'",
     ),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Token de acceso para clonar repositorios privados"
+    ),
+    branch: Optional[str] = typer.Option(
+        None, "--branch", help="Rama a auditar (solo con --repo-url)"
+    ),
+    tag: Optional[str] = typer.Option(
+        None, "--tag", help="Tag a auditar (solo con --repo-url)"
+    ),
+    depth: int = typer.Option(
+        1, "--depth", min=1, help="Profundidad del clone (default: 1)"
+    ),
     output_format: OutputFormat = typer.Option(
         OutputFormat.JSON,
         "--format",
@@ -79,6 +91,14 @@ def scan(
                 "Indica --repo-url o --path (exactamente uno de los dos)"
             )
 
+        if branch is not None and tag is not None:
+            raise ValueError("Indica --branch o --tag (no ambos)")
+
+        if local_path is not None and (token or branch or tag or depth != 1):
+            raise ValueError(
+                "--token, --branch, --tag y --depth solo aplican con --repo-url"
+            )
+
         if rules is not None and not rules.is_dir():
             raise ValueError(
                 f"El directorio de reglas no existe o no es un directorio: {rules}"
@@ -89,8 +109,8 @@ def scan(
 
         source = local_path if local_path is not None else repo_url
         console.print(
-            f"[bold green]▶ Auditando[/] [cyan]{source}[/] [bold green]→[/] "
-            f"[cyan]{output}[/]"
+            f"[bold green]▶ Auditando[/] [cyan]{sanitize_url(str(source))}[/] "
+            f"[bold green]→[/] [cyan]{output}[/]"
         )
         with Progress(
             SpinnerColumn(),
@@ -104,7 +124,11 @@ def scan(
                 task = progress.add_task("Clonando repositorio...", total=None)
 
             with RepoIngester(
-                repo_url=repo_url, local_path=local_path
+                repo_url=repo_url,
+                local_path=local_path,
+                token=token,
+                branch=branch or tag,
+                depth=depth,
             ) as ingester:
                 ingester.clone()
                 project = ingester.analyze()

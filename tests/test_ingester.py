@@ -150,3 +150,89 @@ class TestRepoIngesterLocal:
     def test_ningun_argumento_lanza_valueerror(self):
         with pytest.raises(ValueError):
             RepoIngester()
+
+
+class TestRepoIngesterCloneArgs:
+    """Tests del clone con token/branch/depth (sin ejecutar git real)."""
+
+    def _fake_clone(self, monkeypatch, captured):
+        """Monkeypatch de Repo.clone_from que captura url/kwargs."""
+
+        class FakeOrigin:
+            def __init__(self):
+                self.set_url_calls = []
+
+            def set_url(self, url):
+                self.set_url_calls.append(url)
+
+        class FakeRepo:
+            def __init__(self, url):
+                self.remotes = type("R", (), {"origin": FakeOrigin()})()
+                self._url = url
+
+        def _clone_from(url, to_path, **kwargs):
+            captured["url"] = url
+            captured["kwargs"] = kwargs
+            return FakeRepo(url)
+
+        monkeypatch.setattr("vibeaudit.ingester.Repo.clone_from", _clone_from)
+
+    def test_clone_con_token_inyecta_url_y_limpia_origin(self, monkeypatch, tmp_path):
+        captured = {}
+        self._fake_clone(monkeypatch, captured)
+
+        ingester = RepoIngester(
+            repo_url="https://github.com/acme/secreto.git", token="tok123", depth=1
+        )
+        ingester.clone()
+
+        assert captured["url"] == "https://tok123@github.com/acme/secreto.git"
+        assert captured["kwargs"]["depth"] == 1
+        assert captured["kwargs"]["env"] == {"GIT_TERMINAL_PROMPT": "0"}
+
+    def test_clone_con_branch_y_depth_pasa_kwargs(self, monkeypatch, tmp_path):
+        captured = {}
+        self._fake_clone(monkeypatch, captured)
+
+        ingester = RepoIngester(
+            repo_url="https://github.com/acme/secreto.git", branch="dev", depth=5
+        )
+        ingester.clone()
+
+        assert captured["url"] == "https://github.com/acme/secreto.git"
+        assert captured["kwargs"]["depth"] == 5
+        assert captured["kwargs"]["branch"] == "dev"
+
+    def test_clone_sin_flags_solo_env(self, monkeypatch, tmp_path):
+        captured = {}
+        self._fake_clone(monkeypatch, captured)
+
+        RepoIngester(repo_url="https://github.com/acme/secreto.git").clone()
+
+        assert captured["kwargs"] == {"env": {"GIT_TERMINAL_PROMPT": "0"}}
+
+    def test_token_url_ya_con_credenciales_se_reemplaza(self, monkeypatch, tmp_path):
+        captured = {}
+        self._fake_clone(monkeypatch, captured)
+
+        RepoIngester(
+            repo_url="https://old@github.com/acme/secreto.git", token="nuevo"
+        ).clone()
+
+        assert captured["url"] == "https://nuevo@github.com/acme/secreto.git"
+
+    def test_modo_local_rechaza_token(self, tmp_path):
+        local_dir = tmp_path / "local"
+        local_dir.mkdir()
+        with pytest.raises(ValueError):
+            RepoIngester(local_path=local_dir, token="x")
+
+    def test_sanitize_url_quita_credenciales(self):
+        from vibeaudit.ingester import sanitize_url
+
+        assert (
+            sanitize_url("https://tok@github.com/a/b.git")
+            == "https://github.com/a/b.git"
+        )
+        assert sanitize_url("https://github.com/a/b.git") == "https://github.com/a/b.git"
+        assert sanitize_url("/tmp/repo.git") == "/tmp/repo.git"

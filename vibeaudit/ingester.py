@@ -81,6 +81,16 @@ FRAMEWORK_FILES: Dict[str, str] = {
     "build.gradle": "Spring Boot",
 }
 
+def sanitize_url(url: str) -> str:
+    """Quita credenciales embebidas de una URL (https://token@host/...)."""
+    if "://" not in url:
+        return url
+    scheme, rest = url.split("://", 1)
+    if "@" in rest.split("/", 1)[0]:
+        rest = rest.split("@", 1)[1]
+    return f"{scheme}://{rest}"
+
+
 class RepoIngester:
     """Clona un repositorio Git o analiza un directorio local, y devuelve metadatos."""
 
@@ -88,13 +98,25 @@ class RepoIngester:
         self,
         repo_url: Optional[str] = None,
         local_path: Optional[Path] = None,
+        token: Optional[str] = None,
+        branch: Optional[str] = None,
+        depth: Optional[int] = None,
     ):
         if (repo_url is None) == (local_path is None):
             raise ValueError(
                 "Indica una URL de repositorio o un directorio local (exactamente uno)"
             )
+        if local_path is not None and (
+            token or branch or (depth is not None and depth != 1)
+        ):
+            raise ValueError(
+                "token, branch y depth solo aplican al clonar (--repo-url)"
+            )
         self.repo_url = repo_url
         self.local_path = Path(local_path) if local_path is not None else None
+        self.token = token
+        self.branch = branch
+        self.depth = depth
         self._temp_dir: Optional[tempfile.TemporaryDirectory] = None
         self.repo_path: Optional[Path] = None
 
@@ -123,7 +145,8 @@ class RepoIngester:
             self._clone()
         except GitCommandError as exc:
             message = str(exc).lower()
-            console.print(f"[bold red]Error de Git:[/] {exc}")
+            safe_url = sanitize_url(self.repo_url)
+            console.print(f"[bold red]Error de Git:[/] {sanitize_url(str(exc))}")
             if (
                 "not found" in message
                 or "repository not found" in message
@@ -132,16 +155,16 @@ class RepoIngester:
                 or "authentication failed" in message
             ):
                 raise ValueError(
-                    f"El repositorio no existe o no es accesible: {self.repo_url}"
+                    f"El repositorio no existe o no es accesible: {safe_url}"
                 ) from exc
             if "permission denied" in message:
                 raise PermissionError(
-                    f"Sin permisos para acceder al repositorio: {self.repo_url}"
+                    f"Sin permisos para acceder al repositorio: {safe_url}"
                 ) from exc
             raise
         except (NoSuchPathError, InvalidGitRepositoryError) as exc:
             raise ValueError(
-                f"No se pudo leer el repositorio: {self.repo_url}"
+                f"No se pudo leer el repositorio: {sanitize_url(self.repo_url)}"
             ) from exc
 
     def analyze(self) -> ProjectMetadata:
@@ -161,10 +184,34 @@ class RepoIngester:
         self.repo_path = path
 
     def _clone(self) -> None:
-        """Clona el repositorio en un directorio temporal."""
+        """Clona el repositorio en un directorio temporal (con token/branch/depth)."""
         self._temp_dir = tempfile.TemporaryDirectory(prefix="vibeaudit_")
         self.repo_path = Path(self._temp_dir.name)
-        Repo.clone_from(self.repo_url, self.repo_path, depth=1)
+        clone_url = self.repo_url
+        if self.token:
+            clone_url = self._inject_token(clone_url, self.token)
+        kwargs: Dict[str, object] = {}
+        if self.depth is not None:
+            kwargs["depth"] = self.depth
+        if self.branch is not None:
+            kwargs["branch"] = self.branch
+        # Sin prompt interactivo: git falla limpio en vez de pedir credenciales
+        # por terminal (que imprimiría el token en la URL)
+        kwargs["env"] = {"GIT_TERMINAL_PROMPT": "0"}
+        repo = Repo.clone_from(clone_url, self.repo_path, **kwargs)
+        if self.token:
+            # No dejar el token en la config del repo temporal (origin)
+            repo.remotes.origin.set_url(self.repo_url)
+
+    @staticmethod
+    def _inject_token(url: str, token: str) -> str:
+        """Inyecta el token en la URL de clone (https://token@host/...)."""
+        if not (url.startswith("https://") or url.startswith("http://")):
+            return url
+        scheme, rest = url.split("://", 1)
+        if "@" in rest.split("/", 1)[0]:
+            rest = rest.split("@", 1)[1]
+        return f"{scheme}://{token}@{rest}"
 
     def _analyze(self) -> ProjectMetadata:
         """Analiza el repositorio clonado y construye los metadatos."""
@@ -204,11 +251,11 @@ class RepoIngester:
         try:
             remote_url = Repo(self.repo_path).remotes.origin.url
         except Exception:
-            return self.repo_url
+            return sanitize_url(self.repo_url) if self.repo_url else None
         # Los clones locales resuelven origin a la ruta absoluta; conservar la original
         if remote_url.startswith(("/", "file://")):
-            return self.repo_url
-        return remote_url
+            return sanitize_url(self.repo_url) if self.repo_url else None
+        return sanitize_url(remote_url)
 
     def _capture_default_branch(self) -> Optional[str]:
         """Obtiene la rama activa (HEAD) del repositorio clonado."""

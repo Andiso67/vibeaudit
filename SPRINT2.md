@@ -199,3 +199,14 @@ amplía módulos 1, 2 y 5.
   gitleaks. E2E real: dir sin `.git` → secreto CRITICAL + 8 IaC con
   `app.py` relativo; dir con `.git` → rama/commit/1 secreto; `--path` inexistente
   y archivo → errores limpios + exit 1.
+- **Verificación extra** (segunda pasada, `57d1f4d`):
+  - Bug encontrado: repo con `.git` SIN commits (`git init` sin commit o `.git`
+    roto) → gitleaks escaneaba "0 commits" y daba falso negativo silencioso con
+    secretos en el working tree. Fix: `_has_git_history()` con
+    `git rev-parse --verify HEAD` decide `--no-git` (no solo la existencia de
+    `.git`). E2E: repo sin commits con AWS key → 1 secreto detectado.
+  - Verificado sin fallos: dir vacío, nombres no-ASCII (escaneo y reporte),
+    symlink circular, archivos sin permisos, `.git` roto, `--path` + `--rules`
+    (regla custom), `--path` + `-f html`, worktree (`.git` como archivo, no
+    dir), `~` expandido, reporte guardado dentro del dir auditado, deps OSV
+    reales (27 vulns) vía `--path`. 173 tests en verde.

@@ -62,7 +62,10 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    (AWS/GitHub/Stripe/SSH...) → CRITICAL, resto → HIGH.
    **Escanea commits, no el filesystem**: sin `.git` da "0 commits scanned"
    (falso negativo silencioso) → añadir `--no-git` al comando cuando no existe
-   `.git` en el repo_path. Con `--no-git` reporta rutas absolutas → relativizar
+   `.git` en el repo_path. OJO: `.git` presente pero SIN commits (git init sin
+   commit, o `.git` roto) también escanea 0 bytes → decidir con
+   `git rev-parse --verify HEAD` (`_has_git_history()`), no solo con la
+   existencia de `.git`. Con `--no-git` reporta rutas absolutas → relativizar
    al repo_path en `_parse_output` (fuera del repo, conservar).
 8. **OSV API**: `POST /v1/querybatch` devuelve SOLO `id` + `modified` por vuln;
    el detalle completo se trae con `GET /v1/vulns/{id}` por cada ID (deps.py

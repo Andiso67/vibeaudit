@@ -19,9 +19,12 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
              → cleanup del temp dir vía context manager (with RepoIngester(...))
 ```
 
-- `ingester.py`: clona con GitPython (`depth=1`), analiza, es context manager.
-  `clone()` traduce errores de git a `ValueError`/`PermissionError`. La limpieza
-  ocurre en `__exit__` o en `finally` de `ingest()`.
+- `ingester.py`: clona con GitPython (`depth=1`) o carga un directorio local
+  (`RepoIngester(repo_url=... | local_path=...)`, exactamente uno — validado en
+  `__init__`), analiza, es context manager. `clone()` traduce errores de git a
+  `ValueError`/`PermissionError`; en modo local valida existencia/directorio.
+  La limpieza ocurre en `__exit__` o en `finally` de `ingest()` (el modo local
+  nunca borra el directorio del usuario).
 - `scanners/`: cada scanner tiene `is_installed()` estático, `scan()` y
   `_parse_output()`. Nunca fallan por "0 hallazgos" (exit codes 0/1 válidos).
   Levantan `RuntimeError` si la herramienta no está instalada o falla.
@@ -57,6 +60,10 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    (ERROR se mapea a HIGH).
 7. **Gitleaks**: exit 1 = hay hallazgos (NO es error). Reglas críticas
    (AWS/GitHub/Stripe/SSH...) → CRITICAL, resto → HIGH.
+   **Escanea commits, no el filesystem**: sin `.git` da "0 commits scanned"
+   (falso negativo silencioso) → añadir `--no-git` al comando cuando no existe
+   `.git` en el repo_path. Con `--no-git` reporta rutas absolutas → relativizar
+   al repo_path en `_parse_output` (fuera del repo, conservar).
 8. **OSV API**: `POST /v1/querybatch` devuelve SOLO `id` + `modified` por vuln;
    el detalle completo se trae con `GET /v1/vulns/{id}` por cada ID (deps.py
    hace batch de IDs → detalle por ID). El score CVSS viene como vector

@@ -56,11 +56,18 @@ Ejemplo:
   --output /tmp/report.json
 ```
 
+Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
+
+```bash
+.venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --format md
+```
+
 ### Opciones
 
 | Opción | Descripción |
 |---|---|
-| `--repo-url`, `-u` | URL del repositorio Git a auditar (obligatoria) |
+| `--repo-url`, `-u` | URL del repositorio Git a auditar (excluyente con `--path`) |
+| `--path` | Directorio local a auditar sin clonar (excluyente con `--repo-url`) |
 | `--output`, `-o` | Ruta del archivo de salida (default: `audit-report.<formato>`) |
 | `--format`, `-f` | Formato de salida: `json` (default), `html` o `md` |
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |

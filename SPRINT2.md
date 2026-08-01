@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítems 1, 2, 3 y 4 completados (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1, 2, 3, 4 y 5 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -45,7 +45,7 @@ amplía módulos 1, 2 y 5.
 - [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
 - [ ] `dependenciesWithCves` poblado con datos reales verificados E2E
 - [ ] Scanners: exit codes y ausencia de datos manejados sin crash
-- [ ] CLI: flags nuevos con validación (mutua exclusión `--repo-url`/`--path`)
+- [x] CLI: flags nuevos con validación (mutua exclusión `--repo-url`/`--path`)
 - [ ] Reportes HTML/MD/dashboard generados y abiertos localmente
 - [ ] README + SPRINT2.md actualizados; suite completa en verde
 - [ ] Imagen Docker reconstruida con los cambios
@@ -173,3 +173,29 @@ amplía módulos 1, 2 y 5.
     bug), no-ASCII, `-o` apuntando a un directorio existente (error limpio
     "Is a directory" + exit 1), snippets de 4+ backticks (fence dinámico los
     absorbe). 159 tests en verde.
+
+## Notas de cierre — Ítem 5 (Escaneo de directorio local) ✅
+
+- **Ingester**: `RepoIngester(repo_url=..., local_path=...)` — exactamente uno
+  de los dos (validado en `__init__` con ValueError). Modo local: valida que el
+  path exista y sea directorio (`_load_local`), usa el directorio directamente
+  sin copiar ni borrar nada (`_cleanup` solo limpia el temp de clones).
+  Metadatos parciales sin `.git`: `repositoryUrl`/`defaultBranch`/`commitHash`
+  quedan `null`; con `.git` se capturan rama y commit del working tree. El
+  `name` del proyecto es el basename del directorio.
+- **CLI**: flag `--path <dir>` mutuamente excluyente con `--repo-url` (error
+  limpio + exit 1 si ambos o ninguno). El flag `-u` dejó de ser obligatorio.
+  Progress muestra "Analizando directorio local..." en vez de "Clonando...".
+- **Bug encontrado en E2E**: gitleaks escanea commits, no el filesystem — sin
+  `.git` daba "0 commits scanned, ~0 bytes" y un falso negativo silencioso.
+  Fix: `--no-git` en el comando `detect` cuando no existe `.git` en el
+  repo_path (gitleaks >= 8.17). Además, con `--no-git` gitleaks reporta rutas
+  absolutas → `_parse_output` las relativiza al repo_path (fuera del repo se
+  conservan).
+- **Validación**: 10 tests nuevos (169 total): metadatos parciales sin `.git`,
+  rama/commit con `.git`, path inexistente/no-dir → ValueError, no borra el
+  directorio local, exclusividad en `__init__`, validación de flags en el CLI
+  (sin args, ambos args, scan completo con `--path`), rutas absolutas en
+  gitleaks. E2E real: dir sin `.git` → secreto CRITICAL + 8 IaC con
+  `app.py` relativo; dir con `.git` → rama/commit/1 secreto; `--path` inexistente
+  y archivo → errores limpios + exit 1.

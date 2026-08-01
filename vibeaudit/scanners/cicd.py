@@ -153,11 +153,17 @@ class CICDScanner:
             stripped = line.strip()
             if not stripped.startswith("script:"):
                 continue
-            block = [stripped] + [
-                l.strip() for l in lines[index:] if l.strip().startswith("- ")
-            ]
-            for block_line in block:
-                if GITLAB_TOKEN_RE.search(block_line):
+            indent = len(line) - len(line.lstrip())
+            block_lines = [stripped]
+            for next_line in lines[index:]:
+                if not next_line.strip():
+                    continue
+                if len(next_line) - len(next_line.lstrip()) <= indent:
+                    break
+                block_lines.append(next_line.strip())
+            for block_line in block_lines:
+                match = GITLAB_TOKEN_RE.search(block_line)
+                if match:
                     findings.append(
                         Vulnerability(
                             rule="cicd-gitlab-token-in-script",
@@ -165,7 +171,7 @@ class CICDScanner:
                             line=index,
                             severity=Severity.MEDIUM,
                             snippet=(
-                                f"Token de CI ({GITLAB_TOKEN_RE.search(block_line).group(0)}) "
+                                f"Token de CI ({match.group(0)}) "
                                 "usado en script: puede filtrarse en logs. Usar "
                                 "variables protegidas o passed-job artifacts."
                             ),
@@ -180,7 +186,8 @@ class CICDScanner:
         in_on_block = False
         for index, line in enumerate(lines, start=1):
             stripped = line.strip()
-            if stripped == "on:" or stripped.startswith("on: "):
+            # on: puede aparecer sin comillas o con comillas ("on": o 'on':)
+            if re.match(r'^(?:["\']?on["\']?):', stripped):
                 in_on_block = True
                 if PR_TARGET_RE.search(line):
                     return index
@@ -196,6 +203,7 @@ class CICDScanner:
     def _has_permissions(lines: List[str]) -> bool:
         """True si el workflow define permissions (nivel workflow o de job)."""
         return any(
-            line.strip() == "permissions:" or line.strip().startswith("permissions: ")
+            (line.strip() == "permissions:" or line.strip().startswith("permissions: "))
+            and not line.strip().startswith("#")
             for line in lines
         )

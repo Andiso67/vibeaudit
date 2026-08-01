@@ -161,10 +161,66 @@ class TestGitlabCi:
         )
         assert CICDScanner(tmp_path).scan() == []
 
+    def test_gitlab_token_de_otro_job_no_contamina(self, tmp_path):
+        (tmp_path / ".gitlab-ci.yml").write_text(
+            "job1:\n"
+            "  script:\n"
+            "    - echo \"sin token\"\n"
+            "\n"
+            "job2:\n"
+            "  script:\n"
+            "    - curl -H \"Job-Token: $CI_JOB_TOKEN\" https://x/api\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert len(findings) == 1
+        assert findings[0].line == 6
+
     def test_workflow_vacio_sin_hallazgos(self, tmp_path):
         workflow = tmp_path / ".github" / "workflows" / "ci.yml"
         workflow.parent.mkdir(parents=True)
         workflow.write_text("name: Empty\non: push\n")
+        assert CICDScanner(tmp_path).scan() == []
+
+    def test_on_con_comillas_detecta_pr_target(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text("name: Q\n\"on\": pull_request_target\n")
+        findings = CICDScanner(tmp_path).scan()
+        assert any(
+            f.rule == "cicd-github-pr-target-no-permissions" for f in findings
+        )
+
+    def test_permissions_comentado_no_es_valido(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: C\non: pull_request_target\n# permissions:\n#   contents: read\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert any(
+            f.rule == "cicd-github-pr-target-no-permissions" for f in findings
+        )
+
+    def test_comentarios_y_vars_no_generan_hallazgos(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: C\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - name: x\n"
+            "      # - uses: evil/action@v1\n"
+            "      # - run: echo ${{ secrets.FOO }}\n"
+            "      - run: echo ${{ vars.NOT_A_SECRET }}\n"
+        )
+        assert CICDScanner(tmp_path).scan() == []
+
+    def test_uses_docker_y_local_no_generan_hallazgos(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: D\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - uses: docker://alpine:3.18\n"
+            "      - uses: ./local-action\n"
+        )
         assert CICDScanner(tmp_path).scan() == []
 
 

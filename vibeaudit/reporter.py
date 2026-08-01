@@ -171,11 +171,25 @@ class AuditReporter:
         ]
 
     @staticmethod
+    def _md_fence(snippet: str) -> str:
+        """Fence de code block que no colisiona con los backticks del snippet."""
+        max_run = 0
+        current = 0
+        for ch in snippet:
+            if ch == "`":
+                current += 1
+                max_run = max(max_run, current)
+            else:
+                current = 0
+        return "`" * (max_run + 1) if max_run >= 3 else "```"
+
+    @staticmethod
     def _md_issue(rule: str, file: str, line: int, severity: Severity, snippet) -> str:
         """Renderiza un hallazgo con archivo/línea en Markdown."""
         md = f"### `{rule}` — **{severity.value}** — {file}:{line}"
         if snippet:
-            md += f"\n```\n{snippet}\n```"
+            fence = AuditReporter._md_fence(snippet)
+            md += f"\n{fence}\n{snippet}\n{fence}"
         return md
 
     @staticmethod

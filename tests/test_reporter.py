@@ -271,3 +271,28 @@ class TestReportesLegibles:
         reporter.save_html(html_file)
         assert md.exists()
         assert html_file.exists()
+
+    def test_save_markdown_snippet_con_triple_backtick_no_rompe_fence(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule="r1",
+                    file="app.py",
+                    line=1,
+                    severity=Severity.HIGH,
+                    snippet='print("""\n```\nmarkdown\n```\n""")',
+                )
+            ],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            repo_path=repo,
+        )
+        out = tmp_path / "report.md"
+        reporter.save_markdown(out)
+        content = out.read_text()
+
+        assert content.count("```") % 2 == 0
+        assert "````" in content

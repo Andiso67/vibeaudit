@@ -148,3 +148,14 @@ amplía módulos 1, 2 y 5.
 - **Validación**: 6 tests nuevos (156 total). E2E con `--format html|md|json`
   sobre repo con secretos/SAST/IaC → los 3 archivos generados y verificados
   (HTML abrible en navegador, Markdown con `aws-access-token — CRITICAL`).
+- **Verificación extra** (revisión de robustez del ítem 4):
+  - Bug encontrado: snippet con triple backtick (` ``` `) rompía el code fence
+    del Markdown (fences impares → el resto del documento quedaba dentro del
+    bloque de código). Fix: `_md_fence()` elige un fence más largo que la racha
+    de backticks del snippet.
+  - Verificado sin fallos: snippets gigantes (100 KB), snippets con HTML
+    peligroso (escape en HTML, validado con parser de tags balanceados),
+    deps sin fix/CVEs, summary multilínea, nombres con caracteres especiales,
+    sin metadatos, severidades sin contador. E2E real con deps OSV → 27 badges
+    y fixes correctos en HTML/MD; `--rules` + `--format html` → 3 hallazgos
+    custom en el HTML. 157 tests en verde.

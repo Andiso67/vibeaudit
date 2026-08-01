@@ -296,3 +296,51 @@ class TestReportesLegibles:
 
         assert content.count("```") % 2 == 0
         assert "````" in content
+
+    def test_save_markdown_rule_con_backticks_no_rompe_inline_code(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule="rule`con`ticks",
+                    file="a.py",
+                    line=1,
+                    severity=Severity.MEDIUM,
+                    snippet=None,
+                )
+            ],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            repo_path=repo,
+        )
+        out = tmp_path / "report.md"
+        reporter.save_markdown(out)
+        content = out.read_text()
+
+        assert "``rule`con`ticks``" in content
+
+    def test_save_markdown_snippet_con_fence_y_blank_line(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule="test-rule",
+                    file="a.py",
+                    line=1,
+                    severity=Severity.HIGH,
+                    snippet="print('x')",
+                )
+            ],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            repo_path=repo,
+        )
+        out = tmp_path / "report.md"
+        reporter.save_markdown(out)
+        content = out.read_text()
+
+        assert "\n\n```\nprint('x')\n```" in content

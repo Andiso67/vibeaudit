@@ -224,6 +224,86 @@ def test_parse_output_check_id_sin_namespace_se_mantiene(tmp_path):
     assert findings[0].rule == "otra.regla.rara"
 
 
+def test_parse_output_data_no_es_dict(tmp_path):
+    findings = make_scanner(tmp_path)._parse_output("[1, 2, 3]", "/tmp")
+    assert findings == []
+
+
+def test_parse_output_results_null(tmp_path):
+    out = json.dumps({"results": None, "errors": []})
+    assert make_scanner(tmp_path)._parse_output(out) == []
+
+
+def test_parse_output_path_null_se_ignora(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {"check_id": "x", "path": None, "start": {"line": 1}},
+                {"check_id": "y", "path": "b.py", "start": {"line": 2}},
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert len(findings) == 1
+    assert findings[0].rule == "y"
+
+
+def test_parse_output_check_id_null_usa_unknown(tmp_path):
+    out = json.dumps(
+        {
+            "results": [{"check_id": None, "path": "a.py", "start": {"line": 1}}],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert findings[0].rule == "unknown-rule"
+
+
+def test_parse_output_extra_null_no_crash(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {"check_id": "x", "path": "a.py", "start": {"line": 1}, "extra": None}
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert len(findings) == 1
+    assert findings[0].severity == Severity.INFO
+    assert findings[0].snippet is None
+
+
+def test_parse_output_finding_no_es_dict_se_ignora(tmp_path):
+    out = json.dumps(
+        {
+            "results": ["basura", {"check_id": "x", "path": "a.py", "start": {"line": 1}}],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert len(findings) == 1
+    assert findings[0].rule == "x"
+
+
+def test_relative_path_con_symlink_resuelto(tmp_path, monkeypatch):
+    repo_via_symlink = tmp_path / "link" / "repo"
+    repo_real = tmp_path / "real" / "repo"
+    real_resolve = Path.resolve
+
+    def fake_resolve(self, strict=False):
+        if str(self).startswith(str(repo_via_symlink)):
+            return real_resolve(
+                Path(str(self).replace(str(repo_via_symlink), str(repo_real)))
+            )
+        return real_resolve(self)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+    scanner = CustomRulesScanner(repo_path=repo_via_symlink, rules_dir=None)
+    assert scanner._relative_path(str(repo_real / "app.py")) == "app.py"
+
+
 def test_parse_output_json_invalido_vacia_lista(tmp_path):
     assert make_scanner(tmp_path)._parse_output("no es json") == []
 
@@ -279,6 +359,76 @@ def test_scan_usa_config_rules_dir(monkeypatch, tmp_path):
     assert scanner.scan() == []
     assert "--config" in captured["cmd"]
     assert str(tmp_path / "rules") in captured["cmd"]
+
+
+def test_parse_output_snippet_no_str_no_crash(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {
+                    "check_id": "x",
+                    "path": "a.py",
+                    "start": {"line": 1},
+                    "extra": {"lines": ["a", "b"]},
+                }
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert len(findings) == 1
+    assert findings[0].snippet == "['a', 'b']"
+
+
+def test_parse_output_snippet_none_no_crash(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {
+                    "check_id": "x",
+                    "path": "a.py",
+                    "start": {"line": 1},
+                    "extra": {"lines": None},
+                }
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out)
+    assert findings[0].snippet is None
+
+
+def test_scan_exit_code_raro_stdout_vacio_avisa(monkeypatch, tmp_path, capsys):
+    (tmp_path / "rules").mkdir()
+    (tmp_path / "rules" / "regla.yml").write_text("rules: []")
+
+    def fake_run(cmd, **kwargs):
+        return FakeResult(returncode=7, stdout="", stderr="config inválido")
+
+    monkeypatch.setattr("vibeaudit.scanners.custom.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        CustomRulesScanner, "is_installed", staticmethod(lambda: True)
+    )
+    scanner = CustomRulesScanner(repo_path=tmp_path, rules_dir=tmp_path / "rules")
+    assert scanner.scan() == []
+    captured = capsys.readouterr()
+    assert "config inválido" in captured.out
+
+
+def test_scan_exit_code_0_stdout_vacio_sin_aviso(monkeypatch, tmp_path, capsys):
+    (tmp_path / "rules").mkdir()
+    (tmp_path / "rules" / "regla.yml").write_text("rules: []")
+
+    def fake_run(cmd, **kwargs):
+        return FakeResult(returncode=0, stdout="")
+
+    monkeypatch.setattr("vibeaudit.scanners.custom.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        CustomRulesScanner, "is_installed", staticmethod(lambda: True)
+    )
+    scanner = CustomRulesScanner(repo_path=tmp_path, rules_dir=tmp_path / "rules")
+    assert scanner.scan() == []
+    assert capsys.readouterr().out == ""
 
 
 def test_scan_sin_resultados_stdout_vacio(monkeypatch, tmp_path):

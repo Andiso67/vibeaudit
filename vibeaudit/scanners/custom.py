@@ -94,6 +94,12 @@ class CustomRulesScanner:
             )
 
         if not result.stdout.strip():
+            if result.returncode not in (0, 1):
+                console.print(
+                    f"[bold red]Error:[/] semgrep terminó con código "
+                    f"{result.returncode} sin salida JSON: "
+                    f"{result.stderr.strip()}"
+                )
             return []
 
         return self._parse_output(result.stdout, rules_dir)
@@ -130,6 +136,12 @@ class CustomRulesScanner:
             console.print("[bold yellow]Advertencia:[/] salida de semgrep no es JSON")
             return []
 
+        if not isinstance(data, dict):
+            console.print(
+                "[bold yellow]Advertencia:[/] salida de semgrep no es un objeto JSON"
+            )
+            return []
+
         if data.get("errors"):
             config_errors = [
                 error
@@ -159,33 +171,57 @@ class CustomRulesScanner:
         )
 
         vulnerabilities: List[Vulnerability] = []
-        for finding in data.get("results", []):
-            severity = self._map_severity(finding.get("extra", {}).get("severity"))
-            start = finding.get("start", {})
-            check_id = finding.get("check_id", "unknown-rule")
+        for finding in data.get("results") or []:
+            # Hallazgos malformados se ignoran: un crash aquí rompería el
+            # reporte completo, no solo este hallazgo
+            if not isinstance(finding, dict):
+                continue
+            extra = finding.get("extra") or {}
+            severity = self._map_severity(extra.get("severity"))
+            start = finding.get("start") or {}
+            check_id = finding.get("check_id") or "unknown-rule"
             for prefix in prefixes:
                 if check_id.startswith(prefix):
                     check_id = check_id[len(prefix):]
                     break
+            file_path = self._relative_path(finding.get("path") or "")
+            if not file_path:
+                continue
+            lines = extra.get("lines")
             vulnerabilities.append(
                 Vulnerability(
-                    rule=check_id,
-                    file=self._relative_path(finding.get("path", "")),
+                    rule=check_id or "unknown-rule",
+                    file=file_path,
                     # semgrep siempre da línea >= 1; proteger el modelo por si
                     # una regla rara devuelve 0 o sin start
                     line=start.get("line") or 1,
                     severity=severity,
-                    snippet=finding.get("extra", {}).get("lines"),
+                    snippet=(
+                        lines
+                        if isinstance(lines, str)
+                        else (str(lines) if lines else None)
+                    ),
                 )
             )
         return vulnerabilities
 
     def _relative_path(self, file_path: str) -> str:
-        """Convierte paths absolutos del repo en paths relativos."""
+        """Convierte paths absolutos del repo en paths relativos.
+
+        Soporta el caso de macOS donde semgrep devuelve el path resuelto
+        (p. ej. /private/var/...) y repo_path aún tiene el symlink (p. ej.
+        /var/...): se reintenta con ambos paths resueltos.
+        """
         if not self.repo_path or not file_path:
             return file_path
         try:
             return str(Path(file_path).relative_to(self.repo_path))
+        except ValueError:
+            pass
+        try:
+            return str(
+                Path(file_path).resolve().relative_to(self.repo_path.resolve())
+            )
         except ValueError:
             return file_path
 

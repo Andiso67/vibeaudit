@@ -64,20 +64,25 @@ class GitleaksScanner:
         # (permission denied con pipes) y sin --report-path no se emite JSON
         with tempfile.TemporaryDirectory() as tmpdir:
             report_path = os.path.join(tmpdir, "gitleaks.json")
+            command = [
+                "gitleaks",
+                "detect",
+                "--source",
+                str(self.repo_path),
+                "--report-format",
+                "json",
+                "--report-path",
+                report_path,
+                "--no-banner",
+                "--redact",
+                "0",
+            ]
+            # Sin repo git gitleaks solo escanea commits (0 bytes en directorios
+            # planos) → --no-git escanea los archivos del filesystem directamente
+            if not (self.repo_path / ".git").exists():
+                command.insert(2, "--no-git")
             result = subprocess.run(
-                [
-                    "gitleaks",
-                    "detect",
-                    "--source",
-                    str(self.repo_path),
-                    "--report-format",
-                    "json",
-                    "--report-path",
-                    report_path,
-                    "--no-banner",
-                    "--redact",
-                    "0",
-                ],
+                command,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -133,6 +138,14 @@ class GitleaksScanner:
             file_path = finding.get("File") or ""
             if not file_path:
                 continue
+            # Con --no-git gitleaks reporta rutas absolutas; relativizar al repo
+            if os.path.isabs(file_path) and self.repo_path is not None:
+                try:
+                    relative = os.path.relpath(file_path, self.repo_path)
+                except ValueError:
+                    relative = file_path
+                if not relative.startswith(".."):
+                    file_path = relative
             severity = (
                 Severity.CRITICAL
                 if any(token in rule.lower() for token in CRITICAL_RULES)

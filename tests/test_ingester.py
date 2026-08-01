@@ -1,6 +1,7 @@
 """Tests de RepoIngester usando un repo git real en tmp_path."""
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -90,3 +91,62 @@ class TestRepoIngester:
         metadata = RepoIngester(str(repo_dir)).ingest()
 
         assert metadata.repository_url == str(repo_dir)
+
+
+class TestRepoIngesterLocal:
+    def test_local_path_sin_git_metadatos_parciales(self, tmp_path):
+        local_dir = tmp_path / "mi-proyecto"
+        local_dir.mkdir()
+        (local_dir / "main.py").write_text("print('hola')\n")
+        (local_dir / "notes.txt").write_text("solo texto\n")
+
+        metadata = RepoIngester(local_path=local_dir).ingest()
+
+        assert metadata.name == "mi-proyecto"
+        assert "Python" in metadata.languages
+        assert metadata.repository_url is None
+        assert metadata.default_branch is None
+        assert metadata.commit_hash is None
+
+    def test_local_path_con_git_captura_rama_y_commit(self, tmp_path):
+        local_dir = tmp_path / "repo-local"
+        local_dir.mkdir()
+        make_git_repo(local_dir)
+
+        metadata = RepoIngester(local_path=local_dir).ingest()
+
+        assert metadata.name == "repo-local"
+        assert metadata.default_branch is not None
+        assert metadata.commit_hash and len(metadata.commit_hash) == 40
+
+    def test_local_path_inexistente_lanza_valueerror(self, tmp_path):
+        with pytest.raises(ValueError):
+            RepoIngester(local_path=tmp_path / "no-existe").ingest()
+
+    def test_local_path_es_archivo_lanza_valueerror(self, tmp_path):
+        archivo = tmp_path / "archivo.txt"
+        archivo.write_text("contenido\n")
+
+        with pytest.raises(ValueError):
+            RepoIngester(local_path=archivo).ingest()
+
+    def test_local_path_no_borra_el_directorio(self, tmp_path):
+        local_dir = tmp_path / "mi-proyecto"
+        local_dir.mkdir()
+        (local_dir / "main.py").write_text("print('hola')\n")
+
+        with RepoIngester(local_path=local_dir) as ingester:
+            ingester.clone()
+            assert ingester.repo_path == local_dir.resolve()
+            ingester.analyze()
+
+        assert local_dir.exists()
+        assert (local_dir / "main.py").exists()
+
+    def test_ambos_argumentos_lanza_valueerror(self):
+        with pytest.raises(ValueError):
+            RepoIngester(repo_url="https://github.com/x/y", local_path=Path("/tmp"))
+
+    def test_ningun_argumento_lanza_valueerror(self):
+        with pytest.raises(ValueError):
+            RepoIngester()

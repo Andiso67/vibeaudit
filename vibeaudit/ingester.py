@@ -82,10 +82,19 @@ FRAMEWORK_FILES: Dict[str, str] = {
 }
 
 class RepoIngester:
-    """Clona un repositorio Git, lo analiza y devuelve sus metadatos."""
+    """Clona un repositorio Git o analiza un directorio local, y devuelve metadatos."""
 
-    def __init__(self, repo_url: str):
+    def __init__(
+        self,
+        repo_url: Optional[str] = None,
+        local_path: Optional[Path] = None,
+    ):
+        if (repo_url is None) == (local_path is None):
+            raise ValueError(
+                "Indica una URL de repositorio o un directorio local (exactamente uno)"
+            )
         self.repo_url = repo_url
+        self.local_path = Path(local_path) if local_path is not None else None
         self._temp_dir: Optional[tempfile.TemporaryDirectory] = None
         self.repo_path: Optional[Path] = None
 
@@ -97,7 +106,7 @@ class RepoIngester:
         self._cleanup()
 
     def ingest(self) -> ProjectMetadata:
-        """Clona el repo, detecta características y devuelve ProjectMetadata."""
+        """Clona o carga el directorio, detecta características y devuelve ProjectMetadata."""
         try:
             self.clone()
             metadata = self._analyze()
@@ -106,7 +115,10 @@ class RepoIngester:
             self._cleanup()
 
     def clone(self) -> None:
-        """Clona el repositorio en un directorio temporal con manejo de errores."""
+        """Clona el repositorio o carga el directorio local con manejo de errores."""
+        if self.local_path is not None:
+            self._load_local()
+            return
         try:
             self._clone()
         except GitCommandError as exc:
@@ -133,8 +145,20 @@ class RepoIngester:
             ) from exc
 
     def analyze(self) -> ProjectMetadata:
-        """Analiza el repositorio clonado y devuelve sus metadatos."""
+        """Analiza el repositorio clonado o el directorio local y devuelve sus metadatos."""
         return self._analyze()
+
+    def _load_local(self) -> None:
+        """Valida el directorio local y lo usa directamente como repo_path."""
+        assert self.local_path is not None
+        path = self.local_path.expanduser().resolve()
+        if not path.exists():
+            raise ValueError(f"El directorio local no existe: {self.local_path}")
+        if not path.is_dir():
+            raise ValueError(
+                f"El path local no es un directorio: {self.local_path}"
+            )
+        self.repo_path = path
 
     def _clone(self) -> None:
         """Clona el repositorio en un directorio temporal."""
@@ -145,7 +169,10 @@ class RepoIngester:
     def _analyze(self) -> ProjectMetadata:
         """Analiza el repositorio clonado y construye los metadatos."""
         assert self.repo_path is not None
-        name = self.repo_url.rstrip("/").split("/")[-1].removesuffix(".git")
+        if self.local_path is not None:
+            name = self.local_path.name or "directorio-local"
+        else:
+            name = self.repo_url.rstrip("/").split("/")[-1].removesuffix(".git")
 
         languages: set = set()
         frameworks: set = set()

@@ -152,6 +152,22 @@ class TestGitleaksScanner:
         assert secrets[0].line == 7
         assert secrets[0].severity == Severity.CRITICAL
 
+    def test_parse_ruta_absoluta_se_relativiza_al_repo(self, tmp_path):
+        raw = (
+            f'[{{"RuleID": "aws-access-token", "File": "{tmp_path}/app.py",'
+            f'"StartLine": 3}}]'
+        )
+        secrets = GitleaksScanner(tmp_path)._parse_output(raw)
+        assert secrets[0].file == "app.py"
+
+    def test_parse_ruta_fuera_del_repo_se_conserva(self, tmp_path):
+        raw = (
+            f'[{{"RuleID": "generic", "File": "{tmp_path}/../externo.py",'
+            f'"StartLine": 3}}]'
+        )
+        secrets = GitleaksScanner(tmp_path)._parse_output(raw)
+        assert secrets[0].file == f"{tmp_path}/../externo.py"
+
 
 SEMGREP_JSON = (
     '{"results":['

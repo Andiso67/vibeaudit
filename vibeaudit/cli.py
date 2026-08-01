@@ -47,8 +47,11 @@ def main() -> None:
 
 @app.command()
 def scan(
-    repo_url: str = typer.Option(
-        ..., "--repo-url", "-u", help="URL del repositorio Git a auditar"
+    repo_url: Optional[str] = typer.Option(
+        None, "--repo-url", "-u", help="URL del repositorio Git a auditar"
+    ),
+    local_path: Optional[Path] = typer.Option(
+        None, "--path", help="Directorio local a auditar sin clonar"
     ),
     output: Optional[Path] = typer.Option(
         None,
@@ -69,8 +72,13 @@ def scan(
         show_default="json",
     ),
 ) -> None:
-    """Audita un repositorio: clona, ejecuta Gitleaks, Semgrep y Checkov."""
+    """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
     try:
+        if (repo_url is None) == (local_path is None):
+            raise ValueError(
+                "Indica --repo-url o --path (exactamente uno de los dos)"
+            )
+
         if rules is not None and not rules.is_dir():
             raise ValueError(
                 f"El directorio de reglas no existe o no es un directorio: {rules}"
@@ -79,8 +87,9 @@ def scan(
         if output is None:
             output = Path(f"audit-report.{output_format.value}")
 
+        source = local_path if local_path is not None else repo_url
         console.print(
-            f"[bold green]▶ Auditando[/] [cyan]{repo_url}[/] [bold green]→[/] "
+            f"[bold green]▶ Auditando[/] [cyan]{source}[/] [bold green]→[/] "
             f"[cyan]{output}[/]"
         )
         with Progress(
@@ -89,9 +98,14 @@ def scan(
             console=console,
             transient=True,
         ) as progress:
-            task = progress.add_task("Clonando repositorio...", total=None)
+            if local_path is not None:
+                task = progress.add_task("Analizando directorio local...", total=None)
+            else:
+                task = progress.add_task("Clonando repositorio...", total=None)
 
-            with RepoIngester(repo_url) as ingester:
+            with RepoIngester(
+                repo_url=repo_url, local_path=local_path
+            ) as ingester:
                 ingester.clone()
                 project = ingester.analyze()
                 assert ingester.repo_path is not None

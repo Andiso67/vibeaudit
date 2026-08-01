@@ -122,6 +122,44 @@ class TestGitleaksScanner:
         monkeypatch.setattr("subprocess.run", _run)
         assert GitleaksScanner(tmp_path).scan() == []
 
+    def test_scan_sin_commits_usa_no_git(self, monkeypatch, tmp_path):
+        (tmp_path / ".git").mkdir()
+        calls = []
+
+        def _run(args, **kwargs):
+            calls.append(args)
+            if args[0] == "gitleaks" and args[1] == "version":
+                return FakeResult(0, "8.18.0")
+            if args[0] == "git":
+                return FakeResult(128, "", "fatal: ambiguous argument 'HEAD'")
+            report_idx = args.index("--report-path") + 1
+            Path(args[report_idx]).write_text("[]")
+            return FakeResult(0, "")
+
+        monkeypatch.setattr("subprocess.run", _run)
+        GitleaksScanner(tmp_path).scan()
+        detect = next(a for a in calls if a[0] == "gitleaks" and a[1] == "detect")
+        assert "--no-git" in detect
+
+    def test_scan_con_commits_no_usa_no_git(self, monkeypatch, tmp_path):
+        (tmp_path / ".git").mkdir()
+        calls = []
+
+        def _run(args, **kwargs):
+            calls.append(args)
+            if args[0] == "gitleaks" and args[1] == "version":
+                return FakeResult(0, "8.18.0")
+            if args[0] == "git":
+                return FakeResult(0, "abc123")
+            report_idx = args.index("--report-path") + 1
+            Path(args[report_idx]).write_text("[]")
+            return FakeResult(0, "")
+
+        monkeypatch.setattr("subprocess.run", _run)
+        GitleaksScanner(tmp_path).scan()
+        detect = next(a for a in calls if a[0] == "gitleaks" and a[1] == "detect")
+        assert "--no-git" not in detect
+
     def test_scan_no_instalado_lanza_runtimeerror(self, monkeypatch, tmp_path):
         fake_run(monkeypatch, {("gitleaks", "version"): FakeResult(1)})
         with pytest.raises(RuntimeError):

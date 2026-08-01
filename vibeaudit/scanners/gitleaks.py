@@ -52,6 +52,22 @@ class GitleaksScanner:
         except (FileNotFoundError, subprocess.SubprocessError):
             return False
 
+    def _has_git_history(self) -> bool:
+        """True si el path es un repo git con al menos un commit."""
+        if not (self.repo_path / ".git").exists():
+            return False
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(self.repo_path), "rev-parse", "--verify", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            return result.returncode == 0
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return False
+
     def scan(self) -> List[Secret]:
         """Ejecuta gitleaks detect y devuelve la lista de Secret encontrados."""
         if not self.is_installed():
@@ -77,9 +93,10 @@ class GitleaksScanner:
                 "--redact",
                 "0",
             ]
-            # Sin repo git gitleaks solo escanea commits (0 bytes en directorios
-            # planos) → --no-git escanea los archivos del filesystem directamente
-            if not (self.repo_path / ".git").exists():
+            # Sin historial git gitleaks solo escanea commits (0 bytes en
+            # directorios planos o repos sin commits) → --no-git escanea los
+            # archivos del filesystem directamente
+            if not self._has_git_history():
                 command.insert(2, "--no-git")
             result = subprocess.run(
                 command,

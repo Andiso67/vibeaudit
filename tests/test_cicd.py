@@ -175,6 +175,29 @@ class TestGitlabCi:
         assert len(findings) == 1
         assert findings[0].line == 6
 
+    def test_gitlab_token_en_before_script(self, tmp_path):
+        (tmp_path / ".gitlab-ci.yml").write_text(
+            "deploy:\n"
+            "  before_script:\n"
+            "    - docker login -u x -p $CI_REGISTRY_PASSWORD\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert len(findings) == 1
+        assert findings[0].rule == "cicd-gitlab-token-in-script"
+        assert "$CI_REGISTRY_PASSWORD" in findings[0].snippet
+
+    def test_gitlab_token_en_after_script(self, tmp_path):
+        (tmp_path / ".gitlab-ci.yml").write_text(
+            "build:\n"
+            "  script:\n"
+            "    - echo ok\n"
+            "  after_script:\n"
+            "    - echo $CI_JOB_TOKEN\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert len(findings) == 1
+        assert findings[0].line == 4
+
     def test_workflow_vacio_sin_hallazgos(self, tmp_path):
         workflow = tmp_path / ".github" / "workflows" / "ci.yml"
         workflow.parent.mkdir(parents=True)
@@ -293,6 +316,48 @@ class TestGitlabCi:
         rules = {f.rule for f in findings}
         assert "cicd-github-secret-in-run" in rules
         assert "cicd-github-action-not-pinned" in rules
+
+
+    def test_pr_target_comentado_no_dispara_hallazgo(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: C\non:\n"
+            "  # pull_request_target es peligroso, no usarlo\n"
+            "  push:\n"
+            "jobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - run: echo safe\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert all(f.rule != "cicd-github-pr-target-no-permissions" for f in findings)
+
+    def test_pr_target_con_blank_dentro_de_on(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: B\non:\n"
+            "\n"
+            "  pull_request_target:\n"
+            "\n"
+            "  push:\n"
+            "jobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - run: echo safe\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert any(
+            f.rule == "cicd-github-pr-target-no-permissions" for f in findings
+        )
+
+    def test_workflow_con_bom_utf8(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        content = (
+            "name: BOM\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - uses: thirdparty/action@v2\n"
+        )
+        workflow.write_bytes(b"\xef\xbb\xbf" + content.encode("utf-8"))
+        findings = CICDScanner(tmp_path).scan()
+        assert any(f.rule == "cicd-github-action-not-pinned" for f in findings)
 
 
 class TestHelpers:

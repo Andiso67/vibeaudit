@@ -50,7 +50,7 @@ class CICDScanner:
             try:
                 lines = Path(file_path).read_text(
                     encoding="utf-8", errors="ignore"
-                ).splitlines()
+                ).lstrip("\ufeff").splitlines()
             except OSError:
                 continue
             if rel_path == GITLAB_CI_FILE:
@@ -184,7 +184,8 @@ class CICDScanner:
         findings: List[Vulnerability] = []
         for index, line in enumerate(lines, start=1):
             stripped = line.strip()
-            if not stripped.startswith("script:"):
+            # script:, before_script: y after_script: ejecutan shell en el job
+            if not re.match(r"^(?:before_script|script|after_script):", stripped):
                 continue
             indent = len(line) - len(line.lstrip())
             block_lines = [stripped]
@@ -220,17 +221,20 @@ class CICDScanner:
         """Devuelve el número de línea del pull_request_target si existe."""
         in_on_block = False
         for index, line in enumerate(lines, start=1):
-            stripped = line.strip()
+            stripped = line.lstrip("\ufeff").strip()
             # on: puede aparecer sin comillas o con comillas ("on": o 'on':)
             if re.match(r'^(?:["\']?on["\']?):', stripped):
                 in_on_block = True
-                if PR_TARGET_RE.search(line):
+                if PR_TARGET_RE.search(line.split("#", 1)[0]):
                     return index
                 continue
             if in_on_block:
-                if not stripped or not line.startswith((" ", "\t")):
+                # Líneas vacías no terminan el bloque on: (YAML válido)
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if not line.startswith((" ", "\t")):
                     return None
-                if PR_TARGET_RE.search(stripped):
+                if PR_TARGET_RE.search(stripped.split("#", 1)[0]):
                     return index
         return None
 

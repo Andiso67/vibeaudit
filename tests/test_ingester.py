@@ -234,5 +234,17 @@ class TestRepoIngesterCloneArgs:
             sanitize_url("https://tok@github.com/a/b.git")
             == "https://github.com/a/b.git"
         )
+        assert (
+            sanitize_url("https://user:pass@github.com/a/b.git")
+            == "https://github.com/a/b.git"
+        )
         assert sanitize_url("https://github.com/a/b.git") == "https://github.com/a/b.git"
         assert sanitize_url("/tmp/repo.git") == "/tmp/repo.git"
+        # ssh:// no es una credencial http: el usuario git@ se conserva
+        assert (
+            sanitize_url("ssh://git@github.com/org/repo.git")
+            == "ssh://git@github.com/org/repo.git"
+        )
+        assert (
+            sanitize_url("git@github.com:org/repo.git") == "git@github.com:org/repo.git"
+        )

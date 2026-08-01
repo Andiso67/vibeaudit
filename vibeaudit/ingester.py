@@ -82,8 +82,8 @@ FRAMEWORK_FILES: Dict[str, str] = {
 }
 
 def sanitize_url(url: str) -> str:
-    """Quita credenciales embebidas de una URL (https://token@host/...)."""
-    if "://" not in url:
+    """Quita credenciales embebidas de una URL http(s) (https://token@host/...)."""
+    if not (url.startswith("https://") or url.startswith("http://")):
         return url
     scheme, rest = url.split("://", 1)
     if "@" in rest.split("/", 1)[0]:

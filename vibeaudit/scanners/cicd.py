@@ -78,6 +78,9 @@ class CICDScanner:
         """Checks de seguridad para un workflow de GitHub Actions."""
         findings: List[Vulnerability] = []
 
+        # Líneas que pertenecen a bloques run: (contenido de scripts shell)
+        run_block_lines = self._run_block_line_indexes(lines)
+
         # 1. pull_request_target sin bloque permissions explícito
         on_line = self._find_pull_request_target(lines)
         if on_line is not None and not self._has_permissions(lines):
@@ -98,6 +101,8 @@ class CICDScanner:
 
         # 2. Acciones de terceros sin pin a SHA de commit
         for index, line in enumerate(lines, start=1):
+            if index in run_block_lines:
+                continue
             stripped = line.strip().lstrip("- ").strip()
             if not stripped.startswith("uses:"):
                 continue
@@ -124,12 +129,21 @@ class CICDScanner:
             stripped = line.strip().lstrip("- ").strip()
             if not stripped.startswith("run:"):
                 continue
+            indent = len(line) - len(line.lstrip())
             block_lines = [line]
             for next_line in lines[index:]:
-                if next_line.strip() and not next_line.startswith((" ", "\t")):
+                if not next_line.strip():
+                    continue
+                next_indent = len(next_line) - len(next_line.lstrip())
+                if next_indent <= indent:
                     break
                 block_lines.append(next_line)
-            if SECRET_IN_RUN_RE.search("\n".join(block_lines)):
+            active_lines = [
+                block_line
+                for block_line in block_lines
+                if not block_line.strip().startswith("#")
+            ]
+            if SECRET_IN_RUN_RE.search("\n".join(active_lines)):
                 findings.append(
                     Vulnerability(
                         rule="cicd-github-secret-in-run",
@@ -145,6 +159,25 @@ class CICDScanner:
                 )
 
         return findings
+
+    @staticmethod
+    def _run_block_line_indexes(lines: List[str]) -> set:
+        """Índices de líneas que son contenido de bloques run: (scripts shell)."""
+        indexes = set()
+        for index, line in enumerate(lines, start=1):
+            stripped = line.strip().lstrip("- ").strip()
+            if not stripped.startswith("run:"):
+                continue
+            indent = len(line) - len(line.lstrip())
+            for next_index in range(index + 1, len(lines) + 1):
+                next_line = lines[next_index - 1]
+                if not next_line.strip():
+                    continue
+                next_indent = len(next_line) - len(next_line.lstrip())
+                if next_indent <= indent:
+                    break
+                indexes.add(next_index)
+        return indexes
 
     def _scan_gitlab_ci(self, lines: List[str], rel_path: str) -> List[Vulnerability]:
         """Checks de seguridad para un .gitlab-ci.yml."""
@@ -162,6 +195,8 @@ class CICDScanner:
                     break
                 block_lines.append(next_line.strip())
             for block_line in block_lines:
+                if block_line.startswith("#"):
+                    continue
                 match = GITLAB_TOKEN_RE.search(block_line)
                 if match:
                     findings.append(

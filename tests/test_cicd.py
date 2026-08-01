@@ -223,6 +223,77 @@ class TestGitlabCi:
         )
         assert CICDScanner(tmp_path).scan() == []
 
+    def test_script_que_genera_uses_no_genera_hallazgo(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: G\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - run: |\n"
+            "          echo 'uses: evil/action@v1' > template.txt\n"
+            "          uses: not-a-real-line\n"
+        )
+        assert CICDScanner(tmp_path).scan() == []
+
+    def test_secreto_comentado_en_run_no_genera_hallazgo(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: R\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - run: |\n"
+            "          echo \"hi\"\n"
+            "          # echo ${{ secrets.COMMENTED }}\n"
+        )
+        assert CICDScanner(tmp_path).scan() == []
+
+    def test_token_comentado_gitlab_no_genera_hallazgo(self, tmp_path):
+        (tmp_path / ".gitlab-ci.yml").write_text(
+            "build:\n  script:\n    - echo \"ok\"\n"
+            "    # - curl -H \"Job-Token: $CI_JOB_TOKEN\" https://x\n"
+        )
+        assert CICDScanner(tmp_path).scan() == []
+
+    def test_secreto_real_y_commentado_en_mismo_run(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: M\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n      - run: |\n"
+            "          # echo ${{ secrets.COMMENTED }}\n"
+            "          echo ${{ secrets.REAL }}\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        assert len(findings) == 1
+        assert findings[0].rule == "cicd-github-secret-in-run"
+
+    def test_runs_consecutivos_no_contaminan(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: MR\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: echo \"safe\"\n"
+            "      - run: |\n          echo ${{ secrets.ONE }}\n"
+            "      - run: |\n          echo ${{ secrets.TWO }}\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        secrets_in_run = [f for f in findings if f.rule == "cicd-github-secret-in-run"]
+        assert len(secrets_in_run) == 2
+        assert {f.line for f in secrets_in_run} == {8, 10}
+
+    def test_secreto_inline_en_run(self, tmp_path):
+        workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text(
+            "name: I\non: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: echo ${{ secrets.INLINE }}\n"
+            "      - uses: evil/action@v1\n"
+        )
+        findings = CICDScanner(tmp_path).scan()
+        rules = {f.rule for f in findings}
+        assert "cicd-github-secret-in-run" in rules
+        assert "cicd-github-action-not-pinned" in rules
+
 
 class TestHelpers:
     def test_find_pr_target_en_linea_1(self):

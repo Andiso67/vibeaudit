@@ -93,15 +93,20 @@ class TestAuditReport:
             iac_issues=[
                 Vulnerability(rule="ckv", file="main.tf", line=3, severity=Severity.MEDIUM)
             ],
+            cicd_issues=[
+                Vulnerability(rule="cicd-x", file="ci.yml", line=1, severity=Severity.HIGH)
+            ],
             metrics=Metrics(),
         )
         dumped = report.model_dump_json(by_alias=True)
         assert '"iacFiles"' in dumped
         assert '"iacIssues"' in dumped
         assert '"vulnerabilitiesBySeverity"' in dumped
+        assert '"cicdIssues"' in dumped
 
     def test_valores_por_defecto(self):
         report = AuditReport(project=ProjectMetadata(name="demo"), metrics=Metrics())
         assert report.vulnerabilities == []
         assert report.secrets == []
         assert report.iac_issues == []
+        assert report.cicd_issues == []

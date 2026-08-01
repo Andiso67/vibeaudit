@@ -22,7 +22,7 @@ def make_repo(tmp_path):
     return tmp_path
 
 
-def make_reporter(repo_path, extra_issues=None):
+def make_reporter(repo_path, extra_issues=None, cicd_issues=None):
     return AuditReporter(
         project=ProjectMetadata(name="demo", iac_files=["main.tf"]),
         vulnerabilities=[
@@ -36,6 +36,7 @@ def make_reporter(repo_path, extra_issues=None):
         or [
             Vulnerability(rule="ckv", file="main.tf", line=3, severity=Severity.MEDIUM)
         ],
+        cicd_issues=cicd_issues or [],
         repo_path=repo_path,
     )
 
@@ -76,6 +77,28 @@ class TestAuditReporter:
         assert "linesOfCode" in data["metrics"]
         assert "vulnerabilitiesBySeverity" in data["metrics"]
         assert "iacIssues" in data
+
+    def test_cicd_issues_en_json(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = make_reporter(
+            repo,
+            cicd_issues=[
+                Vulnerability(
+                    rule="cicd-github-pr-target-no-permissions",
+                    file=".github/workflows/ci.yml",
+                    line=3,
+                    severity=Severity.HIGH,
+                )
+            ],
+        )
+        data = json.loads(reporter.to_json())
+        assert len(data["cicdIssues"]) == 1
+        assert data["cicdIssues"][0]["rule"] == "cicd-github-pr-target-no-permissions"
+
+    def test_sin_cicd_issues_campo_vacio(self, tmp_path):
+        repo = make_repo(tmp_path)
+        data = json.loads(make_reporter(repo).to_json())
+        assert data["cicdIssues"] == []
 
     def test_save_to_file(self, tmp_path):
         repo = make_repo(tmp_path)

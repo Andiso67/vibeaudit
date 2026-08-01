@@ -62,6 +62,7 @@ class AuditReporter:
         cicd_issues: Optional[List[Vulnerability]] = None,
         repo_path: Optional[Path] = None,
         dependency_vulnerabilities: Optional[List[DependencyVulnerability]] = None,
+        custom_issues: Optional[List[Vulnerability]] = None,
     ):
         self.project = project
         self.vulnerabilities = vulnerabilities or []
@@ -70,6 +71,7 @@ class AuditReporter:
         self.cicd_issues = cicd_issues or []
         self.repo_path = repo_path
         self.dependency_vulnerabilities = dependency_vulnerabilities or []
+        self.custom_issues = custom_issues or []
         self._cached_report: Optional[AuditReport] = None
 
     def _count_lines_of_code(self) -> int:
@@ -131,6 +133,7 @@ class AuditReporter:
             secrets=self.secrets,
             iac_issues=self.iac_issues,
             cicd_issues=self.cicd_issues,
+            custom_issues=self.custom_issues,
             metrics=metrics,
         )
         return self._cached_report
@@ -157,11 +160,13 @@ class AuditReporter:
             total_vulns
             + len(report.iac_issues)
             + len(report.cicd_issues)
+            + len(report.custom_issues)
             + len(report.metrics.dependency_vulnerabilities)
         )
         table.add_row("Vulnerabilidades (SAST)", str(total_vulns))
         table.add_row("Problemas de IaC", str(len(report.iac_issues)))
         table.add_row("Riesgos de CI/CD", str(len(report.cicd_issues)))
+        table.add_row("Reglas custom", str(len(report.custom_issues)))
         table.add_row("Secretos filtrados", str(len(report.secrets)))
         table.add_row(
             "Dependencias con CVEs", str(len(report.metrics.dependency_vulnerabilities))

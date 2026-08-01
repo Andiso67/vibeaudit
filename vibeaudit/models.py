@@ -193,6 +193,11 @@ class AuditReport(BaseModel):
         alias="cicdIssues",
         description="Riesgos de seguridad en pipelines CI/CD (GitHub Actions, GitLab CI)",
     )
+    custom_issues: List[Vulnerability] = Field(
+        default_factory=list,
+        alias="customIssues",
+        description="Hallazgos de reglas custom 'Vibe Coding' (--rules)",
+    )
     metrics: Metrics = Field(..., description="Métricas del repositorio")
 
     model_config = {"populate_by_name": True}

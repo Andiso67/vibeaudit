@@ -27,6 +27,8 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
   Levantan `RuntimeError` si la herramienta no está instalada o falla.
   `CICDScanner` es la excepción: parser propio de `.github/workflows/*.yml` y
   `.gitlab-ci.yml` (sin herramienta externa), `is_installed()` siempre True.
+  `CustomRulesScanner` es semgrep con `--config <dir>` en vez de `auto` y NO
+  filtra por severidad (las reglas custom suelen ser WARNING/INFO).
 - `reporter.py`: `build()` cachea el reporte (el repo temporal se borra antes
   de `save_to_file()`). Usar `by_alias=True` al serializar.
 - `cli.py`: Typer. El `@app.callback()` vacío es OBLIGATORIO: con un solo
@@ -38,6 +40,7 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    tenerlo (`ProjectMetadata`, `Metrics`, `AuditReport`, `DependencyVulnerability`).
 2. **Aliases camelCase**: `iacFiles`, `linesOfCode`, `testFiles`,
    `dependenciesWithCves`, `vulnerabilitiesBySeverity`, `iacIssues`,
+   `cicdIssues`, `customIssues`,
    `repositoryUrl`, `defaultBranch`, `commitHash`, `cveIds`, `cvssScore`,
    `fixedVersion`, `isFixAvailable`, `dependencyType`, `cweIds`,
    `affectedRange`, `epssScore`, `exploitedInWild`.
@@ -60,6 +63,18 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
    `CVSS:3.1/AV:...` (parseado por `_parse_cvss_vector`) o numérico.
    Hay advisories duplicados por CVE entre fuentes (GHSA vs NVD): se deduplican
    en `_dedupe_vulnerabilities` conservando el más severo.
+9. **CICDScanner (parser propio de YAML)**: los bloques `run:` (GitHub) y
+   `script:`/`before_script:`/`after_script:` (GitLab) se aíslan POR
+   INDENTACIÓN (`indent <=` línea clave → fin de bloque). Nunca usar
+   `".git" in root` en walks (matchea `.github`). En el bloque `on:` ignorar
+   líneas comentadas y vacías (un blank cortaba la búsqueda). Limpiar BOM
+   UTF-8 al leer (`lstrip("\ufeff")`). Validar con workflows reales, no solo
+   casos inventados (cada verificación con reales encontró bugs).
+10. **CustomRulesScanner**: semgrep antepone el path del directorio como
+    namespace al `check_id` (con `/` → `.`) → limpiarlo en `_parse_output`
+    para que el rule sea `custom.<id>`. NO filtra por severidad (reglas de
+    estilo son WARNING/INFO). La validación del flag `--rules` debe ir DENTRO
+    del `try` del CLI (si no, traceback en vez de error limpio).
 
 ## Convenciones
 - Docstrings en español en todas las clases/métodos públicos.

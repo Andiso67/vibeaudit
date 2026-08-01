@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítems 1 y 2 completados (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1, 2 y 3 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -102,3 +102,32 @@ amplía módulos 1, 2 y 5.
 - **Validación**: 17 tests nuevos (90 total); E2E con repo de prueba (2
   workflows + GitLab CI) → 4 hallazgos correctos (2 HIGH + 2 MEDIUM) y
   `actions/checkout@v4` correctamente ignorado por ser de confianza.
+- **Verificaciones extra** (3 rondas, el usuario pidió revisar 2 veces más):
+  - Ronda 1: bloque `script:` de GitLab absorbía líneas de otros jobs
+    (ahora por indentación), `"on":` con comillas no se detectaba, y
+    `# permissions:` comentado contaba como válida.
+  - Ronda 2: scripts shell que *generan* texto `uses:` se marcaban como
+    acciones sin pin (`_run_block_line_indexes`), secretos/tokens comentados
+    (`#`) generaban hallazgos, y bloques `run:` consecutivos se duplicaban
+    por comparación incorrecta de indentación.
+  - Ronda 3 (con workflows reales de `actions/starter-workflows` y
+    super-linter): `pull_request_target` en un comentario del bloque `on:`
+    disparaba falso HIGH, líneas vacías dentro de `on:` ocultaban el
+    trigger real, BOM UTF-8 rompía el análisis de la primera línea, y los
+    tokens en `before_script:`/`after_script:` de GitLab no se detectaban.
+
+## Notas de cierre — Ítem 3 (Reglas custom "Vibe Coding") ✅
+
+- **Scanner**: `vibeaudit/scanners/custom.py` — `CustomRulesScanner`, ejecuta
+  semgrep con `--config <rules_dir>` (en vez de `--config auto`). A diferencia
+  de `SemgrepScanner`, conserva TODAS las severidades (las reglas custom de
+  estilo suelen ser WARNING/INFO). Sin `--rules` el flujo no cambia.
+- **Modelo**: campo `customIssues` (List[Vulnerability]) en `AuditReport`,
+  incluido en el resumen Rich (fila "Reglas custom") y en el total.
+- **CLI**: flag `--rules <dir>` opcional; si el directorio no existe o no es
+  dir → `ValueError` limpio (sin traceback). El check_id de semgrep viene
+  prefijado con el namespace del directorio → se limpia a `custom.<id>`.
+- **Ejemplo de bundle**: `no-sql-select-star`, `no-any-ts`, `use-logger`
+  (verificado E2E con repo Python/TS/JS → 3 hallazgos con severidades
+  LOW/MEDIUM en el JSON final).
+- **Validación**: 13 tests nuevos (121 total).

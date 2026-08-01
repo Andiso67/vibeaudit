@@ -11,6 +11,7 @@ from vibeaudit.ingester import RepoIngester
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
+from vibeaudit.scanners.custom import CustomRulesScanner
 from vibeaudit.scanners.deps import DependencyScanner
 from vibeaudit.scanners.gitleaks import GitleaksScanner
 from vibeaudit.scanners.semgrep import SemgrepScanner
@@ -46,14 +47,23 @@ def scan(
         "-o",
         help="Ruta del archivo JSON de salida",
     ),
+    rules: Optional[Path] = typer.Option(
+        None,
+        "--rules",
+        help="Directorio con reglas semgrep YAML custom 'Vibe Coding'",
+    ),
 ) -> None:
     """Audita un repositorio: clona, ejecuta Gitleaks, Semgrep y Checkov."""
-    console.print(
-        f"[bold green]▶ Auditando[/] [cyan]{repo_url}[/] [bold green]→[/] "
-        f"[cyan]{output}[/]"
-    )
-
     try:
+        if rules is not None and not rules.is_dir():
+            raise ValueError(
+                f"El directorio de reglas no existe o no es un directorio: {rules}"
+            )
+
+        console.print(
+            f"[bold green]▶ Auditando[/] [cyan]{repo_url}[/] [bold green]→[/] "
+            f"[cyan]{output}[/]"
+        )
         with Progress(
             SpinnerColumn(),
             TextColumn("{task.description}"),
@@ -86,6 +96,15 @@ def scan(
                     ingester.repo_path
                 ).scan()
 
+                custom_issues = []
+                if rules is not None:
+                    progress.update(
+                        task, description="Ejecutando reglas custom (Vibe Coding)..."
+                    )
+                    custom_issues = CustomRulesScanner(
+                        ingester.repo_path, rules
+                    ).scan()
+
                 progress.update(task, description="Generando reporte...")
                 reporter = AuditReporter(
                     project=project,
@@ -94,6 +113,7 @@ def scan(
                     iac_issues=iac_issues,
                     cicd_issues=cicd_issues,
                     dependency_vulnerabilities=dependency_vulnerabilities,
+                    custom_issues=custom_issues,
                     repo_path=ingester.repo_path,
                 )
                 report = reporter.build()
@@ -106,7 +126,8 @@ def scan(
             f"{len(vulnerabilities)} vulnerabilidades, "
             f"{len(iac_issues)} problemas IaC, "
             f"{len(cicd_issues)} riesgos CI/CD, "
-            f"{len(dependency_vulnerabilities)} deps con CVEs[/])"
+            f"{len(dependency_vulnerabilities)} deps con CVEs, "
+            f"{len(custom_issues)} reglas custom[/])"
         )
         reporter.print_summary()
 

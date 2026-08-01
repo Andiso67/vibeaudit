@@ -96,6 +96,9 @@ class TestAuditReport:
             cicd_issues=[
                 Vulnerability(rule="cicd-x", file="ci.yml", line=1, severity=Severity.HIGH)
             ],
+            custom_issues=[
+                Vulnerability(rule="custom-x", file="app.py", line=2, severity=Severity.MEDIUM)
+            ],
             metrics=Metrics(),
         )
         dumped = report.model_dump_json(by_alias=True)
@@ -103,6 +106,7 @@ class TestAuditReport:
         assert '"iacIssues"' in dumped
         assert '"vulnerabilitiesBySeverity"' in dumped
         assert '"cicdIssues"' in dumped
+        assert '"customIssues"' in dumped
 
     def test_valores_por_defecto(self):
         report = AuditReport(project=ProjectMetadata(name="demo"), metrics=Metrics())
@@ -110,3 +114,4 @@ class TestAuditReport:
         assert report.secrets == []
         assert report.iac_issues == []
         assert report.cicd_issues == []
+        assert report.custom_issues == []

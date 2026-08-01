@@ -100,6 +100,34 @@ class TestAuditReporter:
         data = json.loads(make_reporter(repo).to_json())
         assert data["cicdIssues"] == []
 
+    def test_custom_issues_en_json(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="demo", iac_files=["main.tf"]),
+            vulnerabilities=[],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            custom_issues=[
+                Vulnerability(
+                    rule="custom.no-sql-select-star",
+                    file="app.py",
+                    line=3,
+                    severity=Severity.MEDIUM,
+                )
+            ],
+            repo_path=repo,
+        )
+        data = json.loads(reporter.to_json())
+        assert len(data["customIssues"]) == 1
+        assert data["customIssues"][0]["rule"] == "custom.no-sql-select-star"
+        assert data["customIssues"][0]["severity"] == "MEDIUM"
+
+    def test_sin_custom_issues_campo_vacio(self, tmp_path):
+        repo = make_repo(tmp_path)
+        data = json.loads(make_reporter(repo).to_json())
+        assert data["customIssues"] == []
+
     def test_save_to_file(self, tmp_path):
         repo = make_repo(tmp_path)
         out = tmp_path / "out" / "report.json"

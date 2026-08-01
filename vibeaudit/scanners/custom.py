@@ -53,9 +53,13 @@ class CustomRulesScanner:
                 f"El directorio de reglas no existe o no es un directorio: "
                 f"{self.rules_dir}"
             )
-        if not list(self.rules_dir.glob("*.yml")) + list(
-            self.rules_dir.glob("*.yaml")
-        ):
+        yaml_files = (
+            list(self.rules_dir.glob("*.yml"))
+            + list(self.rules_dir.glob("*.yaml"))
+            + list(self.rules_dir.rglob("*.yml"))
+            + list(self.rules_dir.rglob("*.yaml"))
+        )
+        if not yaml_files:
             console.print(
                 "[bold yellow]Advertencia:[/] el directorio de reglas no tiene "
                 "archivos .yml/.yaml, no se ejecutan reglas custom"
@@ -167,7 +171,9 @@ class CustomRulesScanner:
                 Vulnerability(
                     rule=check_id,
                     file=self._relative_path(finding.get("path", "")),
-                    line=start.get("line", 0),
+                    # semgrep siempre da línea >= 1; proteger el modelo por si
+                    # una regla rara devuelve 0 o sin start
+                    line=start.get("line") or 1,
                     severity=severity,
                     snippet=finding.get("extra", {}).get("lines"),
                 )
@@ -191,4 +197,6 @@ class CustomRulesScanner:
             "WARNING": Severity.MEDIUM,
             "INFO": Severity.LOW,
         }
-        return mapping.get(semgrep_severity.upper(), Severity.INFO)
+        return mapping.get(
+            (semgrep_severity or "").upper(), Severity.INFO
+        )

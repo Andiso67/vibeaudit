@@ -143,6 +143,87 @@ def test_scan_rules_dir_vacio_avisa_y_no_ejecuta(monkeypatch, tmp_path):
     assert called == []
 
 
+def test_scan_rules_solo_en_subdirectorios_ejecuta(monkeypatch, tmp_path):
+    rules_dir = tmp_path / "rules"
+    (rules_dir / "team-a").mkdir(parents=True)
+    (rules_dir / "team-a" / "rule.yml").write_text("rules: []")
+    called = []
+
+    def fake_run(cmd, **kwargs):
+        called.append(cmd)
+        return FakeResult(stdout="{}")
+
+    monkeypatch.setattr("vibeaudit.scanners.custom.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        CustomRulesScanner, "is_installed", staticmethod(lambda: True)
+    )
+    scanner = CustomRulesScanner(repo_path=tmp_path, rules_dir=rules_dir)
+    assert scanner.scan() == []
+    assert len(called) == 1
+
+
+def test_parse_output_sin_severidad_no_crash(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {
+                    "check_id": "x",
+                    "path": "a.py",
+                    "start": {"line": 1},
+                    "extra": {"lines": "y"},
+                }
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out, str(tmp_path))
+    assert len(findings) == 1
+    assert findings[0].severity == Severity.INFO
+
+
+def test_parse_output_linea_cero_o_ausente_no_crash(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {
+                    "check_id": "x",
+                    "path": "a.py",
+                    "start": {"line": 0},
+                    "extra": {},
+                },
+                {
+                    "check_id": "y",
+                    "path": "b.py",
+                    "extra": {},
+                },
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out, str(tmp_path))
+    assert len(findings) == 2
+    assert findings[0].line == 1
+    assert findings[1].line == 1
+
+
+def test_parse_output_check_id_sin_namespace_se_mantiene(tmp_path):
+    out = json.dumps(
+        {
+            "results": [
+                {
+                    "check_id": "otra.regla.rara",
+                    "path": "a.py",
+                    "start": {"line": 2},
+                    "extra": {},
+                }
+            ],
+            "errors": [],
+        }
+    )
+    findings = make_scanner(tmp_path)._parse_output(out, str(tmp_path))
+    assert findings[0].rule == "otra.regla.rara"
+
+
 def test_parse_output_json_invalido_vacia_lista(tmp_path):
     assert make_scanner(tmp_path)._parse_output("no es json") == []
 

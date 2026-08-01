@@ -59,6 +59,7 @@ class AuditReporter:
         vulnerabilities: Optional[List[Vulnerability]] = None,
         secrets: Optional[List[Secret]] = None,
         iac_issues: Optional[List[Vulnerability]] = None,
+        cicd_issues: Optional[List[Vulnerability]] = None,
         repo_path: Optional[Path] = None,
         dependency_vulnerabilities: Optional[List[DependencyVulnerability]] = None,
     ):
@@ -66,6 +67,7 @@ class AuditReporter:
         self.vulnerabilities = vulnerabilities or []
         self.secrets = secrets or []
         self.iac_issues = iac_issues or []
+        self.cicd_issues = cicd_issues or []
         self.repo_path = repo_path
         self.dependency_vulnerabilities = dependency_vulnerabilities or []
         self._cached_report: Optional[AuditReport] = None
@@ -128,6 +130,7 @@ class AuditReporter:
             vulnerabilities=self.vulnerabilities,
             secrets=self.secrets,
             iac_issues=self.iac_issues,
+            cicd_issues=self.cicd_issues,
             metrics=metrics,
         )
         return self._cached_report
@@ -153,10 +156,12 @@ class AuditReporter:
         total_issues = (
             total_vulns
             + len(report.iac_issues)
+            + len(report.cicd_issues)
             + len(report.metrics.dependency_vulnerabilities)
         )
         table.add_row("Vulnerabilidades (SAST)", str(total_vulns))
         table.add_row("Problemas de IaC", str(len(report.iac_issues)))
+        table.add_row("Riesgos de CI/CD", str(len(report.cicd_issues)))
         table.add_row("Secretos filtrados", str(len(report.secrets)))
         table.add_row(
             "Dependencias con CVEs", str(len(report.metrics.dependency_vulnerabilities))

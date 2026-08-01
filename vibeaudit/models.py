@@ -188,6 +188,11 @@ class AuditReport(BaseModel):
         alias="iacIssues",
         description="Problemas de IaC (ej. Checkov)",
     )
+    cicd_issues: List[Vulnerability] = Field(
+        default_factory=list,
+        alias="cicdIssues",
+        description="Riesgos de seguridad en pipelines CI/CD (GitHub Actions, GitLab CI)",
+    )
     metrics: Metrics = Field(..., description="Métricas del repositorio")
 
     model_config = {"populate_by_name": True}

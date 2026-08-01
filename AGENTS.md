@@ -25,6 +25,8 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
 - `scanners/`: cada scanner tiene `is_installed()` estático, `scan()` y
   `_parse_output()`. Nunca fallan por "0 hallazgos" (exit codes 0/1 válidos).
   Levantan `RuntimeError` si la herramienta no está instalada o falla.
+  `CICDScanner` es la excepción: parser propio de `.github/workflows/*.yml` y
+  `.gitlab-ci.yml` (sin herramienta externa), `is_installed()` siempre True.
 - `reporter.py`: `build()` cachea el reporte (el repo temporal se borra antes
   de `save_to_file()`). Usar `by_alias=True` al serializar.
 - `cli.py`: Typer. El `@app.callback()` vacío es OBLIGATORIO: con un solo

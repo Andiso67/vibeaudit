@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítem 1 completado (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1 y 2 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -80,3 +80,25 @@ amplía módulos 1, 2 y 5.
 - **Validación**: 24 tests nuevos (72 total); E2E con repo npm (lodash 4.17.20 +
   axios 0.21.1) → 27 vulns únicas con CVSS y fixes correctos (ej. axios → 0.31.1).
 - **Pendiente**: KEV/EPSS cuando exista la fuente (campos ya listos).
+
+## Notas de cierre — Ítem 2 (Análisis de CI/CD) ✅
+
+- **Scanner**: `vibeaudit/scanners/cicd.py` — `CICDScanner`, parser propio sin
+  herramienta externa (`is_installed()` siempre True). Detecta
+  `.github/workflows/*.{yml,yaml}` y `.gitlab-ci.yml`.
+- **Checks GitHub Actions**:
+  - `cicd-github-pr-target-no-permissions` (HIGH): `pull_request_target` sin
+    bloque `permissions:` en el workflow.
+  - `cicd-github-action-not-pinned` (MEDIUM): acciones de terceros (fuera de
+    `actions|github|docker|azure|aws-actions`) referenciadas por tag/rama en vez
+    de SHA de 40 hex.
+  - `cicd-github-secret-in-run` (HIGH): `${{ secrets.* }}` interpolado en
+    bloques `run:` (multilínea incluido).
+- **Checks GitLab CI**: `cicd-gitlab-token-in-script` (MEDIUM): tokens
+  (`$CI_JOB_TOKEN`, `$CI_REGISTRY_PASSWORD`, `$CI_DEPLOY_PASSWORD`) usados en
+  scripts (posible fuga en logs).
+- **Modelo**: campo `cicdIssues` (List[Vulnerability]) en `AuditReport`;
+  incluido en el resumen Rich y el total de hallazgos.
+- **Validación**: 17 tests nuevos (90 total); E2E con repo de prueba (2
+  workflows + GitLab CI) → 4 hallazgos correctos (2 HIGH + 2 MEDIUM) y
+  `actions/checkout@v4` correctamente ignorado por ser de confianza.

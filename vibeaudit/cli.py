@@ -10,6 +10,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from vibeaudit.ingester import RepoIngester
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
+from vibeaudit.scanners.cicd import CICDScanner
 from vibeaudit.scanners.deps import DependencyScanner
 from vibeaudit.scanners.gitleaks import GitleaksScanner
 from vibeaudit.scanners.semgrep import SemgrepScanner
@@ -77,6 +78,9 @@ def scan(
                 progress.update(task, description="Ejecutando Checkov...")
                 iac_issues = CheckovScanner(ingester.repo_path).scan()
 
+                progress.update(task, description="Analizando CI/CD...")
+                cicd_issues = CICDScanner(ingester.repo_path).scan()
+
                 progress.update(task, description="Analizando dependencias...")
                 dependency_vulnerabilities = DependencyScanner(
                     ingester.repo_path
@@ -88,6 +92,7 @@ def scan(
                     vulnerabilities=vulnerabilities,
                     secrets=secrets,
                     iac_issues=iac_issues,
+                    cicd_issues=cicd_issues,
                     dependency_vulnerabilities=dependency_vulnerabilities,
                     repo_path=ingester.repo_path,
                 )
@@ -100,6 +105,7 @@ def scan(
             f"([bold]{len(secrets)} secretos, "
             f"{len(vulnerabilities)} vulnerabilidades, "
             f"{len(iac_issues)} problemas IaC, "
+            f"{len(cicd_issues)} riesgos CI/CD, "
             f"{len(dependency_vulnerabilities)} deps con CVEs[/])"
         )
         reporter.print_summary()

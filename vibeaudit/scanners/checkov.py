@@ -181,37 +181,70 @@ class CheckovScanner:
         for check_type in check_types:
             if not isinstance(check_type, dict):
                 continue
-            results = check_type.get("results", {})
-            failed_checks.extend(results.get("failed_checks", []))
+            results = check_type.get("results") or {}
+            if not isinstance(results, dict):
+                continue
+            failed_checks.extend(results.get("failed_checks") or [])
 
         vulnerabilities: List[Vulnerability] = []
         for check in failed_checks:
-            file_path = check.get("repo_file_path") or check.get("file", "")
-            line_range = check.get("file_line_range") or [0, 0]
+            # Hallazgos malformados se ignoran: un crash aquí rompería el
+            # reporte completo, no solo este hallazgo
+            if not isinstance(check, dict):
+                continue
+            file_path = self._relative_path(
+                check.get("repo_file_path") or check.get("file") or ""
+            )
+            if not file_path:
+                continue
+            line_range = check.get("file_line_range") or []
+            line = line_range[0] if isinstance(line_range, list) and line_range else 1
+            check_name = check.get("check_name")
             vulnerabilities.append(
                 Vulnerability(
-                    rule=check.get("check_id", "unknown-check"),
-                    file=self._relative_path(file_path),
-                    line=line_range[0] if line_range else 0,
+                    rule=check.get("check_id") or "unknown-check",
+                    file=file_path,
+                    # checkov siempre da línea >= 1; proteger el modelo por si
+                    # un hallazgo raro devuelve rango vacío o línea 0
+                    line=line,
                     severity=self._map_severity(check.get("severity")),
-                    snippet=check.get("check_name"),
+                    snippet=(
+                        check_name
+                        if isinstance(check_name, str)
+                        else (str(check_name) if check_name else None)
+                    ),
                 )
             )
         return vulnerabilities
 
     def _relative_path(self, file_path: str) -> str:
-        """Convierte paths absolutos del repo en paths relativos."""
+        """Convierte paths absolutos del repo en paths relativos.
+
+        Soporta el caso de macOS donde checkov devuelve el path resuelto
+        (p. ej. /private/var/...) y repo_path aún tiene el symlink (p. ej.
+        /var/...): se reintenta con ambos paths resueltos.
+        """
         if not self.repo_path or not file_path:
             return file_path
         try:
             return str(Path(file_path).relative_to(self.repo_path))
+        except ValueError:
+            pass
+        try:
+            return str(
+                Path(file_path).resolve().relative_to(self.repo_path.resolve())
+            )
         except ValueError:
             return file_path
 
     @staticmethod
     def _map_severity(checkov_severity: Optional[str]) -> Severity:
         """Mapea la severidad de checkov (CRITICAL/HIGH/MEDIUM/LOW) al enum Severity."""
+        if checkov_severity is None:
+            return Severity.HIGH
+        if not isinstance(checkov_severity, str):
+            return Severity.HIGH
         try:
-            return Severity(checkov_severity.upper()) if checkov_severity else Severity.HIGH
+            return Severity(checkov_severity.upper())
         except ValueError:
             return Severity.HIGH

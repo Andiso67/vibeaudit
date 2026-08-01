@@ -1,5 +1,6 @@
 """Interfaz de línea de comandos para vibeaudit."""
 
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,14 @@ app = typer.Typer(
 console = Console()
 
 
+class OutputFormat(str, Enum):
+    """Formatos de salida soportados por el CLI."""
+
+    JSON = "json"
+    HTML = "html"
+    MD = "md"
+
+
 @app.callback()
 def _callback() -> None:
     """Auditoría de seguridad para repositorios Git (secretos, SAST e IaC)."""
@@ -41,16 +50,23 @@ def scan(
     repo_url: str = typer.Option(
         ..., "--repo-url", "-u", help="URL del repositorio Git a auditar"
     ),
-    output: Path = typer.Option(
-        Path("audit-report.json"),
+    output: Optional[Path] = typer.Option(
+        None,
         "--output",
         "-o",
-        help="Ruta del archivo JSON de salida",
+        help="Ruta del archivo de salida (default: audit-report.<formato>)",
     ),
     rules: Optional[Path] = typer.Option(
         None,
         "--rules",
         help="Directorio con reglas semgrep YAML custom 'Vibe Coding'",
+    ),
+    output_format: OutputFormat = typer.Option(
+        OutputFormat.JSON,
+        "--format",
+        "-f",
+        help="Formato de salida: json, html o md",
+        show_default="json",
     ),
 ) -> None:
     """Audita un repositorio: clona, ejecuta Gitleaks, Semgrep y Checkov."""
@@ -59,6 +75,9 @@ def scan(
             raise ValueError(
                 f"El directorio de reglas no existe o no es un directorio: {rules}"
             )
+
+        if output is None:
+            output = Path(f"audit-report.{output_format.value}")
 
         console.print(
             f"[bold green]▶ Auditando[/] [cyan]{repo_url}[/] [bold green]→[/] "
@@ -119,7 +138,12 @@ def scan(
                 report = reporter.build()
 
         # Fuera del with: el directorio temporal ya fue limpiado
-        reporter.save_to_file(output)
+        if output_format == OutputFormat.JSON:
+            reporter.save_to_file(output)
+        elif output_format == OutputFormat.MD:
+            reporter.save_markdown(output)
+        else:
+            reporter.save_html(output)
         console.print(
             f"[bold green]✔ Reporte guardado en[/] [cyan]{output}[/] "
             f"([bold]{len(secrets)} secretos, "

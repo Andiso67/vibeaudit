@@ -61,7 +61,12 @@ Ejemplo:
 | Opción | Descripción |
 |---|---|
 | `--repo-url`, `-u` | URL del repositorio Git a auditar (obligatoria) |
-| `--output`, `-o` | Ruta del archivo JSON de salida (default: `audit-report.json`) |
+| `--output`, `-o` | Ruta del archivo de salida (default: `audit-report.<formato>`) |
+| `--format`, `-f` | Formato de salida: `json` (default), `html` o `md` |
+| `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |
+
+El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
+directamente en el navegador. El Markdown es legible en cualquier visor/CI.
 
 ## Estructura del JSON maestro
 

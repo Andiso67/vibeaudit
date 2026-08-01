@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítems 1, 2 y 3 completados (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1, 2, 3 y 4 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -131,3 +131,20 @@ amplía módulos 1, 2 y 5.
   (verificado E2E con repo Python/TS/JS → 3 hallazgos con severidades
   LOW/MEDIUM en el JSON final).
 - **Validación**: 13 tests nuevos (121 total).
+
+## Notas de cierre — Ítem 4 (Reporte HTML/Markdown) ✅
+
+- **Reporter**: `AuditReporter.save_markdown()` y `AuditReporter.save_html()` usan
+  la misma data del `AuditReport` (sin re-escanear). HTML autocontenido: CSS
+  inline, sin JS externo, badges de severidad con colores y escape de HTML
+  (`html.escape`) para reglas/snippets peligrosos.
+- **Markdown**: secciones por tipo (SAST, secretos, IaC, CI/CD, custom, deps),
+  resumen en tabla, metadatos (repo/rama/commit) y métricas. "No se encontraron
+  hallazgos." en secciones vacías.
+- **CLI**: flag `--format json|html|md` (default json, validado por typer/click
+  con `OutputFormat` enum — `Literal` NO es soportado por typer 0.9, da
+  "Type not yet supported"). `--output` ahora opcional: default
+  `audit-report.<formato>`.
+- **Validación**: 6 tests nuevos (156 total). E2E con `--format html|md|json`
+  sobre repo con secretos/SAST/IaC → los 3 archivos generados y verificados
+  (HTML abrible en navegador, Markdown con `aws-access-token — CRITICAL`).

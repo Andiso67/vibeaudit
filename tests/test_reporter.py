@@ -4,6 +4,7 @@ import json
 
 from vibeaudit.models import (
     AuditReport,
+    DependencyVulnerability,
     Metrics,
     ProjectMetadata,
     Secret,
@@ -140,3 +141,133 @@ class TestAuditReporter:
         report = make_reporter(None).build()
         assert report.metrics.lines_of_code == 0
         assert report.metrics.test_files == 0
+
+
+def make_reporter_con_deps(repo_path):
+    """Reporter con vulnerabilidades de dependencias para reportes legibles."""
+    return AuditReporter(
+        project=ProjectMetadata(
+            name="demo",
+            repository_url="https://github.com/demo/demo",
+            default_branch="main",
+            commit_hash="a" * 40,
+        ),
+        vulnerabilities=[
+            Vulnerability(
+                rule="python.lang.security.eval",
+                file="app.py",
+                line=42,
+                severity=Severity.HIGH,
+                snippet="eval(x)",
+            )
+        ],
+        secrets=[Secret(type="aws", file="c.py", line=2, severity=Severity.CRITICAL)],
+        iac_issues=[],
+        cicd_issues=[],
+        dependency_vulnerabilities=[
+            DependencyVulnerability(
+                name="axios",
+                ecosystem="npm",
+                version="0.21.1",
+                direct=True,
+                severity=Severity.CRITICAL,
+                cvss_score=9.8,
+                fixed_version="0.31.1",
+                cve_ids=["CVE-2021-3749"],
+                summary="Prototype pollution",
+            )
+        ],
+        repo_path=repo_path,
+    )
+
+
+class TestReportesLegibles:
+    def test_save_markdown_incluye_secciones(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "report.md"
+        make_reporter_con_deps(repo).save_markdown(out)
+        content = out.read_text()
+
+        assert "# Auditoría de demo" in content
+        assert "**Repositorio**: https://github.com/demo/demo" in content
+        assert "## Vulnerabilidades (SAST)" in content
+        assert "`python.lang.security.eval` — **HIGH** — app.py:42" in content
+        assert "eval(x)" in content
+        assert "## Dependencias con CVEs" in content
+        assert "axios@0.21.1 (npm) — **CRITICAL**" in content
+        assert "corregida en 0.31.1" in content
+        assert "CVE-2021-3749" in content
+        assert "## Métricas" in content
+
+    def test_save_markdown_sin_hallazgos(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "report.md"
+        AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            repo_path=repo,
+        ).save_markdown(out)
+        content = out.read_text()
+
+        assert "No se encontraron hallazgos." in content
+        assert "| **Total** | **0** |" in content
+
+    def test_save_html_incluye_tablas(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "report.html"
+        make_reporter_con_deps(repo).save_html(out)
+        content = out.read_text()
+
+        assert "<!DOCTYPE html>" in content
+        assert "<title>Auditoría de demo</title>" in content
+        assert "python.lang.security.eval" in content
+        assert "CVE-2021-3749" in content
+        assert "corregida en <code>0.31.1</code>" in content
+        assert "app.py:42" in content
+        assert '<span class="badge" style="background: #ea580c;">HIGH</span>' in content
+
+    def test_save_html_sin_hallazgos(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "report.html"
+        AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            repo_path=repo,
+        ).save_html(out)
+        content = out.read_text()
+
+        assert "<!DOCTYPE html>" in content
+        assert content.count("No se encontraron hallazgos.") >= 6
+
+    def test_save_html_escapa_codigo_peligroso(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="x"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule='"><script>alert(1)</script>',
+                    file="app.py",
+                    line=1,
+                    severity=Severity.HIGH,
+                    snippet="<script>alert('x')</script>",
+                )
+            ],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            repo_path=repo,
+        )
+        out = tmp_path / "report.html"
+        reporter.save_html(out)
+        content = out.read_text()
+
+        assert "<script>alert(1)</script>" not in content
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in content
+
+    def test_save_markdown_y_html_crean_directorios_padre(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = make_reporter(repo)
+        md = tmp_path / "out" / "report.md"
+        html_file = tmp_path / "out" / "report.html"
+        reporter.save_markdown(md)
+        reporter.save_html(html_file)
+        assert md.exists()
+        assert html_file.exists()

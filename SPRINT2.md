@@ -159,3 +159,17 @@ amplía módulos 1, 2 y 5.
     sin metadatos, severidades sin contador. E2E real con deps OSV → 27 badges
     y fixes correctos en HTML/MD; `--rules` + `--format html` → 3 hallazgos
     custom en el HTML. 157 tests en verde.
+- **Verificación extra 2** (segunda pasada de robustez, `2af9f9e`):
+  - Bug encontrado: regla con backticks (`rule\`with\`ticks`) — el escape con
+    backslash NO es válido en code spans de CommonMark (`<code>r\</code>x`).
+    Fix: `_md_code()` usa delimitador de code span dinámico (más backticks que
+    la racha máxima del texto, como `_md_fence`).
+  - Mejora defensiva: blank line entre la cabecera `###` y el fence del snippet
+    (compatibilidad con renderers estrictos de Markdown).
+  - Verificado con renderer real (python-markdown con `tables` + `fenced_code`,
+    comportamiento GFM): tablas del resumen OK, snippets como `<pre><code>`
+    (9 code blocks en el E2E), regla con backticks como `<code>r`x</code>`.
+  - Verificado sin fallos: CRLF en snippets (se preserva `\r\n` intacto, no es
+    bug), no-ASCII, `-o` apuntando a un directorio existente (error limpio
+    "Is a directory" + exit 1), snippets de 4+ backticks (fence dinámico los
+    absorbe). 159 tests en verde.

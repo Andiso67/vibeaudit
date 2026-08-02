@@ -141,6 +141,33 @@ def test_scan_con_path_genera_reporte(monkeypatch, tmp_path):
     assert reporte["project"]["name"] == "proyecto"
 
 
+def test_scan_con_dashboard_genera_html_extra(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+
+    monkeypatch.setattr("vibeaudit.cli.GitleaksScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.SemgrepScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CICDScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.DependencyScanner", FakeScanner)
+
+    salida = tmp_path / "reporte.json"
+    result = runner.invoke(
+        app,
+        ["scan", "--path", str(proyecto), "--output", str(salida), "--dashboard"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(salida.read_text())["project"]["name"] == "proyecto"
+    dashboard = tmp_path / "reporte-dashboard.html"
+    assert dashboard.exists()
+    content = dashboard.read_text()
+    assert "<title>Dashboard — proyecto</title>" in content
+    assert 'type="application/json"' in content
+    assert "Dashboard guardado en" in result.output
+
+
 class FakeRepoIngester:
     """Ingester falso para aislar la validación de flags."""
 

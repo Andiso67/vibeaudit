@@ -1,6 +1,6 @@
 # Sprint 2 — Cierre del ciclo de auditoría
 
-> **ESTADO: EN CURSO** — Ítems 1, 2, 3, 4, 5 y 6 completados (ver notas de cierre al final).
+> **ESTADO: EN CURSO** — Ítems 1, 2, 3, 4, 5, 6 y 7 completados (ver notas de cierre al final).
 
 ## Objetivo del Sprint
 
@@ -42,12 +42,12 @@ amplía módulos 1, 2 y 5.
 
 ## Definition of Done
 
-- [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
-- [ ] `dependenciesWithCves` poblado con datos reales verificados E2E
-- [ ] Scanners: exit codes y ausencia de datos manejados sin crash
+- [x] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
+- [x] `dependenciesWithCves` poblado con datos reales verificados E2E
+- [x] Scanners: exit codes y ausencia de datos manejados sin crash
 - [x] CLI: flags nuevos con validación (mutua exclusión `--repo-url`/`--path`)
-- [ ] Reportes HTML/MD/dashboard generados y abiertos localmente
-- [ ] README + SPRINT2.md actualizados; suite completa en verde
+- [x] Reportes HTML/MD/dashboard generados y abiertos localmente
+- [x] README + SPRINT2.md actualizados; suite completa en verde
 - [ ] Imagen Docker reconstruida con los cambios
 
 ## Criterios de Aceptación
@@ -247,3 +247,50 @@ amplía módulos 1, 2 y 5.
     `http://*****@...`), `--branch feature --depth 1` remoto → rama/commit/LOC
     correctos (3 líneas: a.py v1+v2 + b.py v3). Repo 404 → error limpio
     saneado + exit 1. 184 tests en verde.
+
+## Notas de cierre — Ítem 7 (Dashboard básico) ✅
+
+- **Reporter**: `AuditReporter.save_dashboard()` — HTML autocontenido que
+  embebe el JSON maestro (el mismo `to_json()` del reporte) en un
+  `<script id="audit-data" type="application/json">`. Render con JavaScript
+  vanilla (sin servidor, sin JS/CSS externo): funciona abriendo el archivo con
+  `file://`.
+- **Seguridad del embebido**: el JSON se escapa de las secuencias que romperían
+  el bloque de datos — `</` → `<\/` y `<!--` → `<\u0021--` (ambas válidas en
+  JSON, `JSON.parse` las resuelve). El render usa `textContent` (nunca
+  `innerHTML`), así que reglas/snippets con HTML peligroso se muestran como
+  texto plano.
+- **Contenido**: tarjetas de resumen por tipo (SAST, secretos, IaC, CI/CD,
+  custom, deps) + total, barras por severidad (colores por nivel CRITICAL→INFO),
+  métricas (LOC, test files, deps con CVEs) y 6 tablas con detalle (snippet en
+  `<pre>` para hallazgos, fix/CVEs/summary para deps). Campo de búsqueda que
+  filtra filas y oculta secciones vacías.
+- **CLI**: flag `--dashboard` (independiente de `--format`): además del reporte
+  genera `<output>-dashboard.html` (ej. `audit-report.json` →
+  `audit-report-dashboard.html`) e imprime "✔ Dashboard guardado en...".
+- **Validación**: 5 tests nuevos (189 total): JSON embebido parseable y con
+  datos reales (CVE, regla), dashboard vacío, escape de `</script>` y `<!--`
+  dentro del JSON (el dato se conserva íntegro tras parsearlo), creación de
+  directorios padre, y test CLI del flag `--dashboard`.
+- **E2E real**: `scan --path /tmp/e2e-dashboard --format html --dashboard` →
+  reporte HTML + dashboard generados; dashboard abierto en navegador con 8
+  hallazgos IaC (CKV_AWS_20 HIGH), JSON embebido verificado (1 solo bloque de
+  datos, sin `</script>` crudo dentro).
+- **Verificación extra** (pasada de robustez tras el E2E):
+  - Embebido: round-trip exacto `JSON parseado == to_json()` con payloads
+    hostiles (`` </script>``, `<!--`, combinados, backslash literal, escapes
+    unicode, emoji, 200 concatenaciones, bytes nulos); solo 2 bloques
+    `<script>`; sin `innerHTML`/`eval`/`document.write`/recursos externos.
+  - Render: el IIFE real ejecutado con DOM mock en node (dashboard con datos
+    reales de awslabs) — tarjetas, barras de severidad, 6 tablas con 963 filas
+    y métricas correctas; sintaxis JS válida (`node --check`).
+  - CLI real: `--dashboard` solo, con `-f md`, con `-f html -o` sin extensión
+    (nombres `<output>-dashboard.html` correctos), output=directorio → error
+    limpio + exit 1, flag visible en `--help`.
+  - E2E real con repo grande: `--path /tmp/awslabs-cfn` (7.5M, 316 archivos
+    IaC) → 963 IaC + 8 secretos + 3 deps con CVEs. Requirió checkov 2.5.20
+    (3.3.8 se cuelga en repos grandes; el pin en el .venv de dev valida el fix
+    pendiente del Dockerfile).
+  - Bug encontrado y corregido: el total de `print_summary` (consola)
+    excluía los secretos (966 vs 974 de HTML/dashboard). Fix: `len(report.secrets)`
+    en el total + test nuevo. 190 tests en verde.

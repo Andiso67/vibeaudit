@@ -74,10 +74,15 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--depth` | Profundidad del clone (default: `1`) |
 | `--output`, `-o` | Ruta del archivo de salida (default: `audit-report.<formato>`) |
 | `--format`, `-f` | Formato de salida: `json` (default), `html` o `md` |
+| `--dashboard` | Genera además un dashboard HTML interactivo junto al reporte (`<output>-dashboard.html`) |
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
+El dashboard (`--dashboard`) es HTML autocontenido que embebe el JSON maestro
+en un `<script type="application/json">` y lo renderiza con JavaScript vanilla
+(tarjetas de resumen, barras por severidad, tablas de hallazgos con filtro),
+funciona abriendo el archivo con `file://` (sin servidor).
 
 ## Estructura del JSON maestro
 

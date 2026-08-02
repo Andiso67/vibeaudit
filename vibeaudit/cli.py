@@ -83,6 +83,11 @@ def scan(
         help="Formato de salida: json, html o md",
         show_default="json",
     ),
+    dashboard: bool = typer.Option(
+        False,
+        "--dashboard",
+        help="Genera además un dashboard HTML interactivo junto al reporte",
+    ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
     try:
@@ -182,6 +187,12 @@ def scan(
             reporter.save_markdown(output)
         else:
             reporter.save_html(output)
+        if dashboard:
+            dashboard_path = output.with_name(f"{output.stem}-dashboard.html")
+            reporter.save_dashboard(dashboard_path)
+            console.print(
+                f"[bold green]✔ Dashboard guardado en[/] [cyan]{dashboard_path}[/]"
+            )
         console.print(
             f"[bold green]✔ Reporte guardado en[/] [cyan]{output}[/] "
             f"([bold]{len(secrets)} secretos, "

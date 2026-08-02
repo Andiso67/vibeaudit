@@ -469,6 +469,230 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(document, encoding="utf-8")
 
+    def save_dashboard(self, path: Path) -> None:
+        """Guarda un dashboard HTML interactivo (autocontenido, sin JS externo).
+
+        El JSON maestro se embebe en un <script type="application/json"> para que
+        funcione abriendo el archivo con file:// (sin servidor). El render usa
+        textContent (sin innerHTML) y se escapan las secuencias que romperían
+        el bloque de datos (</script> y <!--).
+        """
+        report = self.build()
+        raw_json = self.to_json()
+        embedded = raw_json.replace("</", "<\\/").replace("<!--", "<\\u0021--")
+
+        meta = []
+        if report.project.repository_url:
+            meta.append(report.project.repository_url)
+        if report.project.default_branch:
+            meta.append(f"rama {report.project.default_branch}")
+        if report.project.commit_hash:
+            meta.append(report.project.commit_hash[:12])
+
+        document = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Dashboard — {self._html_escaped(report.project.name)}</title>
+<style>
+body {{ font-family: -apple-system, 'Segoe UI', sans-serif; margin: 2rem auto;
+       max-width: 72rem; padding: 0 1rem; color: #1f2937; }}
+h1 {{ border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }}
+#meta {{ color: #6b7280; margin: 0.25rem 0 1rem; }}
+.cards {{ display: flex; flex-wrap: wrap; gap: 1rem; }}
+.card {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem 1rem;
+        min-width: 9rem; background: #f9fafb; }}
+.card .label {{ color: #6b7280; font-size: 0.85rem; }}
+.card .num {{ font-size: 2rem; font-weight: 700; }}
+.card.total {{ border-color: #1f2937; background: #1f2937; color: #fff; }}
+.card.total .label {{ color: #9ca3af; }}
+section {{ margin-top: 2rem; }}
+table {{ border-collapse: collapse; width: 100%; }}
+th, td {{ border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left;
+         vertical-align: top; }}
+th {{ background: #f9fafb; }}
+pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
+      border-radius: 4px; margin: 0; }}
+.badge {{ color: #fff; padding: 0.1rem 0.5rem; border-radius: 9999px;
+         font-size: 0.8rem; font-weight: 600; }}
+.bar-row {{ display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0; }}
+.bar-label {{ width: 6rem; font-weight: 600; }}
+.bar-track {{ flex: 1; background: #f3f4f6; height: 1.25rem; border-radius: 6px; }}
+.bar-fill {{ height: 100%; border-radius: 6px; }}
+.bar-count {{ width: 3rem; text-align: right; color: #6b7280; }}
+#filter {{ width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb;
+          border-radius: 6px; margin-bottom: 1rem; font-size: 1rem; }}
+</style>
+</head>
+<body>
+<h1>Dashboard — {self._html_escaped(report.project.name)}</h1>
+<p id="meta">{self._html_escaped(" · ".join(meta))}</p>
+<input id="filter" type="search" placeholder="Filtrar hallazgos (regla, archivo, CVE...)" autocomplete="off">
+<div id="cards" class="cards"></div>
+<h2>Severidades</h2>
+<div id="severity-bars"></div>
+<h2>Métricas</h2>
+<ul id="metrics"></ul>
+<div id="sections"></div>
+<script id="audit-data" type="application/json">{embedded}</script>
+<script>
+(function () {{
+  var COLORS = {{CRITICAL:'#dc2626', HIGH:'#ea580c', MEDIUM:'#d97706', LOW:'#16a34a', INFO:'#2563eb'}};
+  var ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+  var data = JSON.parse(document.getElementById('audit-data').textContent);
+
+  function el(tag, cls, text) {{
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }}
+  function badge(sev) {{
+    var b = el('span', 'badge', sev);
+    b.style.background = COLORS[sev] || '#6b7280';
+    return b;
+  }}
+
+  var totals = [
+    ['SAST', data.vulnerabilities.length],
+    ['Secretos', data.secrets.length],
+    ['IaC', data.iacIssues.length],
+    ['CI/CD', data.cicdIssues.length],
+    ['Reglas custom', data.customIssues.length],
+    ['Deps con CVEs', data.metrics.dependencyVulnerabilities.length]
+  ];
+  var grand = totals.reduce(function (s, t) {{ return s + t[1]; }}, 0);
+  var cards = document.getElementById('cards');
+  totals.forEach(function (t) {{
+    var c = el('div', 'card');
+    c.appendChild(el('div', 'label', t[0]));
+    c.appendChild(el('div', 'num', String(t[1])));
+    cards.appendChild(c);
+  }});
+  var g = el('div', 'card total');
+  g.appendChild(el('div', 'label', 'Total hallazgos'));
+  g.appendChild(el('div', 'num', String(grand)));
+  cards.appendChild(g);
+
+  var counts = {{}};
+  ORDER.forEach(function (s) {{ counts[s] = 0; }});
+  function countSev(items) {{
+    (items || []).forEach(function (it) {{
+      var v = it.severity;
+      if (v && counts[v] !== undefined) counts[v]++;
+    }});
+  }}
+  countSev(data.vulnerabilities);
+  countSev(data.secrets);
+  countSev(data.iacIssues);
+  countSev(data.cicdIssues);
+  countSev(data.customIssues);
+  countSev(data.metrics.dependencyVulnerabilities);
+  var max = Math.max.apply(null, ORDER.map(function (s) {{ return counts[s]; }}).concat([1]));
+  var bars = document.getElementById('severity-bars');
+  ORDER.forEach(function (s) {{
+    var row = el('div', 'bar-row');
+    row.appendChild(el('div', 'bar-label', s));
+    var track = el('div', 'bar-track');
+    var fill = el('div', 'bar-fill');
+    fill.style.width = (counts[s] / max * 100) + '%';
+    fill.style.background = COLORS[s];
+    track.appendChild(fill);
+    row.appendChild(track);
+    row.appendChild(el('div', 'bar-count', String(counts[s])));
+    bars.appendChild(row);
+  }});
+
+  var m = document.getElementById('metrics');
+  m.appendChild(el('li', null, 'Líneas de código: ' + (data.metrics.linesOfCode || 0).toLocaleString()));
+  m.appendChild(el('li', null, 'Archivos de test: ' + (data.metrics.testFiles || 0)));
+  var cveNames = (data.metrics.dependenciesWithCves || []).join(', ');
+  m.appendChild(el('li', null, 'Dependencias con CVEs: ' + (cveNames || 'ninguna')));
+
+  function issueCells(it) {{
+    var rule = it.rule || it.type || '';
+    var tdBadge = el('td');
+    tdBadge.appendChild(badge(it.severity));
+    var tdSnippet = el('td');
+    if (it.snippet) tdSnippet.appendChild(el('pre', null, it.snippet));
+    return [el('td', null, rule), el('td', null, it.file + ':' + it.line), tdBadge, tdSnippet];
+  }}
+  function depCells(d) {{
+    var detail = [];
+    detail.push(d.fixedVersion ? 'corregida en ' + d.fixedVersion : 'sin fix');
+    if (d.cveIds && d.cveIds.length) detail.push(d.cveIds.join(', '));
+    if (d.summary) detail.push(d.summary);
+    var tdBadge = el('td');
+    tdBadge.appendChild(badge(d.severity));
+    return [
+      el('td', null, d.name + '@' + d.version),
+      el('td', null, d.ecosystem),
+      tdBadge,
+      el('td', null, detail.join(' — '))
+    ];
+  }}
+  var sections = [
+    {{ id: 'sec-sast', title: 'Vulnerabilidades (SAST)', items: data.vulnerabilities, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-secrets', title: 'Secretos filtrados', items: data.secrets, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-iac', title: 'Problemas de IaC', items: data.iacIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-cicd', title: 'Riesgos de CI/CD', items: data.cicdIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-custom', title: 'Reglas custom', items: data.customIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-deps', title: 'Dependencias con CVEs', items: data.metrics.dependencyVulnerabilities, cells: depCells, headers: ['Paquete', 'Ecosistema', 'Severidad', 'Detalle'] }}
+  ];
+  var sectionsEl = document.getElementById('sections');
+  sections.forEach(function (s) {{
+    var sec = el('section');
+    sec.id = s.id;
+    sec.appendChild(el('h2', null, s.title));
+    var table = el('table');
+    var thead = el('thead');
+    var headRow = el('tr');
+    s.headers.forEach(function (h) {{ headRow.appendChild(el('th', null, h)); }});
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    var tbody = el('tbody');
+    if (s.items && s.items.length) {{
+      s.items.forEach(function (it) {{
+        var row = el('tr');
+        s.cells(it).forEach(function (c) {{ row.appendChild(c); }});
+        tbody.appendChild(row);
+      }});
+    }} else {{
+      var emptyRow = el('tr');
+      var emptyTd = el('td', null, 'No se encontraron hallazgos.');
+      emptyTd.colSpan = s.headers.length;
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+    }}
+    table.appendChild(tbody);
+    sec.appendChild(table);
+    sectionsEl.appendChild(sec);
+  }});
+
+  var filter = document.getElementById('filter');
+  filter.addEventListener('input', function () {{
+    var q = filter.value.toLowerCase();
+    sections.forEach(function (s) {{
+      var sec = document.getElementById(s.id);
+      var rows = sec.querySelectorAll('tbody tr');
+      var anyVisible = false;
+      rows.forEach(function (r) {{
+        var hit = r.textContent.toLowerCase().indexOf(q) !== -1;
+        r.style.display = hit ? '' : 'none';
+        if (hit) anyVisible = true;
+      }});
+      sec.style.display = anyVisible ? '' : 'none';
+    }});
+  }});
+}})();
+</script>
+</body>
+</html>
+"""
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(document, encoding="utf-8")
+
     def print_summary(self) -> None:
         """Muestra un resumen en consola usando Rich."""
         report = self.build()
@@ -482,6 +706,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
             + len(report.iac_issues)
             + len(report.cicd_issues)
             + len(report.custom_issues)
+            + len(report.secrets)
             + len(report.metrics.dependency_vulnerabilities)
         )
         table.add_row("Vulnerabilidades (SAST)", str(total_vulns))

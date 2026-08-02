@@ -1,6 +1,7 @@
 """Tests de AuditReporter."""
 
 import json
+import re
 
 from vibeaudit.models import (
     AuditReport,
@@ -344,3 +345,107 @@ class TestReportesLegibles:
         content = out.read_text()
 
         assert "\n\n```\nprint('x')\n```" in content
+
+    @staticmethod
+    def _embedded_json(content):
+        """Extrae y parsea el JSON embebido en el dashboard."""
+        marker = 'type="application/json">'
+        start = content.index(marker) + len(marker)
+        end = content.index("</script>", start)
+        return json.loads(content[start:end])
+
+    def test_save_dashboard_incluye_datos_embebidos(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "dashboard.html"
+        make_reporter_con_deps(repo).save_dashboard(out)
+        content = out.read_text()
+
+        assert "<!DOCTYPE html>" in content
+        assert "<title>Dashboard — demo</title>" in content
+        assert 'type="application/json"' in content
+        assert "id=\"filter\"" in content
+        assert "severity-bars" in content
+
+        data = self._embedded_json(content)
+        assert data["project"]["name"] == "demo"
+        assert data["vulnerabilities"][0]["rule"] == "python.lang.security.eval"
+        assert data["metrics"]["dependencyVulnerabilities"][0]["cveIds"] == [
+            "CVE-2021-3749"
+        ]
+
+    def test_save_dashboard_sin_hallazgos(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "dashboard.html"
+        AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            repo_path=repo,
+        ).save_dashboard(out)
+        content = out.read_text()
+
+        assert "<!DOCTYPE html>" in content
+        assert "No se encontraron hallazgos." in content
+        assert self._embedded_json(content)["vulnerabilities"] == []
+
+    def test_save_dashboard_escapa_secuencias_peligrosas(self, tmp_path):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="x"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule='</script><script>alert(1)</script>',
+                    file="app.py",
+                    line=1,
+                    severity=Severity.HIGH,
+                    snippet="<!-- payload -->",
+                )
+            ],
+            secrets=[],
+            iac_issues=[],
+            cicd_issues=[],
+            repo_path=repo,
+        )
+        out = tmp_path / "dashboard.html"
+        reporter.save_dashboard(out)
+        content = out.read_text()
+
+        assert "</script><script>alert(1)" not in content
+        assert "<\\/script>" in content
+        assert "<\\u0021--" in content
+        data = self._embedded_json(content)
+        assert data["vulnerabilities"][0]["snippet"] == "<!-- payload -->"
+
+    def test_save_dashboard_crea_directorios_padre(self, tmp_path):
+        repo = make_repo(tmp_path)
+        out = tmp_path / "out" / "nested" / "dashboard.html"
+        make_reporter(repo).save_dashboard(out)
+        assert out.exists()
+
+    def test_print_summary_total_incluye_secretos(self, tmp_path, capsys):
+        repo = make_repo(tmp_path)
+        reporter = AuditReporter(
+            project=ProjectMetadata(name="demo"),
+            vulnerabilities=[
+                Vulnerability(rule="r1", file="a.py", line=1, severity=Severity.HIGH)
+            ],
+            secrets=[
+                Secret(type="aws", file="b.py", line=2, severity=Severity.CRITICAL),
+                Secret(type="generic", file="c.py", line=3, severity=Severity.HIGH),
+            ],
+            iac_issues=[
+                Vulnerability(rule="ckv1", file="main.tf", line=1, severity=Severity.MEDIUM)
+            ],
+            cicd_issues=[],
+            custom_issues=[],
+            repo_path=repo,
+        )
+        reporter.print_summary()
+        output = capsys.readouterr().out
+
+        def count_of(row_name):
+            for line in output.splitlines():
+                if row_name in line:
+                    return int(re.search(r"\d+", line.split(row_name)[1]).group())
+            raise AssertionError(f"Fila no encontrada: {row_name}")
+
+        assert count_of("Secretos filtrados") == 2
+        assert count_of("Total de hallazgos") == 4

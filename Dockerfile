@@ -22,7 +22,8 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir checkov semgrep click==8.1.8
+# checkov 2.5.20: 3.3.8 se cuelga en repos grandes (10+ min sin output)
+RUN pip install --no-cache-dir checkov==2.5.20 semgrep click==8.1.8
 
 WORKDIR /app
 COPY pyproject.toml README.md ./

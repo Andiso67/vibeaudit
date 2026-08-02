@@ -48,7 +48,7 @@ amplía módulos 1, 2 y 5.
 - [x] CLI: flags nuevos con validación (mutua exclusión `--repo-url`/`--path`)
 - [x] Reportes HTML/MD/dashboard generados y abiertos localmente
 - [x] README + SPRINT2.md actualizados; suite completa en verde
-- [ ] Imagen Docker reconstruida con los cambios
+- [x] Imagen Docker reconstruida con los cambios
 
 ## Criterios de Aceptación
 
@@ -294,3 +294,23 @@ amplía módulos 1, 2 y 5.
   - Bug encontrado y corregido: el total de `print_summary` (consola)
     excluía los secretos (966 vs 974 de HTML/dashboard). Fix: `len(report.secrets)`
     en el total + test nuevo. 190 tests en verde.
+
+## Notas de cierre — Imagen Docker (checkov 2.5.20) ✅
+
+- **Dockerfile**: `pip install checkov==2.5.20 semgrep click==8.1.8` (3.3.8 se
+  cuelga en repos grandes: 10+ min sin output). Comentario en el Dockerfile
+  documentando el motivo.
+- **Imagen**: reconstruida (`vibeaudit:latest`, 1.22GB). Verificada dentro del
+  contenedor: CLI OK, checkov 2.5.20, gitleaks 8.30.1, semgrep 1.170.1.
+- **E2E en contenedor**:
+  - Repo chico (s3-public + secrets): 8 hallazgos IaC en segundos, dashboard +
+    reporte generados (antes: cuelgue con 3.3.8).
+  - Repo grande (`/tmp/awslabs-cfn`, 316 archivos IaC): scan completo en ~35s
+    (antes colgado 10 min sin output) → 967 hallazgos + dashboard.
+- **Diferencia dev vs Docker (967 vs 963, +4 CKV_AWS_110)**: variación interna
+  de checkov 2.5.20 (graph checks según plataforma: dev py3.9/macOS vs
+  contenedor py3.12/linux). Los 4 hallazgos extra son reales (políticas IAM en
+  `Solutions/CloudFormationEndpointSignals`) y se renderizan correctamente en
+  el dashboard. Verificado: run directo de checkov idéntico en ambos entornos
+  (40=40), la diferencia solo aparece en el scan vía pipeline.
+- **Suite**: 190 tests en verde.

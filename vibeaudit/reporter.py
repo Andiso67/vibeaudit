@@ -796,8 +796,19 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
         severity_table = Table(title="Vulnerabilidades por severidad")
         severity_table.add_column("Severidad", style="bold")
         severity_table.add_column("Cantidad", justify="right")
+        severity_counts = Counter()
+        for items in (
+            report.vulnerabilities,
+            report.secrets,
+            report.iac_issues,
+            report.cicd_issues,
+            report.custom_issues,
+            report.llm_findings,
+            report.metrics.dependency_vulnerabilities,
+        ):
+            severity_counts.update(issue.severity.value for issue in items)
         for severity in Severity:
-            count = report.metrics.vulnerabilities_by_severity.get(severity.value, 0)
+            count = severity_counts.get(severity.value, 0)
             if count > 0:
                 severity_table.add_row(severity.value, str(count))
         console.print(severity_table)

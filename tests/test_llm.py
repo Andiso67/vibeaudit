@@ -362,12 +362,16 @@ class TestLLMEnReporte:
         assert "**Recomendación:** recomendación" in content
 
     def test_print_summary_incluye_llm_en_total(self, tmp_path, capsys):
+        import re
+
         from vibeaudit.models import LLMFinding
         from vibeaudit.reporter import AuditReporter
 
         reporter = AuditReporter(
             project=ProjectMetadata(name="demo"),
-            vulnerabilities=[],
+            vulnerabilities=[
+                Vulnerability(rule="r1", file="a.py", line=1, severity=Severity.HIGH)
+            ],
             secrets=[],
             iac_issues=[],
             cicd_issues=[],
@@ -379,12 +383,23 @@ class TestLLMEnReporte:
         output = capsys.readouterr().out
 
         def count_of(row_name):
-            import re
-
             for line in output.splitlines():
                 if row_name in line:
                     return int(re.search(r"\d+", line.split(row_name)[1]).group())
             raise AssertionError(f"Fila no encontrada: {row_name}")
 
         assert count_of("Hallazgos LLM") == 1
-        assert count_of("Total de hallazgos") == 1
+        assert count_of("Total de hallazgos") == 2
+
+        severity_count = None
+        in_severity = False
+        for line in output.splitlines():
+            if "Severidad" in line and "Cantidad" in line:
+                in_severity = True
+                continue
+            if in_severity and "HIGH" in line:
+                severity_count = int(re.search(r"\d+", line).group())
+                break
+        assert severity_count == 2, (
+            "La tabla por severidad debe incluir los hallazgos LLM (1 SAST + 1 LLM)"
+        )

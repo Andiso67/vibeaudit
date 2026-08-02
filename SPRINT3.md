@@ -23,7 +23,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 
 | # | Ítem | Módulo | Detalle |
 |---|---|---|---|
-| 1 | **Motor LLM: agentes auditor** | 3 | Nuevo `LLMAuditor`: revisa el `AuditReport` con checklists (12-Factor, OWASP, AWS WAF) y emite hallazgos narrativos (severidad, evidencia, recomendación). Flag `--llm`; sin API key → warning + skip. Sin red en tests (client fake). |
+| 1 | **Motor LLM: agentes auditor** | 3 | Nuevo `LLMAuditor`: revisa el `AuditReport` con checklists (12-Factor, OWASP, AWS WAF) y emite hallazgos narrativos (severidad, evidencia, recomendación). Flag `--llm`; default Ollama local sin API key; si el motor no está disponible → warning + skip. Sin red en tests (client fake). |
 | 2 | **Checklists como datos** | 3 | Bundle de checklists en YAML (12-Factor, OWASP Top 10, AWS Well-Architected) + mapeo hallazgo→checklist. El motor los carga; el reporte referencia el checklist aplicado. |
 | 3 | **Memoria: hallazgos recurrentes** | 4 | Vector DB (Qdrant o pgvector) con post-mortems/soluciones: "ya visto" en reportes anteriores, dedup y sugerencia de fix conocida. Flag `--memory <dir|url>`; sin memoria configurada → no-op. |
 | 4 | **Escaneo de nube (solo lectura)** | 1 | Scanners AWS/Azure/GCP vía APIs de solo lectura (credenciales por env o `--profile`), mismos modelos de salida. Detección de configs inseguras (S3 público, SG abiertos, etc.). |
@@ -40,7 +40,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 ## Definition of Done
 
 - [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
-- [ ] `--llm` con key real produce hallazgos narrativos verificados E2E (mock de API)
+- [x] `--llm` produce hallazgos narrativos verificados E2E (real con Ollama: 11 hallazgos sobre `/tmp/s2-e2e`)
 - [ ] Checklists YAML cargables y referenciados en el reporte
 - [ ] Memoria: dedup y sugerencias verificadas E2E (backend local)
 - [ ] Scanners de nube: fail limpio sin credenciales
@@ -50,7 +50,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 
 ## Criterios de Aceptación
 
-- `scan --llm` sin key → warning y mismo comportamiento que sin `--llm`
+- `scan --llm` sin motor disponible → warning y mismo reporte que sin `--llm` (con Ollama local no se necesita key)
 - `scan --llm` con key → hallazgos con severidad, evidencia y recomendación
 - Hallazgo repetido entre auditorías → sugerencia de fix desde la memoria
 - `scan --memory <dir>` sin red → funciona con el backend local
@@ -92,3 +92,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - **Ajustes encontrados en el E2E real**: timeout default 120s → 600s (llama3.1
   local en CPU superaba los 120s); normalización de `checklistRef` con
   corchetes `[x]` que devuelve el modelo.
+- **Fix de revisión**: la tabla "Vulnerabilidades por severidad" de
+  `print_summary` no incluía los hallazgos LLM (mostraba menos que el total);
+  ahora cuenta severidades sobre todos los tipos (SAST, secretos, IaC, CI/CD,
+  custom, LLM, deps) igual que el dashboard, con test de regresión.

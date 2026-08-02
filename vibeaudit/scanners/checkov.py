@@ -199,6 +199,10 @@ class CheckovScanner:
                 continue
             line_range = check.get("file_line_range") or []
             line = line_range[0] if isinstance(line_range, list) and line_range else 1
+            if line < 1:
+                # Algunos checks (ej. CKV2_GHA_1 en checkov 2.5.x) devuelven
+                # rangos como [0, 1]; el modelo exige line >= 1
+                line = 1
             check_name = check.get("check_name")
             vulnerabilities.append(
                 Vulnerability(

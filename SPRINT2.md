@@ -314,3 +314,27 @@ amplía módulos 1, 2 y 5.
   el dashboard. Verificado: run directo de checkov idéntico en ambos entornos
   (40=40), la diferencia solo aparece en el scan vía pipeline.
 - **Suite**: 190 tests en verde.
+
+## Verificación final del Sprint 2 (previo a siguientes tareas) ✅
+
+- **Suite**: 191 tests en verde; working tree limpio; DoD 7/7.
+- **E2E integral** (`/tmp/s2-e2e`, un solo scan con `--rules` + `--dashboard`):
+  - Ítem 1: lodash@4.17.20 → 3 hallazgos OSV reales (CVE-2020-28500,
+    CVE-2021-23337, CVE-2026-4800, CVE-2025-13465, CVE-2026-2950) con fixes.
+  - Ítem 2: 3 hallazgos CI/CD exactos (pr-target sin permissions HIGH,
+    acción sin pin MEDIUM, secreto en run HIGH).
+  - Ítem 3: regla custom `no-eval` → 1 hallazgo.
+  - Ítem 4: SAST con severidad ERROR real (sqlalchemy-execute-raw-query
+    HIGH db.py:5); el filtro HIGH/CRITICAL del SemgrepScanner es intencional
+    (WARNING/INFO solo vía `--rules`).
+  - Ítem 5: sin `.git` → metadatos parciales (name, sin repo/commit).
+  - Ítem 7: dashboard con los 16 hallazgos.
+  - Ítem 6 (repo git local): `--branch feature --depth 1` → feature/2ccd768
+    LOC 2; `--tag v1.0` → detached LOC 1; branch inexistente → error limpio.
+- **Bug encontrado y corregido durante la verificación**: checkov 2.5.x
+  devuelve `file_line_range: [0, 1]` en CKV2_GHA_1 (GitHub Actions) → el
+  modelo `Vulnerability` exige `line >= 1` y el scan completo fallaba con
+  ValidationError. Fix: clamp a 1 en `_parse_output` de checkov.py + test de
+  regresión. 191 tests.
+- **Docker**: imagen reconstruida con el fix; E2E en contenedor con el mismo
+  repo → 16 hallazgos idénticos a dev, dashboard generado.

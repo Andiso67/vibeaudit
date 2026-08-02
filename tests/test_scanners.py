@@ -387,6 +387,23 @@ class TestCheckovScanner:
         assert vulns[1].rule == "CKV_GHA_7"
         assert vulns[1].severity == Severity.CRITICAL
 
+    def test_parse_rango_linea_inicia_en_cero_usa_linea_1(self, tmp_path):
+        # checkov 2.5.x devuelve [0, 1] en algunos checks (ej. CKV2_GHA_1):
+        # el modelo exige line >= 1, así que se clampa a 1
+        (tmp_path / "main.tf").write_text('resource "aws_s3_bucket" "b" {}\n')
+        raw = (
+            '[{"check_type": "github_actions", "results": {"failed_checks": ['
+            '{"check_id": "CKV2_GHA_1", "check_name": "y", "file": "/ci.yml",'
+            '"file_line_range": [0, 1], "repo_file_path": "/.github/workflows/ci.yml",'
+            '"severity": "HIGH"}'
+            ']}}]'
+        )
+        vulns = CheckovScanner(tmp_path)._parse_output(raw)
+        assert len(vulns) == 1
+        assert vulns[0].rule == "CKV2_GHA_1"
+        assert vulns[0].line == 1
+        assert vulns[0].file == "/.github/workflows/ci.yml"
+
     def test_scan_exit_2_es_error(self, monkeypatch, tmp_path):
         (tmp_path / "main.tf").write_text('resource "aws_s3_bucket" "b" {}\n')
         fake_run(

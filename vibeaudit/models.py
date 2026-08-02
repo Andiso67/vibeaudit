@@ -173,6 +173,31 @@ class Metrics(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class LLMFinding(BaseModel):
+    """Hallazgo narrativo del motor LLM (auditoría por checklists)."""
+
+    title: str = Field(..., min_length=1, description="Título del hallazgo")
+    severity: Severity = Field(..., description="Severidad del hallazgo")
+    checklist_ref: Optional[str] = Field(
+        default=None,
+        alias="checklistRef",
+        description="Referencia al checklist aplicado (ej. 12-factor.config)",
+    )
+    evidence: Optional[str] = Field(
+        default=None, description="Evidencia concreta (hallazgo del JSON maestro)"
+    )
+    recommendation: Optional[str] = Field(
+        default=None, description="Recomendación para corregirlo"
+    )
+    related_files: List[str] = Field(
+        default_factory=list,
+        alias="relatedFiles",
+        description="Archivos relacionados con el hallazgo",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class AuditReport(BaseModel):
     """Esquema maestro que combina todos los resultados de la auditoría."""
 
@@ -197,6 +222,11 @@ class AuditReport(BaseModel):
         default_factory=list,
         alias="customIssues",
         description="Hallazgos de reglas custom 'Vibe Coding' (--rules)",
+    )
+    llm_findings: List[LLMFinding] = Field(
+        default_factory=list,
+        alias="llmFindings",
+        description="Hallazgos narrativos del motor LLM (auditor por checklists)",
     )
     metrics: Metrics = Field(..., description="Métricas del repositorio")
 

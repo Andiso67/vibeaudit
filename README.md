@@ -76,6 +76,7 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--format`, `-f` | Formato de salida: `json` (default), `html` o `md` |
 | `--dashboard` | Genera además un dashboard HTML interactivo junto al reporte (`<output>-dashboard.html`) |
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |
+| `--llm` | Auditoría por checklists con un LLM local/remoto (ver sección "Auditoría LLM") |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
@@ -84,8 +85,30 @@ en un `<script type="application/json">` y lo renderiza con JavaScript vanilla
 (tarjetas de resumen, barras por severidad, tablas de hallazgos con filtro),
 funciona abriendo el archivo con `file://` (sin servidor).
 
-## Estructura del JSON maestro
+## Auditoría LLM
 
+Con `--llm`, vibeaudit envía el resumen del reporte (hallazgos de SAST, IaC,
+CI/CD, secretos y dependencias) a un LLM junto con un checklist de buenas
+prácticas, y añade `llmFindings` al reporte con recomendaciones. Es una
+segunda opinión gratuita: por defecto usa Ollama local (API compatible con
+OpenAI), sin coste ni API key.
+
+```bash
+ollama pull llama3.1 && ollama serve
+.venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json --llm
+```
+
+| Variable de entorno | Descripción | Default |
+|---|---|---|
+| `VIBEAUDIT_LLM_BASE_URL` | Base URL del endpoint `/chat/completions` | `http://localhost:11434/v1` |
+| `VIBEAUDIT_LLM_MODEL` | Modelo a usar | `llama3.1` |
+| `VIBEAUDIT_LLM_API_KEY` | API key (opcional, proveedores remotos) | (vacía) |
+| `VIBEAUDIT_LLM_TIMEOUT` | Timeout de la consulta en segundos | `600` |
+
+Si el motor no está disponible, el scan no falla: muestra una advertencia y
+genera el reporte sin análisis LLM.
+
+## Estructura del JSON maestro
 ```json
 {
   "project": { "name", "languages", "frameworks", "iacFiles" },

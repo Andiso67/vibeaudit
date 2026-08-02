@@ -168,6 +168,105 @@ def test_scan_con_dashboard_genera_html_extra(monkeypatch, tmp_path):
     assert "Dashboard guardado en" in result.output
 
 
+class FakeLLMAuditor:
+    def __init__(self, report, *args, **kwargs):
+        self.report = report
+
+    def audit(self):
+        from vibeaudit.models import LLMFinding, Severity
+
+        return [
+            LLMFinding(
+                title="Secretos en el código",
+                severity=Severity.CRITICAL,
+                checklist_ref="12-factor.config",
+                evidence="ev",
+            )
+        ]
+
+
+class FakeLLMUnavailable:
+    def __init__(self, report, *args, **kwargs):
+        self.report = report
+
+    def audit(self):
+        from vibeaudit.llm import LLMUnavailableError
+
+        raise LLMUnavailableError("motor caido")
+
+
+def test_scan_con_llm_anade_findings(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+
+    monkeypatch.setattr("vibeaudit.cli.GitleaksScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.SemgrepScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CICDScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.DependencyScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.LLMAuditor", FakeLLMAuditor)
+
+    salida = tmp_path / "reporte.json"
+    result = runner.invoke(
+        app, ["scan", "--path", str(proyecto), "--output", str(salida), "--llm"]
+    )
+
+    assert result.exit_code == 0, result.output
+    reporte = json.loads(salida.read_text())
+    assert len(reporte["llmFindings"]) == 1
+    assert reporte["llmFindings"][0]["checklistRef"] == "12-factor.config"
+    assert "1 hallazgos LLM" in result.output
+
+
+def test_scan_llm_indisponible_avisa_y_continua(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+
+    monkeypatch.setattr("vibeaudit.cli.GitleaksScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.SemgrepScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CICDScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.DependencyScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.LLMAuditor", FakeLLMUnavailable)
+
+    salida = tmp_path / "reporte.json"
+    result = runner.invoke(
+        app, ["scan", "--path", str(proyecto), "--output", str(salida), "--llm"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Advertencia" in result.output
+    assert "sin análisis LLM" in result.output
+    reporte = json.loads(salida.read_text())
+    assert reporte["llmFindings"] == []
+    assert reporte["project"]["name"] == "proyecto"
+
+
+def test_scan_sin_llm_no_invoca_auditor(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+
+    monkeypatch.setattr("vibeaudit.cli.GitleaksScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.SemgrepScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CICDScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.DependencyScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.LLMAuditor", FakeLLMAuditor)
+
+    salida = tmp_path / "reporte.json"
+    result = runner.invoke(
+        app, ["scan", "--path", str(proyecto), "--output", str(salida)]
+    )
+
+    assert result.exit_code == 0, result.output
+    reporte = json.loads(salida.read_text())
+    assert "llmFindings" in reporte
+    assert reporte["llmFindings"] == []
+
+
 class FakeRepoIngester:
     """Ingester falso para aislar la validación de flags."""
 

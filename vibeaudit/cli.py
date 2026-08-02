@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from vibeaudit.ingester import RepoIngester, sanitize_url
+from vibeaudit.llm import LLMAuditor, LLMUnavailableError
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -87,6 +88,11 @@ def scan(
         False,
         "--dashboard",
         help="Genera además un dashboard HTML interactivo junto al reporte",
+    ),
+    llm: bool = typer.Option(
+        False,
+        "--llm",
+        help="Auditoría LLM por checklists (motor local/gratuito, p. ej. Ollama)",
     ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
@@ -180,6 +186,18 @@ def scan(
                 )
                 report = reporter.build()
 
+                if llm:
+                    progress.update(
+                        task, description="Ejecutando auditor LLM (checklists)..."
+                    )
+                    try:
+                        report.llm_findings = LLMAuditor(report).audit()
+                    except LLMUnavailableError as exc:
+                        console.print(f"[yellow]Advertencia:[/] {exc}")
+                        console.print(
+                            "[yellow]Se genera el reporte sin análisis LLM.[/]"
+                        )
+
         # Fuera del with: el directorio temporal ya fue limpiado
         if output_format == OutputFormat.JSON:
             reporter.save_to_file(output)
@@ -200,7 +218,8 @@ def scan(
             f"{len(iac_issues)} problemas IaC, "
             f"{len(cicd_issues)} riesgos CI/CD, "
             f"{len(dependency_vulnerabilities)} deps con CVEs, "
-            f"{len(custom_issues)} reglas custom[/])"
+            f"{len(custom_issues)} reglas custom, "
+            f"{len(report.llm_findings)} hallazgos LLM[/])"
         )
         reporter.print_summary()
 

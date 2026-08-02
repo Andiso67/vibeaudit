@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Planificado (backlog y DoD definidos).
+> **ESTADO: EN CURSO** — Ítem 1 completado (motor LLM); pendientes 2-7.
 
 ## Objetivo del Sprint
 
@@ -57,3 +57,38 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - Escaneo de nube sin credenciales → error limpio + exit 1
 - `dashboard` (Next.js) muestra semáforo de riesgo por repo
 - `--deliverables` genera C4 Mermaid, roadmap y backlog en los formatos pedidos
+
+## Notas de ejecución
+
+### Ítem 1 — Motor LLM: agentes auditor (EN CURSO → COMPLETADO)
+
+- **Decisión**: cliente `httpx` contra API compatible con OpenAI. Default
+  Ollama local (`http://localhost:11434/v1`, modelo `llama3.1`): gratis, sin
+  API key. Variables de entorno: `VIBEAUDIT_LLM_BASE_URL`, `VIBEAUDIT_LLM_MODEL`,
+  `VIBEAUDIT_LLM_API_KEY` (opcional), `VIBEAUDIT_LLM_TIMEOUT` (default 600).
+- **`vibeaudit/llm.py`**: `LLMConfig.from_env()`, `LLMClient.chat()` (errores →
+  `LLMUnavailableError`), `ChecklistItem`, `STARTER_CHECKLIST` (6 ítems:
+  12-factor.config, owasp.sensitive-data, owasp.injection, owasp.code-eval,
+  waf.iam-least-privilege, waf.dependencies), `LLMAuditor` con
+  `build_messages()` (system pide SOLO JSON `{"findings":[...]}`, máx. 10
+  hallazgos), `_build_user_prompt()` (resumen + top 40 por sección + checklist),
+  `parse_response()` (tolera fences ```json e JSON embebido; normaliza
+  `checklistRef` con corchetes; items inválidos ignorados).
+- **Modelos**: `LLMFinding` (title, severity, checklistRef, evidence,
+  recommendation, relatedFiles) + `llmFindings` en `AuditReport`
+  (camelCase en JSON).
+- **CLI**: flag `--llm`; si el motor no está disponible → advertencia amarilla
+  y reporte normal (exit 0, no crash).
+- **Reporter**: fila "Hallazgos LLM" en `print_summary`, total incluyéndolos,
+  sección "Auditoría LLM (checklists)" en HTML y Markdown, tarjeta LLM + tabla
+  con filtro en el dashboard. `llm_findings` aceptado en el constructor de
+  `AuditReporter`.
+- **Tests**: 27 nuevos (218 total), sin red: `httpx.MockTransport` inyectado en
+  `LLMClient`, `FakeLLMClient` en auditor/CLI, y reporter (json/html/md/dashboard/
+  print_summary).
+- **E2E real** (Ollama 0.32.5 + llama3.1, `/tmp/s2-e2e`): 11 hallazgos LLM
+  mapeados a issues reales (p.ej. CKV_AWS_20 → waf.iam-least-privilege);
+  dashboard con la sección LLM renderizada. Sin Ollama → advertencia + reporte.
+- **Ajustes encontrados en el E2E real**: timeout default 120s → 600s (llama3.1
+  local en CPU superaba los 120s); normalización de `checklistRef` con
+  corchetes `[x]` que devuelve el modelo.

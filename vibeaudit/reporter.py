@@ -13,6 +13,7 @@ from rich.table import Table
 from vibeaudit.models import (
     AuditReport,
     DependencyVulnerability,
+    LLMFinding,
     Metrics,
     ProjectMetadata,
     Secret,
@@ -73,6 +74,7 @@ class AuditReporter:
         repo_path: Optional[Path] = None,
         dependency_vulnerabilities: Optional[List[DependencyVulnerability]] = None,
         custom_issues: Optional[List[Vulnerability]] = None,
+        llm_findings: Optional[List[LLMFinding]] = None,
     ):
         self.project = project
         self.vulnerabilities = vulnerabilities or []
@@ -82,6 +84,7 @@ class AuditReporter:
         self.repo_path = repo_path
         self.dependency_vulnerabilities = dependency_vulnerabilities or []
         self.custom_issues = custom_issues or []
+        self.llm_findings = llm_findings or []
         self._cached_report: Optional[AuditReport] = None
 
     def _count_lines_of_code(self) -> int:
@@ -144,6 +147,7 @@ class AuditReporter:
             iac_issues=self.iac_issues,
             cicd_issues=self.cicd_issues,
             custom_issues=self.custom_issues,
+            llm_findings=self.llm_findings,
             metrics=metrics,
         )
         return self._cached_report
@@ -167,6 +171,7 @@ class AuditReporter:
             ("Riesgos de CI/CD", len(report.cicd_issues)),
             ("Reglas custom", len(report.custom_issues)),
             ("Secretos filtrados", len(report.secrets)),
+            ("Hallazgos LLM", len(report.llm_findings)),
             ("Dependencias con CVEs", len(report.metrics.dependency_vulnerabilities)),
         ]
 
@@ -229,6 +234,21 @@ class AuditReporter:
             md += f"\n\n{dep.summary}"
         return md
 
+    @staticmethod
+    def _md_llm(finding) -> str:
+        """Renderiza un hallazgo del auditor LLM en Markdown."""
+        md = (
+            f"### {AuditReporter._md_code(finding.title)} — "
+            f"**{finding.severity.value}**"
+        )
+        if finding.checklist_ref:
+            md += f" — `{finding.checklist_ref}`"
+        if finding.evidence:
+            md += f"\n\n{finding.evidence}"
+        if finding.recommendation:
+            md += f"\n\n**Recomendación:** {finding.recommendation}"
+        return md
+
     def save_markdown(self, path: Path) -> None:
         """Guarda el reporte en Markdown legible para humanos."""
         report = self.build()
@@ -275,6 +295,9 @@ class AuditReporter:
             ("Reglas custom", [
                 self._md_issue(v.rule, v.file, v.line, v.severity, v.snippet)
                 for v in report.custom_issues
+            ]),
+            ("Auditoría LLM (checklists)", [
+                self._md_llm(f) for f in report.llm_findings
             ]),
             ("Dependencias con CVEs", [
                 self._md_dep(d) for d in report.metrics.dependency_vulnerabilities
@@ -375,6 +398,31 @@ class AuditReporter:
             + "</tbody></table>"
         )
 
+    def _html_llm_table(self, findings: List) -> str:
+        """Tabla HTML de hallazgos del auditor LLM."""
+        if not findings:
+            return "<p>No se encontraron hallazgos.</p>"
+        rows = []
+        for finding in findings:
+            detail = finding.evidence or ""
+            if finding.recommendation:
+                detail = f"{detail} — <strong>Recomendación:</strong> {finding.recommendation}"
+            rows.append(
+                "<tr>"
+                f"<td><strong>{self._html_escaped(finding.title)}</strong></td>"
+                f"<td>{self._html_badge(finding.severity)}</td>"
+                f"<td>{self._html_escaped(finding.checklist_ref) or '—'}</td>"
+                f"<td>{detail}</td>"
+                "</tr>"
+            )
+        return (
+            "<table><thead><tr>"
+            "<th>Hallazgo</th><th>Severidad</th><th>Checklist</th><th>Detalle</th>"
+            "</tr></thead><tbody>"
+            + "\n".join(rows)
+            + "</tbody></table>"
+        )
+
     def save_html(self, path: Path) -> None:
         """Guarda el reporte en HTML autocontenido (sin JS ni CSS externo)."""
         report = self.build()
@@ -412,6 +460,10 @@ class AuditReporter:
                 ("Problemas de IaC", self._html_issues_table(report.iac_issues)),
                 ("Riesgos de CI/CD", self._html_issues_table(report.cicd_issues)),
                 ("Reglas custom", self._html_issues_table(report.custom_issues)),
+                (
+                    "Auditoría LLM (checklists)",
+                    self._html_llm_table(report.llm_findings),
+                ),
                 (
                     "Dependencias con CVEs",
                     self._html_deps_table(report.metrics.dependency_vulnerabilities),
@@ -559,6 +611,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
     ['IaC', data.iacIssues.length],
     ['CI/CD', data.cicdIssues.length],
     ['Reglas custom', data.customIssues.length],
+    ['LLM', data.llmFindings.length],
     ['Deps con CVEs', data.metrics.dependencyVulnerabilities.length]
   ];
   var grand = totals.reduce(function (s, t) {{ return s + t[1]; }}, 0);
@@ -587,6 +640,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
   countSev(data.iacIssues);
   countSev(data.cicdIssues);
   countSev(data.customIssues);
+  countSev(data.llmFindings);
   countSev(data.metrics.dependencyVulnerabilities);
   var max = Math.max.apply(null, ORDER.map(function (s) {{ return counts[s]; }}).concat([1]));
   var bars = document.getElementById('severity-bars');
@@ -631,12 +685,26 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
       el('td', null, detail.join(' — '))
     ];
   }}
+  function llmCells(f) {{
+    var detail = [];
+    if (f.evidence) detail.push(f.evidence);
+    if (f.recommendation) detail.push('Recomendación: ' + f.recommendation);
+    var tdBadge = el('td');
+    tdBadge.appendChild(badge(f.severity));
+    return [
+      el('td', null, f.title),
+      el('td', null, f.checklistRef || '—'),
+      tdBadge,
+      el('td', null, detail.join(' — '))
+    ];
+  }}
   var sections = [
     {{ id: 'sec-sast', title: 'Vulnerabilidades (SAST)', items: data.vulnerabilities, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-secrets', title: 'Secretos filtrados', items: data.secrets, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-iac', title: 'Problemas de IaC', items: data.iacIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-cicd', title: 'Riesgos de CI/CD', items: data.cicdIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-custom', title: 'Reglas custom', items: data.customIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-llm', title: 'Auditoría LLM (checklists)', items: data.llmFindings, cells: llmCells, headers: ['Hallazgo', 'Checklist', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-deps', title: 'Dependencias con CVEs', items: data.metrics.dependencyVulnerabilities, cells: depCells, headers: ['Paquete', 'Ecosistema', 'Severidad', 'Detalle'] }}
   ];
   var sectionsEl = document.getElementById('sections');
@@ -707,6 +775,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
             + len(report.cicd_issues)
             + len(report.custom_issues)
             + len(report.secrets)
+            + len(report.llm_findings)
             + len(report.metrics.dependency_vulnerabilities)
         )
         table.add_row("Vulnerabilidades (SAST)", str(total_vulns))
@@ -714,6 +783,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
         table.add_row("Riesgos de CI/CD", str(len(report.cicd_issues)))
         table.add_row("Reglas custom", str(len(report.custom_issues)))
         table.add_row("Secretos filtrados", str(len(report.secrets)))
+        table.add_row("Hallazgos LLM", str(len(report.llm_findings)))
         table.add_row(
             "Dependencias con CVEs", str(len(report.metrics.dependency_vulnerabilities))
         )

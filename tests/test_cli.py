@@ -412,3 +412,69 @@ def test_scan_con_deliverables_genera_entregables(monkeypatch, tmp_path):
         "backlog.json",
     ):
         assert (entregables / name).exists(), f"falta {name}"
+
+
+def test_scan_con_sonar_json_genera_import(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+    sonar_out = tmp_path / "sonar-issues.json"
+
+    for cls in (
+        "GitleaksScanner",
+        "SemgrepScanner",
+        "CICDScanner",
+        "DependencyScanner",
+        "CustomRulesScanner",
+        "CheckovScanner",
+    ):
+        monkeypatch.setattr("vibeaudit.cli." + cls, FakeScanner)
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "--path",
+            str(proyecto),
+            "--output",
+            str(tmp_path / "r.json"),
+            "--sonar-json",
+            str(sonar_out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "sonar-issues" in result.output
+    data = json.loads(sonar_out.read_text())
+    assert "issues" in data
+
+
+def test_scan_con_sonar_scan_avisa_sin_binario(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+    monkeypatch.setattr("vibeaudit.cli.SonarRunner.is_installed", staticmethod(lambda: False))
+
+    for cls in (
+        "GitleaksScanner",
+        "SemgrepScanner",
+        "CICDScanner",
+        "DependencyScanner",
+        "CustomRulesScanner",
+        "CheckovScanner",
+    ):
+        monkeypatch.setattr("vibeaudit.cli." + cls, FakeScanner)
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "--path",
+            str(proyecto),
+            "--output",
+            str(tmp_path / "r.json"),
+            "--sonar-scan",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Advertencia" in result.output
+    assert "sonar-scanner" in result.output

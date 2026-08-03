@@ -23,6 +23,7 @@ from vibeaudit.scanners.custom import CustomRulesScanner
 from vibeaudit.scanners.deps import DependencyScanner
 from vibeaudit.scanners.gitleaks import GitleaksScanner
 from vibeaudit.scanners.semgrep import SemgrepScanner
+from vibeaudit.sonar import SonarRunner, save_sonar_json
 
 app = typer.Typer(
     name="vibeaudit",
@@ -114,6 +115,16 @@ def scan(
         None,
         "--deliverables",
         help="Directorio donde generar entregables de cliente (C4, roadmap, backlog)",
+    ),
+    sonar_json: Optional[Path] = typer.Option(
+        None,
+        "--sonar-json",
+        help="Exporta el reporte a sonar-issues.json (Generic Issue Import de SonarQube)",
+    ),
+    sonar_scan: bool = typer.Option(
+        False,
+        "--sonar-scan",
+        help="Ejecuta sonar-scanner real sobre el repo (requiere binario y servidor SonarQube)",
     ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
@@ -250,6 +261,29 @@ def scan(
                         f"[bold green]✔ Entregables en[/] [cyan]{deliverables}[/]: "
                         + ", ".join(sorted(files))
                     )
+
+                if sonar_json is not None:
+                    progress.update(
+                        task, description="Exportando issues a SonarQube (Generic Import)..."
+                    )
+                    save_sonar_json(report, sonar_json)
+                    console.print(
+                        f"[bold green]✔ sonar-issues en[/] [cyan]{sonar_json}[/] "
+                        f"(importar vía 'Generic Issue Import' de SonarQube)"
+                    )
+
+                if sonar_scan:
+                    progress.update(
+                        task, description="Ejecutando sonar-scanner sobre el repo..."
+                    )
+                    try:
+                        rc = SonarRunner(ingester.repo_path).scan()
+                        console.print(
+                            f"[cyan]sonar-scanner:[/] análisis finalizado (código {rc}). "
+                            "Revisa la salida del escáner para más detalle."
+                        )
+                    except RuntimeError as exc:
+                        console.print(f"[yellow]Advertencia:[/] {exc}")
 
         # Fuera del with: el directorio temporal ya fue limpiado
         if output_format == OutputFormat.JSON:

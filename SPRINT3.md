@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítems 1-6 completados (motor LLM, checklists YAML, memoria, nube, dashboard, entregables); pendiente 7.
+> **ESTADO: COMPLETADO** — Ítems 1-7 implementados (motor LLM, checklists YAML, memoria, escaneo nube, dashboard, entregables, SonarQube).
 
 ## Objetivo del Sprint
 
@@ -39,14 +39,14 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 
 ## Definition of Done
 
-- [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
+- [x] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
 - [x] `--llm` produce hallazgos narrativos verificados E2E (real con Ollama: 11 hallazgos sobre `/tmp/s2-e2e`)
 - [x] Checklists YAML cargables y referenciados en el reporte
 - [x] Memoria: dedup y sugerencias verificadas E2E (backend local: 15 recurrentes en el 2º scan)
 - [x] Scanners de nube: fail limpio sin credenciales
 - [x] Dashboard Next.js arranca y renderiza el JSON maestro
 - [x] Entregables: C4/roadmap/backlog generados y verificados
-- [ ] README + SPRINT3.md actualizados; suite completa en verde
+- [x] README + SPRINT3.md actualizados; suite completa en verde (277)
 
 ## Criterios de Aceptación
 
@@ -228,4 +228,30 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
   (dockerfile.security.*, iac CKV_AWS, cloud) y backlog.json con resumen
   {sast: 2, iac: 2, cloud: 2, deps: 18}.
 
-### Ítem 7 — Integración SonarQube (pendiente)
+### Ítem 7 — Integración SonarQube (COMPLETADO)
+
+- **Decisión**: dos vías complementarias. SonarQube Community es gratuito
+  (open source); no hace falta licencia para importar hallazgos externos.
+- **Pieza 1 — Generic Issue Import** (`vibeaudit/sonar.py`): `to_sonar_issues`
+  convierte el reporte al formato `sonar-issues.json` de SonarQube
+  (`engineId: vibeaudit`, `type: VULNERABILITY`, severidades mapeadas
+  CRITICAL→BLOCKER, HIGH→CRITICAL, MEDIUM→MAJOR, LOW→MINOR, INFO→INFO, con
+  `primaryLocation.filePath`/`textRange`). Solo entran hallazgos con archivo
+  (SAST, secretos, IaC, CI/CD, custom); los sin archivo (nube, LLM, deps) se
+  descartan. `save_sonar_json` lo escribe; flag CLI `--sonar-json <archivo>`.
+  Límite de 1000 issues por import (el de SonarQube).
+- **Pieza 2 — sonar-scanner**: `SonarRunner` (passthrough) con
+  `is_installed()` y `scan()` que ejecuta `sonar-scanner -Dsonar.projectBaseDir`.
+  Flag CLI `--sonar-scan`; sin binario → advertencia y el scan continúa
+  (mismo patrón que `--llm` sin motor).
+- **Tests**: `tests/test_sonar.py` (10) + 2 CLI (277 total): formato del
+  import, mapeo de severidad, descarte de sin-archivo, fichero escrito,
+  is_installed y scan con monkeypatch (sin red).
+- **E2E real** (reporte del dashboard): `/tmp/sonar-issues.json` con 4 issues
+  (2 SAST + 2 IaC, todos CRITICAL/HIGH → CRITICAL en SonarQube), engineId y
+  tipo correctos.
+
+## Estado del Sprint 3
+
+**Completado 7/7 ítems** — suite 277 passed, E2Es reales en ítems 1-7. Queda
+pendiente solo la verificación Docker de la imagen con los cambios nuevos.

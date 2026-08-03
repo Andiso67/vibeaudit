@@ -80,6 +80,8 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--memory` | Directorio de memoria de hallazgos recurrentes (ver sección "Memoria") |
 | `--cloud` | Escanea la nube del proveedor configurado (solo lectura; ver sección "Escaneo de nube") |
 | `--deliverables` | Directorio para entregables de cliente (C4 Mermaid, roadmap, backlog) |
+| `--sonar-json` | Exporta el reporte a `sonar-issues.json` (Generic Issue Import de SonarQube) |
+| `--sonar-scan` | Ejecuta `sonar-scanner` real sobre el repo (requiere binario y servidor SonarQube) |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
@@ -198,6 +200,27 @@ entregables de la pre-auditoría en 48h:
 ```
 
 Todo se deriva de forma determinista del reporte (sin red, sin LLM).
+
+## Integración SonarQube
+
+SonarQube Community Edition es **gratuita** (open source). VibeAudit ofrece
+dos modos:
+
+- **`--sonar-json <archivo>`**: exporta los hallazgos con archivo (SAST,
+  secretos, IaC, CI/CD, custom) al formato **Generic Issue Import**
+  (`sonar-issues.json`, `engineId: vibeaudit`). Ese fichero se importa en un
+  proyecto SonarQube desde *Administration → General Settings → Generic Issue
+  Import*, y los hallazgos aparecen en sus dashboards y Quality Gate.
+
+  ```bash
+  .venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json \
+    --sonar-json /tmp/sonar-issues.json
+  ```
+
+- **`--sonar-scan`**: pasa el control a `sonar-scanner` (análisis real de
+  SonarQube sobre el repo). Requiere el binario instalado y la configuración
+  del servidor (URL/token en `sonar-project.properties`); si falta, muestra
+  una advertencia y el scan continúa sin fallar.
 
 ### Checklists como datos
 

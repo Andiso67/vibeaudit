@@ -253,5 +253,11 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 
 ## Estado del Sprint 3
 
-**Completado 7/7 ítems** — suite 277 passed, E2Es reales en ítems 1-7. Queda
-pendiente solo la verificación Docker de la imagen con los cambios nuevos.
+**Completado 7/7 ítems** — suite 277 passed, E2Es reales en ítems 1-7.
+
+**Verificación Docker (completada)** — `docker build -t vibeaudit:test` OK con
+el ítem 7; `scan --help` muestra `--sonar-json`/`--sonar-scan` dentro del
+contenedor; E2E real en imagen: repo con `GITHUB_TOKEN` → 1 issue
+(`secret-…-generic-api-key`, CRITICAL, `t.env`) exportado a `sonar-issues.json`.
+(Nota: las claves AWS de ejemplo `AKIAIOSFODNN7…` están en el allowlist de
+gitleaks, por eso no se detectan.)

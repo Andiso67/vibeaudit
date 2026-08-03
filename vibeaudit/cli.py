@@ -1,5 +1,7 @@
 """Interfaz de línea de comandos para vibeaudit."""
 
+import hashlib
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -7,9 +9,11 @@ from typing import Optional
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.llm import LLMAuditor, LLMUnavailableError
+from vibeaudit.memory import MemoryEntry, MemoryStore
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -93,6 +97,11 @@ def scan(
         False,
         "--llm",
         help="Auditoría LLM por checklists (motor local/gratuito, p. ej. Ollama)",
+    ),
+    memory: Optional[Path] = typer.Option(
+        None,
+        "--memory",
+        help="Directorio de la memoria de hallazgos recurrentes (dedupe y fixes conocidos)",
     ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
@@ -198,6 +207,17 @@ def scan(
                             "[yellow]Se genera el reporte sin análisis LLM.[/]"
                         )
 
+                recurrent: list = []
+                if memory is not None:
+                    progress.update(
+                        task, description="Consultando memoria de hallazgos recurrentes..."
+                    )
+                    recurrent = MemoryStore(memory).ingest_report(report)
+                    report.recurrent_findings = recurrent
+                    console.print(
+                        f"[cyan]Memoria:[/] {len(recurrent)} hallazgos recurrentes reconocidos"
+                    )
+
         # Fuera del with: el directorio temporal ya fue limpiado
         if output_format == OutputFormat.JSON:
             reporter.save_to_file(output)
@@ -218,8 +238,8 @@ def scan(
             f"{len(iac_issues)} problemas IaC, "
             f"{len(cicd_issues)} riesgos CI/CD, "
             f"{len(dependency_vulnerabilities)} deps con CVEs, "
-            f"{len(custom_issues)} reglas custom, "
-            f"{len(report.llm_findings)} hallazgos LLM[/])"
+            f"{len(report.llm_findings)} hallazgos LLM, "
+            f"{len(report.recurrent_findings)} recurrentes[/])"
         )
         reporter.print_summary()
 
@@ -241,6 +261,68 @@ def scan(
             f"[bold red]Error de archivo:[/] no se pudo escribir el reporte: {exc}"
         )
         raise typer.Exit(code=1) from exc
+
+
+memory_app = typer.Typer(
+    name="memory",
+    help="Memoria local de hallazgos recurrentes (dedupe y fixes conocidos)",
+    no_args_is_help=True,
+)
+
+
+@memory_app.command("add")
+def memory_add(
+    directory: Path = typer.Argument(..., help="Directorio de la memoria"),
+    rule: str = typer.Option(..., "--rule", help="Regla/paquete de la clase de hallazgo"),
+    fix: str = typer.Option("", "--fix", help="Solución/fix conocida para esa clase"),
+    evidence: str = typer.Option("", "--evidence", help="Texto de evidencia (opcional)"),
+    framework: str = typer.Option("", "--framework", help="Marco (OWASP, AWS WAF...)"),
+) -> None:
+    """Registra en la memoria una clase de hallazgo con su fix conocido."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    store = MemoryStore(directory)
+    store.upsert(
+        MemoryEntry(
+            id=hashlib.md5(rule.encode()).hexdigest()[:12],
+            rule=rule,
+            evidence=evidence,
+            recommendation=fix,
+            framework=framework,
+            occurrences=1,
+            first_seen=now,
+            last_seen=now,
+        )
+    )
+    console.print(f"[bold green]✔ Memoria actualizada en[/] [cyan]{store.path}[/]")
+    console.print(f"   [cyan]{rule}[/] → {fix or '(sin fix registrado)'}")
+
+
+@memory_app.command("list")
+def memory_list(
+    directory: Path = typer.Argument(..., help="Directorio de la memoria"),
+) -> None:
+    """Lista las entradas de la memoria de hallazgos recurrentes."""
+    store = MemoryStore(directory)
+    entries = store.entries()
+    if not entries:
+        console.print("La memoria está vacía.")
+        return
+    table = Table(title=f"Memoria de hallazgos recurrentes ({store.path})")
+    table.add_column("Regla", style="cyan")
+    table.add_column("Ocurrencias", justify="right")
+    table.add_column("Framework")
+    table.add_column("Fix conocido")
+    for entry in entries:
+        table.add_row(
+            entry.rule,
+            str(entry.occurrences),
+            entry.framework or "-",
+            entry.recommendation or "-",
+        )
+    console.print(table)
+
+
+app.add_typer(memory_app)
 
 
 if __name__ == "__main__":

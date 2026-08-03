@@ -227,6 +227,21 @@ class AppliedChecklist(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class RecurrentFinding(BaseModel):
+    """Hallazgo recurrente reconocido por la memoria (ya visto en auditorías previas)."""
+
+    rule: str = Field(..., min_length=1, description="Regla/paquete de la clase de hallazgo")
+    file: str = Field("", description="Archivo afectado")
+    line: int = Field(0, description="Línea del hallazgo")
+    severity: Severity = Field(..., description="Severidad del hallazgo")
+    occurrences: int = Field(..., ge=1, description="Veces que se ha detectado")
+    memory_id: str = Field(..., min_length=1, description="Id de la entrada de memoria")
+    suggestion: str = Field("", description="Sugerencia de fix desde la memoria")
+    first_seen: str = Field("", alias="firstSeen", description="Fecha ISO de la primera vez")
+
+    model_config = {"populate_by_name": True}
+
+
 class LLMFinding(BaseModel):
     """Hallazgo narrativo del motor LLM (auditoría por checklists)."""
 
@@ -281,6 +296,11 @@ class AuditReport(BaseModel):
         default_factory=list,
         alias="llmFindings",
         description="Hallazgos narrativos del motor LLM (auditor por checklists)",
+    )
+    recurrent_findings: List[RecurrentFinding] = Field(
+        default_factory=list,
+        alias="recurrentFindings",
+        description="Hallazgos recurrentes reconocidos por la memoria (dedupe + fix conocido)",
     )
     checklists: List[AppliedChecklist] = Field(
         default_factory=list,

@@ -77,6 +77,7 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--dashboard` | Genera además un dashboard HTML interactivo junto al reporte (`<output>-dashboard.html`) |
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |
 | `--llm` | Auditoría por checklists con un LLM local/remoto (ver sección "Auditoría LLM") |
+| `--memory` | Directorio de memoria de hallazgos recurrentes (ver sección "Memoria") |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
@@ -107,6 +108,32 @@ ollama pull llama3.1 && ollama serve
 
 Si el motor no está disponible, el scan no falla: muestra una advertencia y
 genera el reporte sin análisis LLM.
+
+## Memoria de hallazgos recurrentes
+
+Con `--memory <dir>`, el scan persiste en `<dir>/memory.json` una tienda local
+(sin dependencias, ~5-20 MB RAM) con los hallazgos ya vistos y sus soluciones.
+Los hallazgos que reaparecen en auditorías posteriores se marcan en el reporte
+como `recurrentFindings` con su número de ocurrencias y, si existe, el fix
+conocido:
+
+```bash
+.venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json --memory ./memoria
+```
+
+Sin `--memory` el scan no registra nada. Además del guardado automático puedes
+registrar fixes conocidos a mano:
+
+```bash
+.venv/bin/python -m vibeaudit.cli memory add ./memoria \
+  --rule CKV_AWS_18 --fix "Restringir los grupos de seguridad a IPs específicas"
+.venv/bin/python -m vibeaudit.cli memory list ./memoria
+```
+
+La deduplicación se hace por clase de hallazgo (regla o paquete+CVE) y la
+similitud semántica entre hallazgos se computa localmente con embeddings
+deterministas de n-gramas (coseno); el diseño permite migrar a una vector DB
+(Qdrant) sin cambiar la interfaz.
 
 ### Checklists como datos
 
@@ -158,6 +185,6 @@ reales instaladas.
 
 ## Roadmap
 
-Motor LLM auditor, memoria vectorial (pgvector/Qdrant), escaneo de nube,
-dashboard de cliente y generador de entregables (diagramas C4, backlog).
+Escaneo de nube (AWS/Azure/GCP), dashboard de cliente (Next.js), generador de
+entregables (diagramas C4, backlog) y exportación a SonarQube.
 Detalle en `CONTEXT.md`.

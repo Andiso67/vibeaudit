@@ -613,6 +613,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
     ['Reglas custom', data.customIssues.length],
     ['LLM', data.llmFindings.length],
     ['Checklists', data.checklists ? data.checklists.length : 0],
+    ['Recurrentes', data.recurrentFindings.length],
     ['Deps con CVEs', data.metrics.dependencyVulnerabilities.length]
   ];
   var grand = totals.reduce(function (s, t) {{ return s + t[1]; }}, 0);
@@ -786,6 +787,9 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
         table.add_row("Secretos filtrados", str(len(report.secrets)))
         table.add_row("Hallazgos LLM", str(len(report.llm_findings)))
         table.add_row("Checklists aplicados", str(len(report.checklists)))
+        table.add_row(
+            "Hallazgos recurrentes (memoria)", str(len(report.recurrent_findings))
+        )
         table.add_row(
             "Dependencias con CVEs", str(len(report.metrics.dependency_vulnerabilities))
         )

@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítems 1-2 completados (motor LLM + checklists YAML); pendientes 3-7.
+> **ESTADO: EN CURSO** — Ítems 1-3 completados (motor LLM, checklists YAML, memoria); pendientes 4-7.
 
 ## Objetivo del Sprint
 
@@ -42,7 +42,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
 - [x] `--llm` produce hallazgos narrativos verificados E2E (real con Ollama: 11 hallazgos sobre `/tmp/s2-e2e`)
 - [x] Checklists YAML cargables y referenciados en el reporte
-- [ ] Memoria: dedup y sugerencias verificadas E2E (backend local)
+- [x] Memoria: dedup y sugerencias verificadas E2E (backend local: 15 recurrentes en el 2º scan)
 - [ ] Scanners de nube: fail limpio sin credenciales
 - [ ] Dashboard Next.js arranca y renderiza el JSON maestro
 - [ ] Entregables: C4/roadmap/backlog generados y verificados
@@ -123,3 +123,35 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - **E2E real** (`/tmp/s2-e2e`, Ollama + llama3.1): `checklists` en el JSON con
   los 3 frameworks y `matchedFindings` reales (AWS WAF: 6 hallazgos de los
   CKV_AWS del scan); 11 hallazgos LLM con checklistRef.
+
+### Ítem 3 — Memoria: hallazgos recurrentes (COMPLETADO)
+
+- **Decisión**: tienda 100 % local sin backend (`<dir>/memory.json`, ~5-20 MB
+  RAM, 0 dependencias nuevas), validada contra el hardware real (Mac M1,
+  16 GB). Por defecto Ollama comparte CPU/RAM con el scan; una vector DB (Qdrant)
+  se dejaría para despliegue servido. La interfaz `MemoryStore` está preparada
+  para migrar a Qdrant sin tocar `cli.py`/`reporter.py`.
+- **`vibeaudit/memory.py`**: `LocalEmbedder` (256-d determinista: n-gramas 3-4
+  + tokenización por palabras, similitud coseno), `MemoryStore` (carga/guarda
+  `<dir>/memory.json`, `ingest_report`, `upsert` con `_identity_key` por regla o
+  paquete+CVE, secciones sast/secrets/iac/cicd/custom/deps), umbral de
+  recurrencia 0.5. Memoria corrupta o vacía → carga como nueva; en `__main__`
+  no crea la tienda (no pisa la nada).
+- **Modelos**: `RecurrentFinding` (rule, severity, file, occurrences,
+  firstSeen, lastSeen, suggestion) + `AuditReport.recurrent_findings` (JSON
+  `recurrentFindings`); `MemoryStore.upsert` lo rellena al inyectar el reporte.
+- **CLI**: `--memory <dir>` en `scan` (no-op sin la flag); subcomando `memory add`
+  (`--rule/--fix/--evidence/--framework`) y `memory list` (tabla Rich), como typer
+  app en `cli.py`.
+- **Reporter**: fila "Hallazgos recurrentes (memoria)" en `print_summary`,
+  tarjeta "Recurrentes" en el dashboard, `Suggestion`/`occurrences` en el JSON.
+- **Tests**: `tests/test_memory.py` (13) + 3 CLI (248 total): sin `--memory`
+  no crea fichero, 2º scan rea CKV_AWS_20 → occurrences=2, `memory add/list`
+  E2E CLI.
+- **E2E real** (`/tmp/s2-e2e`, `--memory /tmp/mem-e2e`): 1º scan → 0 recurrentes
+  y `memory.json` creado; 2º scan → **15 recurrentFindings** (CKV_AWS_18/20,
+  sqlalchemy-execute-raw-query…) con occurrences=2 en `print_summary` y JSON.
+- **README**: sección "Memoria de hallazgos recurrentes" con flag `--memory`,
+  `memory add/list` y formato `memory.json`.
+
+### Ítem 4 — Escaneo de nube (pendiente)

@@ -216,7 +216,7 @@ def test_scan_con_llm_anade_findings(monkeypatch, tmp_path):
     reporte = json.loads(salida.read_text())
     assert len(reporte["llmFindings"]) == 1
     assert reporte["llmFindings"][0]["checklistRef"] == "12-factor.config"
-    assert "1 hallazgos LLM" in result.output
+    assert "1 hallazgos LLM" in " ".join(result.output.split())
 
 
 def test_scan_llm_indisponible_avisa_y_continua(monkeypatch, tmp_path):
@@ -272,3 +272,103 @@ class FakeRepoIngester:
 
     def __init__(self, *args, **kwargs):
         raise AssertionError("No debería instanciarse en validaciones de flags")
+
+
+class FakeScannerConIac:
+    """Scanner falso que aporta un issue de IaC real (CKV_AWS_20)."""
+
+    def __init__(self, repo_path, *args, **kwargs):
+        self.repo_path = repo_path
+
+    def scan(self):
+        from vibeaudit.models import Severity, Vulnerability
+
+        return [
+            Vulnerability(
+                rule="CKV_AWS_20",
+                file="infra/main.tf",
+                line=1,
+                severity=Severity.HIGH,
+            )
+        ]
+
+
+def test_scan_sin_memory_no_crea_directorio(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+    memoria = tmp_path / "memoria"
+
+    monkeypatch.setattr("vibeaudit.cli.GitleaksScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CICDScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.DependencyScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CustomRulesScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.SemgrepScanner", FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScanner)
+
+    result = runner.invoke(
+        app, ["scan", "--path", str(proyecto), "--output", str(tmp_path / "r.json")]
+    )
+    assert result.exit_code == 0, result.output
+    assert not memoria.exists()
+
+
+def test_scan_memory_segunda_vez_detecta_recurrente(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+    memoria = tmp_path / "memoria"
+    salida = tmp_path / "reporte.json"
+
+    def scan():
+        return runner.invoke(
+            app,
+            ["scan", "--path", str(proyecto), "--output", str(salida), "--memory", str(memoria)],
+        )
+
+    for cls in (
+        "GitleaksScanner",
+        "SemgrepScanner",
+        "CICDScanner",
+        "DependencyScanner",
+        "CustomRulesScanner",
+    ):
+        monkeypatch.setattr("vibeaudit.cli." + cls, FakeScanner)
+    monkeypatch.setattr("vibeaudit.cli.CheckovScanner", FakeScannerConIac)
+
+    primera = scan()
+    assert primera.exit_code == 0, primera.output
+    assert json.loads(salida.read_text())["recurrentFindings"] == []
+
+    segunda = scan()
+    assert segunda.exit_code == 0, segunda.output
+    reporte = json.loads(salida.read_text())
+    assert len(reporte["recurrentFindings"]) == 1
+    assert reporte["recurrentFindings"][0]["rule"] == "CKV_AWS_20"
+    assert reporte["recurrentFindings"][0]["occurrences"] == 2
+    assert "recurrentes" in segunda.output
+
+
+def test_memory_add_y_list(tmp_path):
+    memoria = tmp_path / "memoria"
+    result = runner.invoke(
+        app,
+        [
+            "memory",
+            "add",
+            str(memoria),
+            "--rule",
+            "CKV_AWS_20",
+            "--fix",
+            "Añadir public_access_block",
+            "--framework",
+            "AWS WAF",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Memoria actualizada" in result.output
+
+    listing = runner.invoke(app, ["memory", "list", str(memoria)])
+    assert listing.exit_code == 0, listing.output
+    assert "CKV_AWS_20" in listing.output
+    assert "public_access_block" in listing.output

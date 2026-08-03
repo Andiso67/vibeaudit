@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "jsx": "preserve"
+  },
+  "include": ["next-env.d.ts", "**/*.js", "**/*.jsx"],
+  "exclude": ["node_modules"]
+}

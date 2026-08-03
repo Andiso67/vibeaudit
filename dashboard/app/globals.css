@@ -1,0 +1,138 @@
+:root {
+  --bg: #f9fafb;
+  --fg: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --card: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+h2 {
+  margin-top: 2rem;
+}
+
+#meta {
+  color: var(--muted);
+  margin: 0.25rem 0 1.5rem;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  min-width: 9rem;
+  background: var(--card);
+}
+
+.card .label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.card .num {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.card.total {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: #fff;
+}
+
+.card.total .label {
+  color: #9ca3af;
+}
+
+.semaphore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.semaphore .dot {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+.semaphore.red { background: #fee2e2; color: #b91c1c; }
+.semaphore.amber { background: #fef3c7; color: #b45309; }
+.semaphore.green { background: #dcfce7; color: #166534; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--card);
+}
+
+code {
+  background: #f3f4f6;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+pre {
+  background: #f3f4f6;
+  padding: 0.5rem;
+  overflow-x: auto;
+  border-radius: 4px;
+  margin: 0;
+}
+
+.badge {
+  color: #fff;
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+}

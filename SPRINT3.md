@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítems 1-4 completados (motor LLM, checklists YAML, memoria, escaneo de nube); pendientes 5-7.
+> **ESTADO: EN CURSO** — Ítems 1-5 completados (motor LLM, checklists YAML, memoria, escaneo de nube, dashboard); pendientes 6-7.
 
 ## Objetivo del Sprint
 
@@ -44,7 +44,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - [x] Checklists YAML cargables y referenciados en el reporte
 - [x] Memoria: dedup y sugerencias verificadas E2E (backend local: 15 recurrentes en el 2º scan)
 - [x] Scanners de nube: fail limpio sin credenciales
-- [ ] Dashboard Next.js arranca y renderiza el JSON maestro
+- [x] Dashboard Next.js arranca y renderiza el JSON maestro
 - [ ] Entregables: C4/roadmap/backlog generados y verificados
 - [ ] README + SPRINT3.md actualizados; suite completa en verde
 
@@ -186,4 +186,23 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
   (`aws-s3-bucket-public`, `aws-ec2-security-group-open`) presentes en JSON,
   Markdown, HTML y dashboard (`/tmp/cloud-e2e*`).
 
-### Ítem 5 — Dashboard de cliente (pendiente)
+### Ítem 5 — Dashboard de cliente (COMPLETADO)
+
+- **Decisión**: app Next.js en `dashboard/` (App Router, server components,
+  JSX sin TS). Server component `app/page.jsx` lee el JSON maestro del disco
+  en cada petición (`export const dynamic = "force-dynamic"`): primero
+  `VIBEAUDIT_REPORT` (env) y luego `public/audit-report.json`.
+- **Semáforo de riesgo**: rojo si hay CRITICAL/HIGH, ámbar si solo MEDIUM,
+  verde si no hay nada de eso — calculado sobre todas las secciones
+  (SAST, secretos, IaC, CI/CD, custom, nube, LLM, recurrentes, deps).
+- **Contenido**: tarjetas de resumen por sección + total, lista por
+  severidad, métricas (LOC, tests, deps con CVEs) y una tabla por sección
+  (issue/cloud/deps/llm/recurrent, cada una con su renderizador).
+- **Ejemplo real**: `dashboard/public/audit-report.json` (scan del propio
+  repo con issues de nube fakes: 2 SAST, 2 IaC, 2 nube, 18 deps).
+- **Verificación**: `npm install` (22 paquetes), `npm run build` compila,
+  `next start` + curl → semáforo rojo "Riesgo alto" (1 CRITICAL, 20 HIGH),
+  tarjetas y tablas renderizadas. Node v26.4.0/npm 11.17.0 verificados antes.
+- **Nota**: `node_modules/` y `.next/` en `.gitignore` del dashboard.
+
+### Ítem 6 — Generador de entregables (pendiente)

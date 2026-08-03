@@ -159,6 +159,26 @@ variables fijar. AWS se escanea con reglas reales (S3 ACL/get-bucket-acl,
 EC2 describe-security-groups); Azure/GCP muestran una advertencia hasta
 incorporar sus SDK.
 
+## Dashboard de cliente (Next.js)
+
+En `dashboard/` hay un servidor Next.js (App Router + server components) que
+carga el JSON maestro y muestra el **semáforo de riesgo** (rojo si hay
+CRITICAL/HIGH, ámbar con MEDIUM, verde si no), tarjetas de resumen, conteos
+por severidad, métricas y una tabla por sección del reporte (SAST, secretos,
+IaC, CI/CD, custom, nube, LLM, recurrentes, dependencias).
+
+```bash
+cd dashboard
+npm install
+npm run build    # verifica compilación
+npm start        # http://localhost:3000
+```
+
+El JSON se lee de `dashboard/public/audit-report.json` (o de la variable
+`VIBEAUDIT_REPORT`). Un ejemplo real se incluye en
+`dashboard/public/audit-report.json`; sin reporte la página indica cómo
+señalarlo. Requiere Node >= 20.9.
+
 ### Checklists como datos
 
 Los checklists son YAML en `vibeaudit/checklists/` (12-Factor, OWASP Top 10,

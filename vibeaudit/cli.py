@@ -17,6 +17,7 @@ from vibeaudit.memory import MemoryEntry, MemoryStore
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
+from vibeaudit.scanners.cloud import CloudScanner
 from vibeaudit.scanners.custom import CustomRulesScanner
 from vibeaudit.scanners.deps import DependencyScanner
 from vibeaudit.scanners.gitleaks import GitleaksScanner
@@ -102,6 +103,11 @@ def scan(
         None,
         "--memory",
         help="Directorio de la memoria de hallazgos recurrentes (dedupe y fixes conocidos)",
+    ),
+    cloud: bool = typer.Option(
+        False,
+        "--cloud",
+        help="Escanea la nube del proveedor configurado (solo lectura, credenciales por env)",
     ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
@@ -218,6 +224,17 @@ def scan(
                         f"[cyan]Memoria:[/] {len(recurrent)} hallazgos recurrentes reconocidos"
                     )
 
+                cloud_issues: list = []
+                if cloud:
+                    progress.update(
+                        task, description="Escaneando la nube (solo lectura)..."
+                    )
+                    cloud_issues = CloudScanner().scan()
+                    report.cloud_issues = cloud_issues
+                    console.print(
+                        f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas"
+                    )
+
         # Fuera del with: el directorio temporal ya fue limpiado
         if output_format == OutputFormat.JSON:
             reporter.save_to_file(output)
@@ -239,7 +256,8 @@ def scan(
             f"{len(cicd_issues)} riesgos CI/CD, "
             f"{len(dependency_vulnerabilities)} deps con CVEs, "
             f"{len(report.llm_findings)} hallazgos LLM, "
-            f"{len(report.recurrent_findings)} recurrentes[/])"
+            f"{len(report.recurrent_findings)} recurrentes, "
+            f"{len(report.cloud_issues)} nube[/])"
         )
         reporter.print_summary()
 
@@ -251,10 +269,16 @@ def scan(
         raise typer.Exit(code=1) from exc
     except RuntimeError as exc:
         console.print(f"[bold red]Error:[/] {exc}")
-        console.print(
-            "[yellow]Sugerencia:[/] verifica que gitleaks, semgrep y checkov "
-            "estén instalados (brew install gitleaks semgrep; pip install checkov)"
-        )
+        if "credenciales de nube" in str(exc):
+            console.print(
+                "[yellow]Nube:[/] configura las credenciales del proveedor "
+                "por entorno (AWS_ACCESS_KEY_ID, AZURE_CLIENT_ID...) y reintenta."
+            )
+        else:
+            console.print(
+                "[yellow]Sugerencia:[/] verifica que gitleaks, semgrep y checkov "
+                "estén instalados (brew install gitleaks semgrep; pip install checkov)"
+            )
         raise typer.Exit(code=1) from exc
     except OSError as exc:
         console.print(

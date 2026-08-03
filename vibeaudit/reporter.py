@@ -12,6 +12,7 @@ from rich.table import Table
 
 from vibeaudit.models import (
     AuditReport,
+    CloudIssue,
     DependencyVulnerability,
     LLMFinding,
     Metrics,
@@ -75,6 +76,7 @@ class AuditReporter:
         dependency_vulnerabilities: Optional[List[DependencyVulnerability]] = None,
         custom_issues: Optional[List[Vulnerability]] = None,
         llm_findings: Optional[List[LLMFinding]] = None,
+        cloud_issues: Optional[List[CloudIssue]] = None,
     ):
         self.project = project
         self.vulnerabilities = vulnerabilities or []
@@ -85,6 +87,7 @@ class AuditReporter:
         self.dependency_vulnerabilities = dependency_vulnerabilities or []
         self.custom_issues = custom_issues or []
         self.llm_findings = llm_findings or []
+        self.cloud_issues = cloud_issues or []
         self._cached_report: Optional[AuditReport] = None
 
     def _count_lines_of_code(self) -> int:
@@ -148,6 +151,7 @@ class AuditReporter:
             cicd_issues=self.cicd_issues,
             custom_issues=self.custom_issues,
             llm_findings=self.llm_findings,
+            cloud_issues=self.cloud_issues,
             metrics=metrics,
         )
         return self._cached_report
@@ -170,6 +174,7 @@ class AuditReporter:
             ("Problemas de IaC", len(report.iac_issues)),
             ("Riesgos de CI/CD", len(report.cicd_issues)),
             ("Reglas custom", len(report.custom_issues)),
+            ("Seguridad en la nube", len(report.cloud_issues)),
             ("Secretos filtrados", len(report.secrets)),
             ("Hallazgos LLM", len(report.llm_findings)),
             ("Dependencias con CVEs", len(report.metrics.dependency_vulnerabilities)),
@@ -249,6 +254,20 @@ class AuditReporter:
             md += f"\n\n**Recomendación:** {finding.recommendation}"
         return md
 
+    @staticmethod
+    def _md_cloud(issue) -> str:
+        """Renderiza un hallazgo de nube en Markdown."""
+        md = (
+            f"### {AuditReporter._md_code(issue.rule)} — "
+            f"**{issue.severity.value}** — `{issue.provider}` — "
+            f"{issue.resource}"
+        )
+        if issue.description:
+            md += f"\n\n{issue.description}"
+        if issue.recommendation:
+            md += f"\n\n**Recomendación:** {issue.recommendation}"
+        return md
+
     def save_markdown(self, path: Path) -> None:
         """Guarda el reporte en Markdown legible para humanos."""
         report = self.build()
@@ -298,6 +317,9 @@ class AuditReporter:
             ]),
             ("Auditoría LLM (checklists)", [
                 self._md_llm(f) for f in report.llm_findings
+            ]),
+            ("Seguridad en la nube", [
+                self._md_cloud(c) for c in report.cloud_issues
             ]),
             ("Dependencias con CVEs", [
                 self._md_dep(d) for d in report.metrics.dependency_vulnerabilities
@@ -398,6 +420,36 @@ class AuditReporter:
             + "</tbody></table>"
         )
 
+    def _html_cloud_table(self, issues: List) -> str:
+        """Tabla HTML de hallazgos de seguridad en la nube."""
+        if not issues:
+            return "<p>No se encontraron hallazgos.</p>"
+        rows = []
+        for issue in issues:
+            detail = issue.description or ""
+            if issue.recommendation:
+                detail = (
+                    f"{detail} — <strong>Recomendación:</strong> "
+                    f"{self._html_escaped(issue.recommendation)}"
+                )
+            rows.append(
+                "<tr>"
+                f"<td><code>{self._html_escaped(issue.rule)}</code></td>"
+                f"<td>{self._html_escaped(issue.provider)}</td>"
+                f"<td><code>{self._html_escaped(issue.resource)}</code></td>"
+                f"<td>{self._html_badge(issue.severity)}</td>"
+                f"<td>{detail}</td>"
+                "</tr>"
+            )
+        return (
+            "<table><thead><tr>"
+            "<th>Regla</th><th>Proveedor</th><th>Recurso</th>"
+            "<th>Severidad</th><th>Detalle</th>"
+            "</tr></thead><tbody>"
+            + "\n".join(rows)
+            + "</tbody></table>"
+        )
+
     def _html_llm_table(self, findings: List) -> str:
         """Tabla HTML de hallazgos del auditor LLM."""
         if not findings:
@@ -463,6 +515,10 @@ class AuditReporter:
                 (
                     "Auditoría LLM (checklists)",
                     self._html_llm_table(report.llm_findings),
+                ),
+                (
+                    "Seguridad en la nube",
+                    self._html_cloud_table(report.cloud_issues),
                 ),
                 (
                     "Dependencias con CVEs",
@@ -612,6 +668,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
     ['CI/CD', data.cicdIssues.length],
     ['Reglas custom', data.customIssues.length],
     ['LLM', data.llmFindings.length],
+    ['Nube', data.cloudIssues.length],
     ['Checklists', data.checklists ? data.checklists.length : 0],
     ['Recurrentes', data.recurrentFindings.length],
     ['Deps con CVEs', data.metrics.dependencyVulnerabilities.length]
@@ -643,6 +700,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
   countSev(data.cicdIssues);
   countSev(data.customIssues);
   countSev(data.llmFindings);
+  countSev(data.cloudIssues);
   countSev(data.metrics.dependencyVulnerabilities);
   var max = Math.max.apply(null, ORDER.map(function (s) {{ return counts[s]; }}).concat([1]));
   var bars = document.getElementById('severity-bars');
@@ -700,12 +758,27 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
       el('td', null, detail.join(' — '))
     ];
   }}
+  function cloudCells(c) {{
+    var detail = [];
+    if (c.description) detail.push(c.description);
+    if (c.recommendation) detail.push('Recomendación: ' + c.recommendation);
+    var tdBadge = el('td');
+    tdBadge.appendChild(badge(c.severity));
+    return [
+      el('td', null, c.rule),
+      el('td', null, c.provider),
+      el('td', null, c.resource),
+      tdBadge,
+      el('td', null, detail.join(' — '))
+    ];
+  }}
   var sections = [
     {{ id: 'sec-sast', title: 'Vulnerabilidades (SAST)', items: data.vulnerabilities, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-secrets', title: 'Secretos filtrados', items: data.secrets, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-iac', title: 'Problemas de IaC', items: data.iacIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-cicd', title: 'Riesgos de CI/CD', items: data.cicdIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-custom', title: 'Reglas custom', items: data.customIssues, cells: issueCells, headers: ['Regla', 'Archivo', 'Severidad', 'Detalle'] }},
+    {{ id: 'sec-cloud', title: 'Seguridad en la nube', items: data.cloudIssues, cells: cloudCells, headers: ['Regla', 'Proveedor', 'Recurso', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-llm', title: 'Auditoría LLM (checklists)', items: data.llmFindings, cells: llmCells, headers: ['Hallazgo', 'Checklist', 'Severidad', 'Detalle'] }},
     {{ id: 'sec-deps', title: 'Dependencias con CVEs', items: data.metrics.dependencyVulnerabilities, cells: depCells, headers: ['Paquete', 'Ecosistema', 'Severidad', 'Detalle'] }}
   ];
@@ -776,6 +849,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
             + len(report.iac_issues)
             + len(report.cicd_issues)
             + len(report.custom_issues)
+            + len(report.cloud_issues)
             + len(report.secrets)
             + len(report.llm_findings)
             + len(report.metrics.dependency_vulnerabilities)
@@ -784,6 +858,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
         table.add_row("Problemas de IaC", str(len(report.iac_issues)))
         table.add_row("Riesgos de CI/CD", str(len(report.cicd_issues)))
         table.add_row("Reglas custom", str(len(report.custom_issues)))
+        table.add_row("Seguridad en la nube", str(len(report.cloud_issues)))
         table.add_row("Secretos filtrados", str(len(report.secrets)))
         table.add_row("Hallazgos LLM", str(len(report.llm_findings)))
         table.add_row("Checklists aplicados", str(len(report.checklists)))
@@ -809,6 +884,7 @@ pre {{ background: #f9fafb; padding: 0.5rem; overflow-x: auto;
             report.iac_issues,
             report.cicd_issues,
             report.custom_issues,
+            report.cloud_issues,
             report.llm_findings,
             report.metrics.dependency_vulnerabilities,
         ):

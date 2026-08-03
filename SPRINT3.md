@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítems 1-3 completados (motor LLM, checklists YAML, memoria); pendientes 4-7.
+> **ESTADO: EN CURSO** — Ítems 1-4 completados (motor LLM, checklists YAML, memoria, escaneo de nube); pendientes 5-7.
 
 ## Objetivo del Sprint
 
@@ -43,7 +43,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - [x] `--llm` produce hallazgos narrativos verificados E2E (real con Ollama: 11 hallazgos sobre `/tmp/s2-e2e`)
 - [x] Checklists YAML cargables y referenciados en el reporte
 - [x] Memoria: dedup y sugerencias verificadas E2E (backend local: 15 recurrentes en el 2º scan)
-- [ ] Scanners de nube: fail limpio sin credenciales
+- [x] Scanners de nube: fail limpio sin credenciales
 - [ ] Dashboard Next.js arranca y renderiza el JSON maestro
 - [ ] Entregables: C4/roadmap/backlog generados y verificados
 - [ ] README + SPRINT3.md actualizados; suite completa en verde
@@ -154,4 +154,36 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - **README**: sección "Memoria de hallazgos recurrentes" con flag `--memory`,
   `memory add/list` y formato `memory.json`.
 
-### Ítem 4 — Escaneo de nube (pendiente)
+### Ítem 4 — Escaneo de nube (COMPLETADO)
+
+- **Decisión**: primero el proveedor AWS funcionando con `boto3` (ya instalado) y
+  detección de credenciales por env para AWS/Azure/GCP. En ningún caso se exige
+  red en tests (clientes fake inyectados); el escaneo usa solo APIs de lectura
+  (`list_buckets`, `get_bucket_acl`, `describe_security_groups`), nunca modifica
+  recursos.
+- **`vibeaudit/scanners/cloud.py`**: `CloudScanner(providers=None, clients=None)`;
+  `configured_providers()` detecta credenciales: AWS vía `botocore.session` sin
+  red (env, perfil, roles) y Azure/GCP por variables de entorno
+  (`PROVIDER_ENV_VARS`). `scan()` → `RuntimeError` limpio "No hay credenciales de
+  nube" si ninguno está configurado (el CLI lo traduce a exit 1 con sugerencia
+  específica de nube).
+- **Reglas AWS**: `aws-s3-bucket-public` (grants AllUsers/AuthenticatedUsers en
+  el ACL del bucket) y `aws-ec2-security-group-open` (ingress abierto a
+  `0.0.0.0/0` o `::/0`, incluso puertos `-1`). Azure/GCP: placeholder con
+  advertencia y `NotImplementedError` hasta incorporar sus SDK.
+- **Modelo** `CloudIssue` (provider, rule, resource, resourceType, region,
+  severity, description, recommendation) + `AuditReport.cloud_issues` (JSON
+  `cloudIssues`).
+- **CLI**: flag `--cloud` (no-op sin ella); error de credenciales → mensaje
+  específico de nube + exit 1. Reporter: fila "Seguridad en la nube" en
+  `print_summary` y `_summary_rows`, sección con su tabla en HTML/Markdown, y
+  tarjeta "Nube" + sección `sec-cloud` en el dashboard.
+- **Tests**: `tests/test_cloud.py` (8, suite 256): fakes S3/EC2, ACL anónimo
+  filtrado, puertos abiertos (incl. `-1`), sin credenciales → RuntimeError, y
+  detección de proveedores por env.
+- **E2E fail limpio**: `scan --path tests --cloud` sin credenciales →
+  "No hay credenciales de nube configuradas" + exit 1. E2E con fakes: 2 issues
+  (`aws-s3-bucket-public`, `aws-ec2-security-group-open`) presentes en JSON,
+  Markdown, HTML y dashboard (`/tmp/cloud-e2e*`).
+
+### Ítem 5 — Dashboard de cliente (pendiente)

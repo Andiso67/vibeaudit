@@ -78,6 +78,7 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--rules` | Directorio con reglas semgrep YAML custom "Vibe Coding" |
 | `--llm` | Auditoría por checklists con un LLM local/remoto (ver sección "Auditoría LLM") |
 | `--memory` | Directorio de memoria de hallazgos recurrentes (ver sección "Memoria") |
+| `--cloud` | Escanea la nube del proveedor configurado (solo lectura; ver sección "Escaneo de nube") |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
@@ -134,6 +135,29 @@ La deduplicación se hace por clase de hallazgo (regla o paquete+CVE) y la
 similitud semántica entre hallazgos se computa localmente con embeddings
 deterministas de n-gramas (coseno); el diseño permite migrar a una vector DB
 (Qdrant) sin cambiar la interfaz.
+
+### Escaneo de nube (solo lectura)
+
+With `--cloud`, vibeaudit consulta las APIs de solo lectura del proveedor
+configurado por entorno y reporta configs inseguras (`cloudIssues`): buckets
+S3 con ACL público, security groups abiertos a `0.0.0.0/0`, etc. Nunca
+modifica recursos.
+
+```bash
+AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... \
+  .venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json --cloud
+```
+
+| Proveedor | Credenciales (env) | Dependencia |
+|---|---|---|
+| AWS | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (o `AWS_PROFILE`) | `boto3` |
+| Azure | `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` | `azure-mgmt` (pendiente) |
+| GCP | `GOOGLE_APPLICATION_CREDENTIALS` | `google-cloud-*` (pendiente) |
+
+Sin credenciales configuradas el scan falla limpio con exit 1 indicando qué
+variables fijar. AWS se escanea con reglas reales (S3 ACL/get-bucket-acl,
+EC2 describe-security-groups); Azure/GCP muestran una advertencia hasta
+incorporar sus SDK.
 
 ### Checklists como datos
 

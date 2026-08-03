@@ -267,6 +267,21 @@ class LLMFinding(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class CloudIssue(BaseModel):
+    """Configuración insegura detectada en la nube (escaneo de solo lectura)."""
+
+    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP)")
+    rule: str = Field(..., min_length=1, description="Identificador de la regla (ej. aws-s3-public)")
+    resource: str = Field(..., min_length=1, description="Identificador del recurso afectado")
+    resource_type: str = Field(default="", description="Tipo de recurso (bucket, security-group...)")
+    region: str = Field(default="", description="Región del recurso")
+    severity: Severity = Field(..., description="Severidad del hallazgo")
+    description: str = Field(default="", description="Qué config insegura se detectó")
+    recommendation: str = Field(default="", description="Corrección recomendada")
+
+    model_config = {"populate_by_name": True}
+
+
 class AuditReport(BaseModel):
     """Esquema maestro que combina todos los resultados de la auditoría."""
 
@@ -301,6 +316,11 @@ class AuditReport(BaseModel):
         default_factory=list,
         alias="recurrentFindings",
         description="Hallazgos recurrentes reconocidos por la memoria (dedupe + fix conocido)",
+    )
+    cloud_issues: List[CloudIssue] = Field(
+        default_factory=list,
+        alias="cloudIssues",
+        description="Configuraciones inseguras en nube (escaneo de solo lectura)",
     )
     checklists: List[AppliedChecklist] = Field(
         default_factory=list,

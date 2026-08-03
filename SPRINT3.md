@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítems 1-5 completados (motor LLM, checklists YAML, memoria, escaneo de nube, dashboard); pendientes 6-7.
+> **ESTADO: EN CURSO** — Ítems 1-6 completados (motor LLM, checklists YAML, memoria, nube, dashboard, entregables); pendiente 7.
 
 ## Objetivo del Sprint
 
@@ -45,7 +45,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - [x] Memoria: dedup y sugerencias verificadas E2E (backend local: 15 recurrentes en el 2º scan)
 - [x] Scanners de nube: fail limpio sin credenciales
 - [x] Dashboard Next.js arranca y renderiza el JSON maestro
-- [ ] Entregables: C4/roadmap/backlog generados y verificados
+- [x] Entregables: C4/roadmap/backlog generados y verificados
 - [ ] README + SPRINT3.md actualizados; suite completa en verde
 
 ## Criterios de Aceptación
@@ -205,4 +205,27 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
   tarjetas y tablas renderizadas. Node v26.4.0/npm 11.17.0 verificados antes.
 - **Nota**: `node_modules/` y `.next/` en `.gitignore` del dashboard.
 
-### Ítem 6 — Generador de entregables (pendiente)
+### Ítem 6 — Generador de entregables (COMPLETADO)
+
+- **Decisión**: entregables deterministas derivados del JSON maestro (sin red,
+  sin LLM) con `--deliverables <dir>`: diagramas C4 en Mermaid, roadmap por
+  fases y backlog CSV/JSON. `vibeaudit/deliverables.py`.
+- **C4**: `c4-context.mmd` (nivel 1: usuario → VibeAudit → JSON → dashboard/
+  entregables) y `c4-container.mmd` (nivel 2: CLI, ingester, scanners, LLM,
+  memoria, reporter, entregables) en bloques Mermaid fenced.
+- **Roadmap**: `roadmap.md` por fases según severidad — Fase 1 (CRITICAL/HIGH),
+  Fase 2 (MEDIUM), Fase 3 (LOW/INFO) — con tabla de hallazgos por fase
+  (id, tipo, regla, archivo, severidad).
+- **Backlog**: `backlog.csv` (id, seccion, regla, archivo, linea, severidad,
+  fase, recomendacion) y `backlog.json` (mismos datos + fases +
+  resumen_por_seccion). Cada hallazgo lleva recomendación (del campo
+  correspondiente o por defecto por tipo).
+- **CLI**: flag `--deliverables <dir>`; crea el directorio y lista los archivos
+  generados al terminar.
+- **Tests**: `tests/test_deliverables.py` (8) + 1 CLI (265 total).
+- **E2E real** (reporte de `/tmp/r6.json` y del dashboard con 18 deps): 5
+  archivos en `/tmp/entregables-real`; roadmap con Fase 1 poblada
+  (dockerfile.security.*, iac CKV_AWS, cloud) y backlog.json con resumen
+  {sast: 2, iac: 2, cloud: 2, deps: 18}.
+
+### Ítem 7 — Integración SonarQube (pendiente)

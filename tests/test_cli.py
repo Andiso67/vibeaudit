@@ -372,3 +372,43 @@ def test_memory_add_y_list(tmp_path):
     assert listing.exit_code == 0, listing.output
     assert "CKV_AWS_20" in listing.output
     assert "public_access_block" in listing.output
+
+
+def test_scan_con_deliverables_genera_entregables(monkeypatch, tmp_path):
+    proyecto = tmp_path / "proyecto"
+    proyecto.mkdir()
+    (proyecto / "main.py").write_text("print('hola')\n")
+    entregables = tmp_path / "entregables"
+
+    for cls in (
+        "GitleaksScanner",
+        "SemgrepScanner",
+        "CICDScanner",
+        "DependencyScanner",
+        "CustomRulesScanner",
+        "CheckovScanner",
+    ):
+        monkeypatch.setattr("vibeaudit.cli." + cls, FakeScanner)
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "--path",
+            str(proyecto),
+            "--output",
+            str(tmp_path / "r.json"),
+            "--deliverables",
+            str(entregables),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Entregables" in result.output
+    for name in (
+        "c4-context.mmd",
+        "c4-container.mmd",
+        "roadmap.md",
+        "backlog.csv",
+        "backlog.json",
+    ):
+        assert (entregables / name).exists(), f"falta {name}"

@@ -79,6 +79,7 @@ Auditar un directorio local sin clonar (metadatos parciales si no tiene `.git`):
 | `--llm` | Auditoría por checklists con un LLM local/remoto (ver sección "Auditoría LLM") |
 | `--memory` | Directorio de memoria de hallazgos recurrentes (ver sección "Memoria") |
 | `--cloud` | Escanea la nube del proveedor configurado (solo lectura; ver sección "Escaneo de nube") |
+| `--deliverables` | Directorio para entregables de cliente (C4 Mermaid, roadmap, backlog) |
 
 El reporte HTML es autocontenido (CSS inline, sin JS externo) y se abre
 directamente en el navegador. El Markdown es legible en cualquier visor/CI.
@@ -178,6 +179,25 @@ El JSON se lee de `dashboard/public/audit-report.json` (o de la variable
 `VIBEAUDIT_REPORT`). Un ejemplo real se incluye en
 `dashboard/public/audit-report.json`; sin reporte la página indica cómo
 señalarlo. Requiere Node >= 20.9.
+
+## Entregables de cliente
+
+Con `--deliverables <dir>` se generan, a partir del JSON maestro, los
+entregables de la pre-auditoría en 48h:
+
+- `c4-context.mmd` / `c4-container.mmd` — diagramas C4 (nivel 1 y 2) en
+  Mermaid para docs/impresión.
+- `roadmap.md` — plan de remediación por fases según severidad (fase 1
+  CRITICAL/HIGH, fase 2 MEDIUM, fase 3 LOW/INFO) con los hallazgos agrupados.
+- `backlog.csv` / `backlog.json` — backlog de remediación con id, sección,
+  regla, archivo, línea, severidad, fase y recomendación por hallazgo.
+
+```bash
+.venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json \
+  --deliverables ./entregables
+```
+
+Todo se deriva de forma determinista del reporte (sin red, sin LLM).
 
 ### Checklists como datos
 

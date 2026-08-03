@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from vibeaudit.deliverables import DeliverablesGenerator
 from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.llm import LLMAuditor, LLMUnavailableError
 from vibeaudit.memory import MemoryEntry, MemoryStore
@@ -108,6 +109,11 @@ def scan(
         False,
         "--cloud",
         help="Escanea la nube del proveedor configurado (solo lectura, credenciales por env)",
+    ),
+    deliverables: Optional[Path] = typer.Option(
+        None,
+        "--deliverables",
+        help="Directorio donde generar entregables de cliente (C4, roadmap, backlog)",
     ),
 ) -> None:
     """Audita un repositorio (clona) o un directorio local: Gitleaks, Semgrep, Checkov."""
@@ -233,6 +239,16 @@ def scan(
                     report.cloud_issues = cloud_issues
                     console.print(
                         f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas"
+                    )
+
+                if deliverables is not None:
+                    progress.update(
+                        task, description="Generando entregables (C4, roadmap, backlog)..."
+                    )
+                    files = DeliverablesGenerator(report).generate(deliverables)
+                    console.print(
+                        f"[bold green]✔ Entregables en[/] [cyan]{deliverables}[/]: "
+                        + ", ".join(sorted(files))
                     )
 
         # Fuera del with: el directorio temporal ya fue limpiado

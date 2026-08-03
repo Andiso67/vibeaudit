@@ -1,0 +1,50 @@
+# Checklist OWASP Top 10 (2021): categorías más relevantes para el contenido
+# de un JSON maestro de vibeaudit (SAST, secretos, CI/CD, dependencias).
+
+name: "OWASP Top 10"
+description: "Riesgos de seguridad de aplicaciones web del OWASP Top 10 aplicables a los hallazgos."
+items:
+  - id: owasp.injection
+    framework: OWASP
+    title: "Prevención de inyección"
+    description: "Las consultas y comandos deben usar parámetros/escapado, nunca concatenación de strings (OWASP A03). Revisar hallazgos de tipo injection/raw query."
+    severity: HIGH
+    match:
+      sections: [sast, custom]
+      rules: ["*injection*", "*sql*", "*command*", "*exec*", "*query*"]
+
+  - id: owasp.sensitive-data
+    framework: OWASP
+    title: "Protección de datos sensibles"
+    description: "Los secretos y datos sensibles no deben quedar expuestos en el repositorio ni en registros (OWASP A02). Revisar hallazgos de gitleaks."
+    severity: HIGH
+    match:
+      sections: [secrets, custom]
+      rules: ["*key*", "*token*", "*secret*", "*password*", "*credential*"]
+
+  - id: owasp.code-eval
+    framework: OWASP
+    title: "Sin evaluación dinámica de código"
+    description: "Evitar eval/exec y deserialización no segura sobre entrada del usuario (OWASP A03). Revisar hallazgos de evaluaciones dinámicas."
+    severity: HIGH
+    match:
+      sections: [sast, custom]
+      rules: ["*eval*", "*exec*", "*pickle*", "*deserial*", "*yaml.load*"]
+
+  - id: owasp.broken-auth
+    framework: OWASP
+    title: "Autenticación y credenciales en pipelines"
+    description: "Credenciales y tokens hardcodeados en pipelines o código comprometen autenticación y accesos (OWASP A07)."
+    severity: HIGH
+    match:
+      sections: [cicd, secrets]
+      rules: ["*token*", "*secret*", "*credential*", "*password*", "*oauth*"]
+
+  - id: owasp.vulnerable-deps
+    framework: OWASP
+    title: "Dependencias vulnerables"
+    description: "Las dependencias con CVEs conocidos deben actualizarse a la versión corregida (OWASP A06)."
+    severity: HIGH
+    match:
+      sections: [deps]
+      min_severity: HIGH

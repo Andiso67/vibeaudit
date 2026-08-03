@@ -1,6 +1,6 @@
 # Sprint 3 — Motor LLM, memoria y entregables
 
-> **ESTADO: EN CURSO** — Ítem 1 completado (motor LLM); pendientes 2-7.
+> **ESTADO: EN CURSO** — Ítems 1-2 completados (motor LLM + checklists YAML); pendientes 3-7.
 
 ## Objetivo del Sprint
 
@@ -41,7 +41,7 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 
 - [ ] Ítems 1-7 implementados con tests unitarios (monkeypatch, sin red)
 - [x] `--llm` produce hallazgos narrativos verificados E2E (real con Ollama: 11 hallazgos sobre `/tmp/s2-e2e`)
-- [ ] Checklists YAML cargables y referenciados en el reporte
+- [x] Checklists YAML cargables y referenciados en el reporte
 - [ ] Memoria: dedup y sugerencias verificadas E2E (backend local)
 - [ ] Scanners de nube: fail limpio sin credenciales
 - [ ] Dashboard Next.js arranca y renderiza el JSON maestro
@@ -96,3 +96,30 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
   `print_summary` no incluía los hallazgos LLM (mostraba menos que el total);
   ahora cuenta severidades sobre todos los tipos (SAST, secretos, IaC, CI/CD,
   custom, LLM, deps) igual que el dashboard, con test de regresión.
+
+### Ítem 2 — Checklists como datos (COMPLETADO)
+
+- **Bundle YAML** en `vibeaudit/checklists/` (3 archivos, 12 ítems):
+  `12-factor.yaml` (config, dependencies, backing-services), `owasp-top10.yaml`
+  (injection, sensitive-data, code-eval, broken-auth, vulnerable-deps) y
+  `aws-well-architected.yaml` (iam-least-privilege, encryption, logging,
+  network-security). `pyproject.toml` package-data incluye `checklists/*.yaml`.
+- **Modelos** (`models.py`): `ChecklistMatch` (sections, rules glob, minSeverity),
+  `ChecklistItem` ampliado (framework, severity, match), `AppliedChecklist`
+  (name, itemCount, matchedFindings) y `AuditReport.checklists` (JSON
+  `checklists`) que referencia los checklists aplicados.
+- **`vibeaudit/checklists/__init__.py`** (loader): `load_checklist_file`,
+  `load_checklists(bundle_dir)` (para tests con directorios custom),
+  validación estricta (`ChecklistBundleError` para YAML inválido, falta de
+  `items`, ítems inválidos e ids duplicados), `match_finding` (sección + glob
+  de regla + severidad mínima), `match_report` y `applied_checklists`.
+- **Integración LLM**: `STARTER_CHECKLIST = load_checklists()` (el bundle es el
+  default); el prompt lista cada ítem con su framework y alcance de mapeo
+  (`[aplica a iac,cicd >= HIGH]`); `audit()` rellena `report.checklists`.
+- **Reporter**: fila "Checklists aplicados" en `print_summary` y tarjeta
+  "Checklists" en el dashboard (el JSON maestro ya incluye el campo).
+- **Tests**: 14 nuevos en `tests/test_checklists.py` (232 total), incluyendo
+  validación de errores y mapeo CKV_AWS_20/18 → aws.iam-least-privilege.
+- **E2E real** (`/tmp/s2-e2e`, Ollama + llama3.1): `checklists` en el JSON con
+  los 3 frameworks y `matchedFindings` reales (AWS WAF: 6 hallazgos de los
+  CKV_AWS del scan); 11 hallazgos LLM con checklistRef.

@@ -108,6 +108,15 @@ ollama pull llama3.1 && ollama serve
 Si el motor no está disponible, el scan no falla: muestra una advertencia y
 genera el reporte sin análisis LLM.
 
+### Checklists como datos
+
+Los checklists son YAML en `vibeaudit/checklists/` (12-Factor, OWASP Top 10,
+AWS Well-Architected) con ítems que declaran reglas de mapeo hallazgo→checklist
+(secciones del reporte, patrones de id de regla como `CKV_AWS_*`, y severidad
+mínima). El reporte maestro referencia los checklists aplicados en
+`checklists` (`{name, itemCount, matchedFindings}`), contados a partir del
+mapeo real de los hallazgos.
+
 ## Estructura del JSON maestro
 ```json
 {

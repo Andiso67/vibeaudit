@@ -173,6 +173,60 @@ class Metrics(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ChecklistMatch(BaseModel):
+    """Condiciones que mapean hallazgos del JSON maestro a un ítem del checklist."""
+
+    sections: List[str] = Field(
+        default_factory=lambda: ["sast"],
+        description="Secciones del reporte: sast, secrets, iac, cicd, custom, deps",
+    )
+    rules: List[str] = Field(
+        default_factory=list,
+        description="Patrones glob sobre el identificador de regla (ej. 'CKV_AWS_*')",
+    )
+    min_severity: Optional[Severity] = Field(
+        default=None,
+        alias="minSeverity",
+        description="Severidad mínima del hallazgo para considerarlo",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ChecklistItem(BaseModel):
+    """Ítem de un checklist de buenas prácticas (12-Factor, OWASP, AWS WAF...)."""
+
+    id: str = Field(..., min_length=1, description="Identificador único (ej. 12-factor.config)")
+    title: str = Field(..., min_length=1, description="Título corto")
+    description: str = Field(..., min_length=1, description="Qué verificar y por qué")
+    framework: str = Field(
+        default="", description="Marco de referencia (ej. 12-Factor, OWASP, AWS WAF)"
+    )
+    severity: Optional[Severity] = Field(
+        default=None,
+        description="Severidad sugerida para los hallazgos de este ítem",
+    )
+    match: Optional[ChecklistMatch] = Field(
+        default=None, description="Condiciones de mapeo hallazgo→checklist"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class AppliedChecklist(BaseModel):
+    """Referencia a un checklist aplicado durante la auditoría LLM."""
+
+    name: str = Field(..., min_length=1, description="Nombre del checklist")
+    item_count: int = Field(gt=0, alias="itemCount", description="Nº de ítems del checklist")
+    matched_findings: int = Field(
+        default=0,
+        alias="matchedFindings",
+        description="Hallazgos del reporte mapeados a algún ítem",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class LLMFinding(BaseModel):
     """Hallazgo narrativo del motor LLM (auditoría por checklists)."""
 
@@ -227,6 +281,10 @@ class AuditReport(BaseModel):
         default_factory=list,
         alias="llmFindings",
         description="Hallazgos narrativos del motor LLM (auditor por checklists)",
+    )
+    checklists: List[AppliedChecklist] = Field(
+        default_factory=list,
+        description="Checklists aplicados en la auditoría (referencias al bundle YAML)",
     )
     metrics: Metrics = Field(..., description="Métricas del repositorio")
 

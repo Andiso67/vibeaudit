@@ -13,9 +13,15 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 import httpx
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 
-from vibeaudit.models import AuditReport, LLMFinding, Severity
+from vibeaudit.checklists import applied_checklists, load_checklists
+from vibeaudit.models import (
+    AuditReport,
+    ChecklistItem,
+    LLMFinding,
+    Severity,
+)
 
 # Variables de entorno
 ENV_BASE_URL = "VIBEAUDIT_LLM_BASE_URL"
@@ -33,52 +39,7 @@ class LLMUnavailableError(RuntimeError):
     """El endpoint LLM no está disponible (sin red, sin servidor local, 401...)."""
 
 
-class ChecklistItem(BaseModel):
-    """Ítem de un checklist de buenas prácticas (12-Factor, OWASP, WAF...)."""
-
-    id: str = Field(..., min_length=1, description="Identificador único (ej. 12-factor.config)")
-    title: str = Field(..., min_length=1, description="Título corto")
-    description: str = Field(..., min_length=1, description="Qué verificar y por qué")
-
-
-STARTER_CHECKLIST: List[ChecklistItem] = [
-    ChecklistItem(
-        id="12-factor.config",
-        title="Configuración en el entorno",
-        description="Los secretos y la configuración no deben estar hardcodeados en el "
-        "código (12-Factor III). Buscar credenciales en archivos fuente y plantillas.",
-    ),
-    ChecklistItem(
-        id="owasp.sensitive-data",
-        title="Protección de datos sensibles",
-        description="Los secretos filtrados y los datos sensibles deben gestionarse con "
-        "gestores de secretos (OWASP A02). Verificar hallazgos de gitleaks y su alcance.",
-    ),
-    ChecklistItem(
-        id="owasp.injection",
-        title="Prevención de inyección",
-        description="Las consultas a bases de datos deben usar parámetros, nunca "
-        "concatenación de strings (OWASP A03). Revisar hallazgos SAST de tipo injection/raw query.",
-    ),
-    ChecklistItem(
-        id="owasp.code-eval",
-        title="Sin evaluación dinámica de código",
-        description="Evitar eval/exec sobre entrada del usuario (OWASP A03). Revisar "
-        "hallazgos de evaluaciones dinámicas en el reporte SAST y reglas custom.",
-    ),
-    ChecklistItem(
-        id="waf.iam-least-privilege",
-        title="Mínimo privilegio en IAM",
-        description="Las políticas IAM y los permisos de CI/CD deben seguir el principio "
-        "de mínimo privilegio (AWS Well-Architected SEC01). Revisar hallazgos de IaC y CI/CD.",
-    ),
-    ChecklistItem(
-        id="waf.dependencies",
-        title="Dependencias actualizadas",
-        description="Las dependencias con CVEs conocidos deben actualizarse a la versión "
-        "corregida (AWS WAF / OWASP A06). Revisar el detalle de dependenciesWithCves.",
-    ),
-]
+STARTER_CHECKLIST: List[ChecklistItem] = load_checklists()
 
 
 @dataclass
@@ -216,7 +177,18 @@ class LLMAuditor:
         lines.append("")
         lines.append("CHECKLIST:")
         for item in self.checklist:
-            lines.append(f"- [{item.id}] {item.title}: {item.description}")
+            scope = ""
+            if item.match is not None:
+                scope = (
+                    " [aplica a "
+                    + ",".join(sorted(item.match.sections))
+                    + (f" >= {item.match.min_severity.value}" if item.match.min_severity else "")
+                    + "]"
+                )
+            lines.append(
+                f"- [{item.id}] ({item.framework or 'General'}) {item.title}: "
+                f"{item.description}{scope}"
+            )
         return "\n".join(lines)
 
     def parse_response(self, text: str) -> List[LLMFinding]:
@@ -267,4 +239,6 @@ class LLMAuditor:
         """Ejecuta la auditoría LLM y devuelve los hallazgos."""
         messages = self.build_messages()
         response = self.client.chat(messages)
-        return self.parse_response(response)
+        findings = self.parse_response(response)
+        self.report.checklists = applied_checklists(self.checklist, self.report)
+        return findings

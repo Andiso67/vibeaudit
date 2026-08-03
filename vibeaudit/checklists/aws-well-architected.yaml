@@ -1,0 +1,41 @@
+# Checklist AWS Well-Architected Framework: pilares de seguridad (SEC) y
+# fiabilidad aplicables a los hallazgos de IaC (Checkov CKV_AWS_*) y CI/CD.
+
+name: "AWS Well-Architected"
+description: "Buenas prácticas del pilar de seguridad y fiabilidad de AWS Well-Architected para recursos IaC."
+items:
+  - id: aws.iam-least-privilege
+    framework: AWS WAF
+    title: "Mínimo privilegio en IAM"
+    description: "Políticas IAM, roles y buckets deben seguir el principio de mínimo privilegio y no permitir acceso público/sobre-permisivo (WAF SEC01)."
+    severity: HIGH
+    match:
+      sections: [iac, cicd]
+      rules: ["CKV_AWS_18", "CKV_AWS_19", "CKV_AWS_20", "CKV_AWS_21", "CKV_AWS_24", "CKV_AWS_27", "CKV_AWS_28", "CKV_AWS_53", "CKV_AWS_55", "CKV_AWS_71", "CKV_AWS_76", "CKV_AWS_114", "CKV_AWS_115", "CKV_AWS_173", "CKV2_AWS_*", "CKV_GHA_*"]
+
+  - id: aws.encryption
+    framework: AWS WAF
+    title: "Cifrado de datos en reposo y tránsito"
+    description: "Los recursos de almacenamiento y bases de datos deben tener cifrado habilitado (WAF SEC03)."
+    severity: HIGH
+    match:
+      sections: [iac]
+      rules: ["CKV_AWS_16", "CKV_AWS_40", "CKV_AWS_41", "CKV_AWS_45", "CKV_AWS_58", "CKV_AWS_96", "CKV_AWS_111", "CKV_AWS_135", "CKV_AWS_140"]
+
+  - id: aws.logging
+    framework: AWS WAF
+    title: "Registro y auditoría de recursos"
+    description: "Los recursos deben registrar accesos y cambios (S3 access logging, CloudTrail) para trazabilidad (WAF SEC07)."
+    severity: MEDIUM
+    match:
+      sections: [iac]
+      rules: ["CKV_AWS_18", "CKV_AWS_66", "CKV_AWS_71", "CKV_AWS_126", "CKV_AWS_142", "CKV_AWS_150", "CKV_AWS_160"]
+
+  - id: aws.network-security
+    framework: AWS WAF
+    title: "Control de red y exposición"
+    description: "Grupos de seguridad y balanceadores no deben exponer puertos abiertos al mundo (WAF SEC05)."
+    severity: HIGH
+    match:
+      sections: [iac]
+      rules: ["CKV_AWS_24", "CKV_AWS_25", "CKV_AWS_26", "CKV_AWS_118", "CKV_AWS_123", "CKV_AWS_127", "CKV_AWS_128", "CKV_AWS_130", "CKV_AWS_158", "CKV_AWS_157", "CKV_AWS_165"]

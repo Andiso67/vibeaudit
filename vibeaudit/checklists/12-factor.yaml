@@ -1,0 +1,35 @@
+# Checklist 12-Factor: criterios de la metodología 12-Factor aplicables a la
+# auditoría de una aplicación (configuración, despliegue, dependencias).
+# Cada ítem puede declarar `match`, que mapea hallazgos del JSON maestro al ítem:
+# - sections: sección(es) del reporte (sast, secrets, iac, cicd, custom, deps)
+# - rules: patrones glob sobre el identificador de regla del hallazgo
+# - min_severity: severidad mínima para considerar el hallazgo
+
+name: "12-Factor"
+description: "Criterios de la metodología 12-Factor para aplicaciones desplegadas como servicio."
+items:
+  - id: 12-factor.config
+    framework: 12-Factor
+    title: "Configuración en el entorno"
+    description: "Los secretos y la configuración no deben estar hardcodeados en el código (12-Factor III). Gestionarlos desde el entorno y un gestor de secretos."
+    severity: HIGH
+    match:
+      sections: [secrets, iac, custom]
+      rules: ["*secret*", "*token*", "*api-key*", "*credential*", "aws-access-token", "google-api-key", "github-pat", "generic-api-key"]
+
+  - id: 12-factor.dependencies
+    framework: 12-Factor
+    title: "Dependencias declaradas y reproducibles"
+    description: "Las dependencias deben declararse explícitamente con versión fijada (12-Factor II) y el entorno debe poder reproducirlas."
+    severity: MEDIUM
+    match:
+      sections: [deps]
+
+  - id: 12-factor.backing-services
+    framework: 12-Factor
+    title: "Servicios de apoyo tratados como recursos externos"
+    description: "Bases de datos, colas y almacenamiento deben ser recursos externos dentro de la app (intercambiables vía configuración)."
+    severity: LOW
+    match:
+      sections: [iac, cicd]
+      rules: ["*rds*", "*dynamodb*", "*bucket*", "*queue*"]

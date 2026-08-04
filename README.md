@@ -203,8 +203,14 @@ Todo se deriva de forma determinista del reporte (sin red, sin LLM).
 
 ## Integración SonarQube
 
-SonarQube Community Edition es **gratuita** (open source). VibeAudit ofrece
-dos modos:
+SonarQube Community es **gratuito** (open source). VibeAudit ofrece dos vías:
+
+> **Sobre versiones**: la LTS/nombre cambió. La **9.9 está fuera de soporte**
+> (EOL); la actual es **SonarQube Server 2026.1** (LTA) y la **Community Build
+> 26.x** (Docker Hub: tag `sonarqube:community`; `lts-community` todavía apunta
+> a 9.9). No uses 9.9 para entornos nuevos. La base H2 embebida no migra de
+> 9.9 a 26.x: al actualizar, borra el volumen de datos (se pierden los
+> proyectos) y configura de nuevo desde cero.
 
 - **`--sonar-json <archivo>`**: exporta los hallazgos con archivo (SAST,
   secretos, IaC, CI/CD, custom) al formato **Generic Issue Import**

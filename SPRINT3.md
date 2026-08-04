@@ -252,19 +252,25 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
 - **E2E real** (reporte del dashboard): `/tmp/sonar-issues.json` con 4 issues
   (2 SAST + 2 IaC, todos CRITICAL/HIGH → CRITICAL en SonarQube), engineId y
   tipo correctos.
-- **Integración en vivo (SonarQube 9.9.8 Community en Docker, puerto 9000)**:
+- **Integración en vivo (SonarQube 26.7.0 Community en Docker, puerto 9000)**:
   `sonar-scanner` 8.1 (Homebrew, Java 21) analizó el repo contra el servidor
   real con `-Dsonar.login=<token> -Dsonar.externalIssuesReportPaths=…`:
   - **Issues de VibeAudit importadas** como `external_vibeaudit:*` (2 SAST
-    Dockerfile CRITICAL visibles en la lista de VULNERABILITY del proyecto).
-  - Las 2 IaC de checkov sobre `Dockerfile` se ignoraron por el servidor:
-    `Dockerfile` no es archivo fuente analizado en 9.9 Community (limitación
-    del servidor, el JSON estaba bien formado).
-  - SonarQube añadió ~104 issues propias (code smells Python/JS + un AWS
-    secret BLOCKER en `dashboard/public/audit-report.json`, el ejemplo).
-  - **Aprendizaje clave**: en 9.9 el import NO es vía menú/UI ni API pública;
-    es el análisis del scanner con `sonar.externalIssuesReportPaths`. Los
-    tokens van por `-Dsonar.login` (no `sonar.token`).
+    Dockerfile CRITICAL visibles como VULNERABILITY en el proyecto).
+  - **Aprendizajes sobre versiones**:
+    - SonarQube **9.9 LTS está EOL** (2025): muestra "no longer active" en la UI.
+      Hoy la LTA es **2026.1** (SaaS/ediciones de pago) y la Community Build se
+      versiona aparte (**26.x**, tag Docker `sonarqube:community`, `lts-community`
+      sigue apuntando a 9.9). Los tags `2026-lta-*` solo existen para
+      enterprise/developer/datacenter, NO para community.
+    - La base H2 embebida **no migra 9.9 → 26.x** (formato MVStore 2 vs 3):
+      hay que borrar el volumen de datos y arrancar limpio (pierdes proyectos).
+    - En 9.9 `Dockerfile` no se analiza como fuente (las IaC de checkov sobre
+      él se descartan); el import real se hace SIEMPRE vía el análisis del
+      scanner con `sonar.externalIssuesReportPaths`, no por menú/UI ni API.
+      Los tokens van por `-Dsonar.login` (no `sonar.token`).
+  - Instalación en vivo: `openjdk@21` + `sonar-scanner` 8.1 vía Homebrew
+    (en macOS el Java de Apple no es runtime JDK; hay que instalar openjdk).
 
 ## Estado del Sprint 3
 

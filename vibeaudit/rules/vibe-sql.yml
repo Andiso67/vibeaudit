@@ -1,0 +1,9 @@
+rules:
+  - id: vibe-sql-select-star
+    pattern-regex: select\s+\*\s+from\s+[\w"`]+
+    message: "SELECT * trae columnas innecesarias (anti-patrón Vibe Coding)."
+    severity: WARNING
+    languages:
+      - generic
+    metadata:
+      cwe: "CWE-1061"

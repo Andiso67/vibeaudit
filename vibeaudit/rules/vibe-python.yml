@@ -1,0 +1,35 @@
+rules:
+  - id: vibe-python-bare-except
+    pattern: |
+      try:
+          ...
+      except:
+          ...
+    message: "except sin tipo: captura todo y oculta errores (anti-patrón Vibe Coding)."
+    severity: WARNING
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-396"
+
+  - id: vibe-python-pass-except
+    pattern: |
+      try:
+          ...
+      except Exception as $E:
+          pass
+    message: "Excepción tragada con `pass`: oculta fallos (anti-patrón Vibe Coding)."
+    severity: WARNING
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-390"
+
+  - id: vibe-todo-fixme
+    pattern-regex: (TODO|FIXME|HACK)
+    message: "TODO/FIXME/HACK pendiente en el código (anti-patrón Vibe Coding)."
+    severity: INFO
+    languages:
+      - generic
+    metadata:
+      cwe: "CWE-1104"

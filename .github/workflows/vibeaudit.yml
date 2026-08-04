@@ -1,0 +1,52 @@
+name: VibeAudit
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Auditoría VibeAudit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir imagen VibeAudit
+        run: docker build -t vibeaudit:latest .
+
+      - name: Ejecutar scan
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            vibeaudit:latest \
+            scan --path . --output /repo/audit-report.json \
+            --sonar-json /repo/sonar-issues.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
+
+      - name: Subir reportes
+        uses: actions/upload-artifact@v4
+        with:
+          name: vibeaudit-report
+          path: |
+            audit-report.json
+            sonar-issues.json
+          if-no-files-found: error
+
+      - name: Importar a SonarQube
+        if: ${{ secrets.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
+        uses: sonarsource/sonar-scanner-cli@v4
+        with:
+          sonarHostUrl: ${{ secrets.SONAR_HOST_URL }}
+          sonarToken: ${{ secrets.SONAR_TOKEN }}
+          args: >
+            -Dsonar.projectBaseDir=${{ github.workspace }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY || github.event.repository.name }}
+            -Dsonar.sources=.
+            -Dsonar.externalIssuesReportPaths=${{ github.workspace }}/sonar-issues.json

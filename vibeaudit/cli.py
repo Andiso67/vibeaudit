@@ -70,7 +70,7 @@ def scan(
     rules: Optional[Path] = typer.Option(
         None,
         "--rules",
-        help="Directorio con reglas semgrep YAML custom 'Vibe Coding'",
+        help="Directorio con reglas semgrep YAML custom 'Vibe Coding' (default: bundle incluido)",
     ),
     token: Optional[str] = typer.Option(
         None, "--token", help="Token de acceso para clonar repositorios privados"
@@ -142,6 +142,8 @@ def scan(
                 "--token, --branch, --tag y --depth solo aplican con --repo-url"
             )
 
+        if rules is None:
+            rules = Path(__file__).parent / "rules"
         if rules is not None and not rules.is_dir():
             raise ValueError(
                 f"El directorio de reglas no existe o no es un directorio: {rules}"
@@ -246,10 +248,13 @@ def scan(
                     progress.update(
                         task, description="Escaneando la nube (solo lectura)..."
                     )
-                    cloud_issues = CloudScanner().scan()
+                    cloud_scanner = CloudScanner()
+                    cloud_issues = cloud_scanner.scan()
                     report.cloud_issues = cloud_issues
+                    report.cloud_resources = cloud_scanner.resources
                     console.print(
-                        f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas"
+                        f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas "
+                        f"({len(cloud_scanner.resources)} recursos analizados)"
                     )
 
                 if deliverables is not None:

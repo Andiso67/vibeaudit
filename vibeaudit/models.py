@@ -282,6 +282,18 @@ class CloudIssue(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class CloudResource(BaseModel):
+    """Recurso de nube analizado (solo lectura), aunque no tenga hallazgos."""
+
+    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP)")
+    resource_type: str = Field(..., min_length=1, description="Tipo de recurso (bucket, security-group...)")
+    resource: str = Field(..., min_length=1, description="Identificador del recurso")
+    region: str = Field(default="", description="Región del recurso")
+    status: str = Field(default="ok", description="ok o issue si generó un hallazgo")
+
+    model_config = {"populate_by_name": True}
+
+
 class AuditReport(BaseModel):
     """Esquema maestro que combina todos los resultados de la auditoría."""
 
@@ -321,6 +333,11 @@ class AuditReport(BaseModel):
         default_factory=list,
         alias="cloudIssues",
         description="Configuraciones inseguras en nube (escaneo de solo lectura)",
+    )
+    cloud_resources: List[CloudResource] = Field(
+        default_factory=list,
+        alias="cloudResources",
+        description="Recursos de nube analizados (solo lectura), sin importar si tienen hallazgos",
     )
     checklists: List[AppliedChecklist] = Field(
         default_factory=list,

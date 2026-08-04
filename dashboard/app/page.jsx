@@ -61,6 +61,56 @@ function severityCounts(report) {
   return counts;
 }
 
+function ProjectHeader({ project }) {
+  const details = [
+    project?.repositoryUrl ? ["Repositorio", project.repositoryUrl] : null,
+    project?.defaultBranch ? ["Rama", project.defaultBranch] : null,
+    project?.commitHash ? ["Commit", project.commitHash.slice(0, 12)] : null,
+  ].filter(Boolean);
+  const tags = [
+    ...(project?.languages || []).map((l) => `Lenguaje: ${l}`),
+    ...(project?.frameworks || []).map((f) => `Framework: ${f}`),
+  ];
+  return (
+    <div className="project-card">
+      <div className="project-name">{project?.name || "Proyecto sin nombre"}</div>
+      {project?.repositoryUrl ? (
+        <div className="project-repo">
+          <a href={project.repositoryUrl} target="_blank" rel="noreferrer">
+            {project.repositoryUrl}
+          </a>
+        </div>
+      ) : null}
+      {details.length > 0 || tags.length > 0 || project?.iacFiles?.length ? (
+        <div className="project-details">
+          {details.map(([label, value]) => (
+            <span className="chip" key={label}>
+              <strong>{label}:</strong> {value}
+            </span>
+          ))}
+          {tags.map((t) => (
+            <span className="chip" key={t}>
+              {t}
+            </span>
+          ))}
+          {project?.iacFiles?.length ? (
+            <div className="iac-list">
+              <strong>Archivos analizados:</strong>
+              <ul>
+                {project.iacFiles.map((f) => (
+                  <li key={f}>
+                    <code>{f}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SummaryCards({ report }) {
   const totals = [
     ["SAST", report.vulnerabilities?.length ?? 0],
@@ -129,6 +179,41 @@ function IssueTable({ items }) {
               <Badge severity={item.severity} />
             </td>
             <td>{item.snippet ? <pre>{item.snippet}</pre> : ""}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function CloudResourcesTable({ items }) {
+  if (!items || items.length === 0) {
+    return <p>No se analizaron recursos de nube en este reporte.</p>;
+  }
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th>Tipo</th>
+          <th>Recurso</th>
+          <th>Región</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item, i) => (
+          <tr key={i}>
+            <td>{item.provider}</td>
+            <td>{item.resource_type}</td>
+            <td>
+              <code>{item.resource}</code>
+            </td>
+            <td>{item.region || "—"}</td>
+            <td>
+              <Badge severity={item.status === "issue" ? "HIGH" : "INFO"} />
+              {item.status === "issue" ? "con hallazgo" : "analizado (ok)"}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -312,16 +397,6 @@ export default function Page() {
   const { data: report, source } = loaded;
   const sem = riskSemaphore(report);
   const counts = severityCounts(report);
-  const meta = [
-    report.project?.name,
-    report.project?.repositoryUrl,
-    report.project?.defaultBranch
-      ? `rama ${report.project.defaultBranch}`
-      : null,
-    report.project?.commitHash ? report.project.commitHash.slice(0, 12) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   const sections = [
     ["Vulnerabilidades (SAST)", <IssueTable key="sast" items={report.vulnerabilities} />],
@@ -330,6 +405,10 @@ export default function Page() {
     ["Riesgos de CI/CD", <IssueTable key="cicd" items={report.cicdIssues} />],
     ["Reglas custom", <IssueTable key="cust" items={report.customIssues} />],
     ["Seguridad en la nube", <CloudTable key="cloud" items={report.cloudIssues} />],
+    [
+      "Recursos de nube analizados",
+      <CloudResourcesTable key="cloudres" items={report.cloudResources} />,
+    ],
     ["Auditoría LLM (checklists)", <LlmTable key="llm" items={report.llmFindings} />],
     [
       "Hallazgos recurrentes (memoria)",
@@ -344,7 +423,7 @@ export default function Page() {
   return (
     <main className="container">
       <h1>VibeAudit — Dashboard de cliente</h1>
-      <p id="meta">{meta}</p>
+      <ProjectHeader project={report.project} />
       <div className={`semaphore ${sem.level}`}>
         <span className="dot" />
         {sem.label}

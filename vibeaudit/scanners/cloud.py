@@ -47,6 +47,7 @@ class CloudScanner:
     ):
         self.providers = providers or ["aws", "azure", "gcp"]
         self.clients = clients or {}
+        self.resources: List[dict] = []
 
     def configured_providers(self) -> List[str]:
         """Devuelve los proveedores que tienen credenciales configuradas."""
@@ -140,6 +141,15 @@ class CloudScanner:
                 console.print(f"[yellow]Advertencia:[/] ACL de {name}: {exc}")
                 continue
             public_permissions = self._public_acl_permissions(acl)
+            self.resources.append(
+                {
+                    "provider": "aws",
+                    "resource_type": "s3-bucket",
+                    "resource": f"s3://{name}",
+                    "region": "",
+                    "status": "issue" if public_permissions else "ok",
+                }
+            )
             if public_permissions:
                 issues.append(
                     CloudIssue(
@@ -170,6 +180,15 @@ class CloudScanner:
             if not group_id:
                 continue
             open_ports = self._open_ingress_ports(group.get("IpPermissions") or [])
+            self.resources.append(
+                {
+                    "provider": "aws",
+                    "resource_type": "security-group",
+                    "resource": group_id,
+                    "region": "",
+                    "status": "issue" if open_ports else "ok",
+                }
+            )
             if open_ports:
                 issues.append(
                     CloudIssue(

@@ -24,6 +24,7 @@ OSV_TIMEOUT_SECONDS = 15
 LOCKFILE_ECOSYSTEMS: Dict[str, str] = {
     "package-lock.json": "npm",
     "yarn.lock": "npm",
+    "pnpm-lock.yaml": "npm",
     "poetry.lock": "PyPI",
     "requirements.txt": "PyPI",
     "Pipfile.lock": "PyPI",
@@ -111,6 +112,8 @@ class DependencyScanner:
             return self._parse_npm_lockfile(full_path)
         if filename == "yarn.lock":
             return self._parse_yarn_lockfile(full_path)
+        if filename == "pnpm-lock.yaml":
+            return self._parse_pnpm_lockfile(full_path)
         if filename == "poetry.lock":
             return self._parse_poetry_lockfile(full_path)
         if filename == "requirements.txt":
@@ -170,6 +173,47 @@ class DependencyScanner:
                     dependency_type="dev" if is_dev else "production",
                 )
             )
+        return dependencies
+
+    def _parse_pnpm_lockfile(self, full_path: str) -> List[Dependency]:
+        """Parsea pnpm-lock.yaml (claves 'name@version' en sección packages)."""
+        content = Path(full_path).read_text(encoding="utf-8", errors="ignore")
+        dependencies: List[Dependency] = []
+        in_packages = False
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("packages:") and not in_packages:
+                in_packages = True
+                continue
+            if in_packages:
+                if stripped and not line.startswith(" ") and not line.startswith("\t"):
+                    break
+                if not stripped:
+                    continue
+                key = stripped.split(":", 1)[0]
+                key = key.split("(", 1)[0].strip().strip("'").strip('"')
+                if key.startswith("/"):
+                    key = key[1:]
+                if "@" not in key:
+                    continue
+                name, version = key.rsplit("@", 1)
+                # Solo claves 'name@version': la version empieza por dígito y
+                # es alfanumérica sin comillas ni espacios (filtra las deps
+                # anidadas 'name': version, cuyo "version" es el scope)
+                if (
+                    not name
+                    or not version
+                    or not re.match(r"^\d[\w.\-+]*$", version)
+                    or re.search(r"[\s'\"]", name)
+                ):
+                    continue
+                dependencies.append(
+                    Dependency(
+                        name=name,
+                        version=version,
+                        ecosystem="npm",
+                    )
+                )
         return dependencies
 
     def _parse_yarn_lockfile(self, full_path: str) -> List[Dependency]:

@@ -68,6 +68,36 @@ class TestParseLockfiles:
         assert by_name["@babel/core"].version == "7.24.0"
         assert by_name["follow-redirects"].version == "1.15.4"
 
+    def test_parse_pnpm_lockfile(self, tmp_path):
+        lockfile = tmp_path / "pnpm-lock.yaml"
+        lockfile.write_text(
+            "lockfileVersion: '9.0'\n"
+            "packages:\n"
+            "\n"
+            "  '@alloc/quick-lru@5.2.0':\n"
+            "    resolution: {integrity: sha512-x}\n"
+            "\n"
+            "  'next@14.2.5':\n"
+            "    resolution: {integrity: sha512-y}\n"
+            "    dependencies:\n"
+            "      '@next/env': 14.2.5\n"
+            "\n"
+            "  '/legacy-dep@1.0.0':\n"
+            "    resolution: {integrity: sha512-z}\n"
+            "\n"
+            "snapshots:\n"
+            "  'next@14.2.5': {}\n"
+        )
+        deps = DependencyScanner(tmp_path)._parse_pnpm_lockfile(str(lockfile))
+
+        assert len(deps) == 3
+        assert deps[0].name == "@alloc/quick-lru"
+        assert deps[0].version == "5.2.0"
+        assert deps[1].name == "next"
+        assert deps[1].version == "14.2.5"
+        assert deps[2].name == "legacy-dep"
+        assert deps[2].version == "1.0.0"
+
     def test_parse_poetry_lockfile(self, tmp_path):
         lockfile = tmp_path / "poetry.lock"
         lockfile.write_text(POETRY_LOCK)

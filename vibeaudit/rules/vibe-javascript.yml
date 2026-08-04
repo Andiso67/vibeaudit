@@ -1,0 +1,31 @@
+rules:
+  - id: vibe-js-console-log
+    pattern: console.log($ARG)
+    message: "console.log en código de producción (anti-patrón Vibe Coding). Usar un logger."
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    metadata:
+      cwe: "CWE-532"
+
+  - id: vibe-js-debugger
+    pattern: debugger;
+    message: "Sentencia `debugger` olvidada (anti-patrón Vibe Coding)."
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    metadata:
+      cwe: "CWE-489"
+
+  - id: vibe-eval
+    pattern: eval($ARG)
+    message: "eval() con entrada potencialmente controlable (riesgo de inyección)."
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+      - python
+    metadata:
+      cwe: "CWE-95"

@@ -38,3 +38,6 @@ coverage.xml
 
 # Scan outputs
 reports/
+
+# Sonar scanner
+.scannerwork/

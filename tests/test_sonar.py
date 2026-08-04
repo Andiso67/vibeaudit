@@ -8,6 +8,7 @@ import pytest
 
 from vibeaudit.models import (
     AuditReport,
+    CloudIssue,
     Metrics,
     ProjectMetadata,
     Secret,
@@ -87,6 +88,81 @@ class TestGenericImport:
         )
         payload = to_sonar_issues(report)
         assert payload["issues"] == []
+
+    def test_cloud_issue_se_ancla_al_primer_archivo_iac(self):
+        report = AuditReport(
+            project=ProjectMetadata(
+                name="x", iac_files=["Dockerfile", "docker-compose.yml"]
+            ),
+            cloud_issues=[
+                CloudIssue(
+                    provider="aws",
+                    rule="aws-ec2-security-group-open",
+                    resource="sg-123",
+                    resource_type="security-group",
+                    severity=Severity.HIGH,
+                    description="abierto",
+                    recommendation="restringir",
+                )
+            ],
+            metrics=Metrics(),
+        )
+        payload = to_sonar_issues(report)
+        assert len(payload["issues"]) == 1
+        cloud = payload["issues"][0]
+        assert cloud["ruleId"] == "cloud-aws-ec2-security-group-open"
+        assert cloud["severity"] == "CRITICAL"
+        assert cloud["primaryLocation"]["filePath"] == "Dockerfile"
+        assert cloud["primaryLocation"]["textRange"]["startLine"] == 1
+
+    def test_cloud_issue_sin_iac_se_omite_con_warning(self, capsys):
+        report = AuditReport(
+            project=ProjectMetadata(name="x"),
+            cloud_issues=[
+                CloudIssue(
+                    provider="aws",
+                    rule="aws-ec2-security-group-open",
+                    resource="sg-123",
+                    resource_type="security-group",
+                    severity=Severity.HIGH,
+                )
+            ],
+            metrics=Metrics(),
+        )
+        payload = to_sonar_issues(report)
+        assert payload["issues"] == []
+        assert "sin archivo IaC" in capsys.readouterr().out
+
+    def test_limite_prioriza_issues_mas_graves(self):
+        report = AuditReport(
+            project=ProjectMetadata(name="x"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule=r,
+                    file="src/a.py",
+                    line=1,
+                    severity=sev,
+                )
+                for r, sev in [
+                    ("low.one", Severity.LOW),
+                    ("high.one", Severity.HIGH),
+                    ("medium.one", Severity.MEDIUM),
+                ]
+            ],
+            metrics=Metrics(),
+        )
+        from vibeaudit.sonar import ISSUE_LIMIT
+
+        report.vulnerabilities.append(
+            Vulnerability(
+                rule="high.two", file="src/b.py", line=2, severity=Severity.HIGH
+            )
+        )
+        payload = to_sonar_issues(report)
+        severities = [i["severity"] for i in payload["issues"]]
+        assert severities[0] == "CRITICAL"
+        assert severities[2] == "MAJOR"
+        assert severities[3] == "MINOR"
 
     def test_severity_mapping_helper(self):
         assert _severity_of(Severity.CRITICAL) == "BLOCKER"

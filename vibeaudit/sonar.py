@@ -41,6 +41,15 @@ ENGINE_ID = "vibeaudit"
 # SonarQube limita las issues importables por reporte
 ISSUE_LIMIT = 1000
 
+# Severidad SonarQube: las más graves se importan primero si hay límite
+SONARQUBE_SEVERITY_RANK = {
+    "BLOCKER": 4,
+    "CRITICAL": 3,
+    "MAJOR": 2,
+    "MINOR": 1,
+    "INFO": 0,
+}
+
 SONAR_SCANNER_BIN = "sonar-scanner"
 SONAR_SCANNER_TIMEOUT = 600
 
@@ -92,7 +101,60 @@ def to_sonar_issues(report) -> dict:
                     "effortMinutes": 15,
                 }
             )
+    for cloud in report.cloud_issues:
+        file_path = _cloud_file_path(report, cloud)
+        if not file_path:
+            console.print(
+                f"[bold yellow]Advertencia:[/] issue de nube "
+                f"[cyan]{cloud.rule}[/] sin archivo IaC al que asociar en "
+                f"SonarQube; se omite del import."
+            )
+            continue
+        issues.append(
+            {
+                "engineId": ENGINE_ID,
+                "ruleId": f"cloud-{cloud.rule}",
+                "severity": _severity_of(cloud.severity),
+                "type": SONARQUBE_TYPE,
+                "primaryLocation": {
+                    "message": (
+                        f"[Config insegura en la nube] {cloud.rule} — "
+                        f"{cloud.description} Recomendación: "
+                        f"{cloud.recommendation}"
+                    ),
+                    "filePath": file_path,
+                    "textRange": {
+                        "startLine": 1,
+                        "endLine": 1,
+                        "startOffset": 0,
+                        "endOffset": 0,
+                    },
+                },
+                "effortMinutes": 15,
+            }
+        )
+    issues.sort(
+        key=lambda issue: SONARQUBE_SEVERITY_RANK.get(issue["severity"], 0),
+        reverse=True,
+    )
     return {"issues": issues[:ISSUE_LIMIT]}
+
+
+def _cloud_file_path(report, cloud) -> Optional[str]:
+    """Asocia una issue de nube (sin archivo) al primer archivo IaC del repo.
+
+    SonarQube exige que toda issue externa tenga una localización en un
+    archivo del proyecto analizado; las issues de nube no nacen de un archivo,
+    así que se anclan al primer archivo IaC (Dockerfile, docker-compose.yml,
+    Terraform...) como proxy de la infraestructura que gobierna el recurso.
+    """
+    candidate = None
+    for path in report.project.iac_files or []:
+        candidate = path
+        break
+    if candidate is None:
+        candidate = getattr(report, "_iac_files_default", None)
+    return candidate
 
 
 def save_sonar_json(report, path: Path) -> None:

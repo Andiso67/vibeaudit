@@ -91,6 +91,18 @@ class TestCloudScannerAws:
         assert "22" in sg_issue.description
         assert sg_issue.severity == Severity.HIGH
 
+    def test_scan_registra_recursos_analizados_con_estado(self):
+        fake_s3 = FakeS3()
+        fake_ec2 = FakeEC2()
+        scanner = CloudScanner(providers=["aws"], clients={"s3": fake_s3, "ec2": fake_ec2})
+        scanner.scan()
+
+        by_resource = {r["resource"]: r for r in scanner.resources}
+        assert by_resource["s3://public-bucket"]["status"] == "issue"
+        assert by_resource["s3://private-bucket"]["status"] == "ok"
+        assert by_resource["sg-open"]["status"] == "issue"
+        assert by_resource["sg-safe"]["status"] == "ok"
+
     def test_scan_reusa_clientes_privados_sin_issue_s3(self):
         fake_s3 = FakeS3()
         fake_ec2 = FakeEC2()

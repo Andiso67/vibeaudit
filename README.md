@@ -6,7 +6,8 @@ de infraestructura inseguras. Clona el repo, ejecuta Gitleaks, Semgrep y Checkov
 y genera un JSON maestro con todos los hallazgos.
 
 Primer paso hacia el servicio de "Pre-Auditoría Automatizada en 48 horas".
-Ver `SPRINT.md` para el alcance del sprint 1 y `CONTEXT.md` para la visión completa.
+Ver `SPRINT.md` para el alcance del sprint 1, `SPRINT3.md` (LLM/memoria/nube/dashboard/SonarQube),
+`SPRINT4.md` (nube→SonarQube, CI/CD, reglas Vibe Coding, pnpm) y `CONTEXT.md` para la visión completa.
 
 ## Requisitos
 

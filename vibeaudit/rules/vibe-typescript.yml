@@ -1,0 +1,28 @@
+rules:
+  - id: vibe-ts-any
+    pattern: |
+      $VAR: any
+    message: "Uso de `any` en TypeScript (anti-patrón Vibe Coding). Preferir tipos explícitos."
+    severity: WARNING
+    languages:
+      - typescript
+    metadata:
+      cwe: "CWE-1104"
+
+  - id: vibe-ts-non-null-assertion
+    pattern: $OBJ!.$ATTR
+    message: "Aserción no nula `!` (anti-patrón Vibe Coding). Puede romper en runtime."
+    severity: WARNING
+    languages:
+      - typescript
+    metadata:
+      cwe: "CWE-476"
+
+  - id: vibe-ts-ts-ignore
+    pattern-regex: "@ts-ignore"
+    message: "Supresión @ts-ignore: oculta errores de tipos (anti-patrón Vibe Coding)."
+    severity: WARNING
+    languages:
+      - generic
+    metadata:
+      cwe: "CWE-1104"

@@ -43,6 +43,61 @@ h2 {
   margin: 0.25rem 0 1.5rem;
 }
 
+.project-card {
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--fg);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 1rem 1.25rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.project-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.project-repo {
+  margin-top: 0.25rem;
+}
+
+.project-repo a {
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.project-repo a:hover {
+  text-decoration: underline;
+}
+
+.project-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: baseline;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 9999px;
+  padding: 0.15rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.iac-list {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.iac-list ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
 .cards {
   display: flex;
   flex-wrap: wrap;

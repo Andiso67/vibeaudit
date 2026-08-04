@@ -151,8 +151,8 @@ class TestInformeCentral:
         assert "## 4. Diagrama C4 — Contenedores" in md
         assert "## 5. Roadmap de remediación por fases" in md
         assert "## 6. Backlog de remediación" in md
-        assert "## 7. Entregables individuales" in md
-        assert "informe-central.html" in md
+        assert "## 7. Entregables descargables" in md
+        assert "[`backlog.csv`](./backlog.csv)" in md
         assert "```mermaid" in md  # embebe el diagrama C4
 
     def test_html_embebe_tablas_y_escapa_contenido(self):
@@ -162,7 +162,38 @@ class TestInformeCentral:
         assert "Datos del proyecto" in page
         assert "python.eval.usage" in page
         assert '<span style=' in page  # pills de severidad
-        assert "&" not in "boton = a and b"  # sanity
+        assert 'class="mermaid"' in page  # diagramas C4 renderizados vía mermaid.js
+        assert "mermaid.min.js" in page
+        assert "flowchart" in page
+
+    def test_html_roadmap_por_fases_y_enlaces(self):
+        gen = DeliverablesGenerator(sample_report())
+        page = gen.informe_html()
+        assert "<h3>Fase 1</h3>" in page
+        assert "<h3>Fase 2</h3>" in page
+        assert "<h3>Fase 3</h3>" in page
+        assert "Sin hallazgos en esta fase" in page  # fase 3 vacía en el sample
+        assert "Entregables descargables" in page
+        assert "backlog.csv" in page and "backlog.json" in page
+        assert "roadmap.md" in page and "c4-context.mmd" in page
+
+    def test_html_backlog_no_trunca_recomendacion(self):
+        report = AuditReport(
+            project=ProjectMetadata(name="repo"),
+            vulnerabilities=[
+                Vulnerability(
+                    rule="x.y",
+                    file="a.py",
+                    line=1,
+                    severity=Severity.HIGH,
+                    snippet="",
+                )
+            ],
+            metrics=Metrics(lines_of_code=10),
+        )
+        page = DeliverablesGenerator(report).informe_html()
+        # el fallback DEFAULT_RECOMMENDATION se muestra completo, sin cortes de 120
+        assert "Revisar el hallazgo" in page
 
     def test_informe_include_en_generate(self, tmp_path):
         out = tmp_path / "out"

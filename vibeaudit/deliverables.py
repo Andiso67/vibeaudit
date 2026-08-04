@@ -436,14 +436,16 @@ class DeliverablesGenerator:
             "",
             self._backlog_table(),
             "",
-            "## 7. Entregables individuales",
+            "## 7. Entregables descargables",
             "",
-            "- `c4-context.mmd` — diagrama de contexto (Mermaid).",
-            "- `c4-container.mmd` — diagrama de contenedores (Mermaid).",
-            "- `roadmap.md` — roadmap por fases según severidad.",
-            "- `backlog.csv` — backlog de remediación (CSV).",
-            "- `backlog.json` — backlog de remediación (JSON).",
-            "- `informe-central.html` — este informe en HTML.",
+            "Los entregables individuales se generan junto a este informe. "
+            "Pulsa el enlace (desde el mismo directorio) para abrirlos:",
+            "",
+            "- [`c4-context.mmd`](./c4-context.mmd) — diagrama de contexto (Mermaid).",
+            "- [`c4-container.mmd`](./c4-container.mmd) — diagrama de contenedores (Mermaid).",
+            "- [`roadmap.md`](./roadmap.md) — roadmap por fases según severidad.",
+            "- [`backlog.csv`](./backlog.csv) — backlog de remediación (CSV).",
+            "- [`backlog.json`](./backlog.json) — backlog de remediación (JSON).",
             "",
         ]
         return "\n".join(lines)
@@ -489,22 +491,62 @@ class DeliverablesGenerator:
         backlog_rows = []
         for e in entries:
             color = sev_color.get(e["severity"], "#5f6368")
-            rec = (e["recommendation"] or "")[:120]
             backlog_rows.append(
                 f"<tr><td><code>{esc(e['id'])}</code></td><td>{esc(e['kind'])}</td>"
                 f"<td><code>{esc(e['rule'])}</code></td><td>{esc(e['file'])}</td>"
                 f"<td style='color:{color};font-weight:700;'>{esc(e['severity'])}</td>"
-                f"<td>{esc(rec)}</td></tr>"
+                f"<td style='word-wrap:break-word;'>{esc(e['recommendation'])}</td></tr>"
             )
+        phases_rows = []
+        for phase in (1, 2, 3):
+            items = [e for e in entries if e["phase"] == phase]
+            rows = "".join(
+                f"<tr><td><code>{esc(e['id'])}</code></td><td>{esc(e['kind'])}</td>"
+                f"<td><code>{esc(e['rule'])}</code></td><td>{esc(e['file'])}</td>"
+                f"<td style='color:{sev_color.get(e['severity'], '#5f6368')};"
+                f"font-weight:700;'>{esc(e['severity'])}</td></tr>"
+                for e in items
+            )
+            content = (
+                f"<tr><td colspan='5'>Sin hallazgos en esta fase.</td></tr>"
+                if not items
+                else rows
+            )
+            phases_rows.append(
+                f"<h3>Fase {phase}</h3><p>{esc(PHASE_DESCRIPTIONS[phase])}</p>"
+                f"<table style='border-collapse:collapse;width:100%;font-size:13px;'>"
+                f"<tr><th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>ID</th>"
+                f"<th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>Tipo</th>"
+                f"<th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>Regla</th>"
+                f"<th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>Archivo</th>"
+                f"<th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>Severidad</th></tr>"
+                f"{content}</table>"
+            )
+        deliverables_links = "\n".join(
+            f"<li><a href='{name}' style='text-decoration:none;'>"
+            f"<code>{name}</code></a> — {description}</li>"
+            for name, description in [
+                ("c4-context.mmd", "diagrama C4 de contexto (Mermaid)"),
+                ("c4-container.mmd", "diagrama C4 de contenedores (Mermaid)"),
+                ("roadmap.md", "roadmap de remediación (Markdown)"),
+                ("backlog.csv", "backlog de remediación (CSV)"),
+                ("backlog.json", "backlog de remediación (JSON)"),
+                ("informe-central.md", "este informe en Markdown"),
+            ]
+        )
         mermaid_style = (
             "background:#f5f5f5;border:1px solid #ddd;border-radius:4px;"
-            "padding:10px;font-family:monospace;white-space:pre;overflow-x:auto;"
+            "padding:10px;"
         )
+        context_body = self._mermaid_body(self.c4_context())
+        container_body = self._mermaid_body(self.c4_container())
         return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <title>Informe central — {esc(meta.name)}</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({{startOnLoad:true, theme:'default'}});</script>
 </head>
 <body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:900px;margin:0 auto;padding:24px;color:#202124;">
 <h1>Informe central — {esc(meta.name)}</h1>
@@ -530,35 +572,26 @@ class DeliverablesGenerator:
 <p>{sev_spans}</p>
 
 <h2>3. Diagrama C4 — Contexto (nivel 1)</h2>
-<pre style="{mermaid_style}">{esc(self._mermaid_body(self.c4_context()))}</pre>
+<pre class="mermaid" style="{mermaid_style}">{context_body}</pre>
+<p><em>Código fuente: <code>c4-context.mmd</code></em></p>
 
 <h2>4. Diagrama C4 — Contenedores (nivel 2)</h2>
-<pre style="{mermaid_style}">{esc(self._mermaid_body(self.c4_container()))}</pre>
+<pre class="mermaid" style="{mermaid_style}">{container_body}</pre>
+<p><em>Código fuente: <code>c4-container.mmd</code></em></p>
 
 <h2>5. Roadmap de remediación por fases</h2>
-<table style="border-collapse:collapse;width:100%;">
-<tr><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Fase</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Descripción</th><th style="text-align:right;border-bottom:1px solid #ccc;padding:6px;">Hallazgos</th></tr>
-{f"".join(
-    "<tr><td style='border-bottom:1px solid #eee;padding:6px;'>Fase " + str(ph) + "</td>"
-    "<td style='border-bottom:1px solid #eee;padding:6px;'>" + esc(PHASE_DESCRIPTIONS[ph]) + "</td>"
-    "<td style='border-bottom:1px solid #eee;padding:6px;text-align:right;'>" + str(sum(1 for e in entries if e['phase'] == ph)) + "</td></tr>"
-    for ph in (1, 2, 3)
-)}
+{"".join(phases_rows)}
 
 <h2>6. Backlog de remediación</h2>
-<table style="border-collapse:collapse;width:100%;font-size:13px;">
+<table style="border-collapse:collapse;width:100%;font-size:13px;table-layout:fixed;">
 <tr><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">ID</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Tipo</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Regla</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Archivo</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Severidad</th><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Recomendación</th></tr>
 {"".join(backlog_rows)}
 </table>
 
-<h2>7. Entregables individuales</h2>
+<h2>7. Entregables descargables</h2>
+<p>Pulsa cada enlace para abrir o descargar el entregable individual.</p>
 <ul>
-<li><code>c4-context.mmd</code> — diagrama de contexto (Mermaid).</li>
-<li><code>c4-container.mmd</code> — diagrama de contenedores (Mermaid).</li>
-<li><code>roadmap.md</code> — roadmap por fases según severidad.</li>
-<li><code>backlog.csv</code> — backlog de remediación (CSV).</li>
-<li><code>backlog.json</code> — backlog de remediación (JSON).</li>
-<li><code>informe-central.html</code> — este informe en HTML.</li>
+{deliverables_links}
 </ul>
 </body>
 </html>

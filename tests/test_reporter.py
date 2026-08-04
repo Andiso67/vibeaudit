@@ -65,6 +65,14 @@ class TestAuditReporter:
         assert report.metrics.lines_of_code == 5
         assert report.metrics.test_files == 1
 
+    def test_metricas_cuentan_tf_como_codigo(self, tmp_path):
+        (tmp_path / "main.tf").write_text("a = 1\nb = 2\n")
+        (tmp_path / "app.py").write_text("x = 1\n")
+
+        report = make_reporter(tmp_path).build()
+
+        assert report.metrics.lines_of_code == 3
+
     def test_conteo_por_severidad(self, tmp_path):
         repo = make_repo(tmp_path)
         report = make_reporter(repo).build()

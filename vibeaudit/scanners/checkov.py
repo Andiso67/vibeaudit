@@ -226,20 +226,38 @@ class CheckovScanner:
 
         Soporta el caso de macOS donde checkov devuelve el path resuelto
         (p. ej. /private/var/...) y repo_path aún tiene el symlink (p. ej.
-        /var/...): se reintenta con ambos paths resueltos.
+        /var/...): se reintenta con ambos paths resueltos. También soporta
+        rutas con prefijos truncados (checkov puede devolver '/GitHUb/...'
+        cuando el repo vive en un árbol con prefijos comunes): se localiza
+        la parte que coincide con un archivo real dentro del repo.
         """
         if not self.repo_path or not file_path:
             return file_path
+        repo = Path(self.repo_path).resolve()
+        candidates = [file_path]
         try:
-            return str(Path(file_path).relative_to(self.repo_path))
-        except ValueError:
+            candidates.append(str(Path(file_path).resolve()))
+        except OSError:
             pass
-        try:
-            return str(
-                Path(file_path).resolve().relative_to(self.repo_path.resolve())
-            )
-        except ValueError:
-            return file_path
+        for candidate in candidates:
+            path = Path(candidate)
+            if path.is_absolute():
+                try:
+                    return str(path.resolve().relative_to(repo))
+                except ValueError:
+                    continue
+            try:
+                return str(path.relative_to(repo))
+            except ValueError:
+                continue
+        # Fallback: ruta con prefijo truncado; buscar el fragmento que
+        # coincide con un archivo real dentro del repo
+        parts = Path(file_path).parts
+        for index in range(len(parts)):
+            candidate = Path(*parts[index:])
+            if (repo / candidate).is_file():
+                return str(candidate)
+        return file_path
 
     @staticmethod
     def _map_severity(checkov_severity: Optional[str]) -> Severity:

@@ -348,7 +348,7 @@ class TestCheckovScanner:
 
         assert len(vulns) == 2
         assert vulns[0].rule == "CKV_AWS_1"
-        assert vulns[0].file == "/main.tf"
+        assert vulns[0].file == "main.tf"
         assert vulns[0].line == 1
         assert vulns[0].severity == Severity.HIGH
         assert vulns[1].severity == Severity.HIGH

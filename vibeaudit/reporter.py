@@ -42,6 +42,12 @@ CODE_EXTENSIONS = (
     ".html",
     ".css",
     ".sh",
+    ".tf",
+    ".tfvars",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".dockerfile",
 )
 
 # Patrones de nombres de archivos de test

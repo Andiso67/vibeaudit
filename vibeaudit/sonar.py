@@ -15,7 +15,7 @@ el repo si el binario y la configuración del servidor existen. Requiere
 import json
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from rich.console import Console
 
@@ -110,10 +110,14 @@ class SonarRunner:
 
     Es un passthrough: la configuración del servidor (URL, token, organización)
     se lee de sonar-project.properties / sonar-scanner.properties del proyecto.
+    Si se pasa `issues_path` (sonar-issues.json), se lo entrega al escáner vía
+    `-Dsonar.externalIssuesReportPaths`, que es como SonarQube importa los
+    hallazgos externos (Generic Issue Import) durante el análisis.
     """
 
-    def __init__(self, repo_path: Path):
+    def __init__(self, repo_path: Path, issues_path: Optional[Path] = None):
         self.repo_path = repo_path
+        self.issues_path = issues_path
 
     @staticmethod
     def is_installed() -> bool:
@@ -138,11 +142,14 @@ class SonarRunner:
                 "proyecto (sonar-project.properties con URL y token del "
                 "servidor SonarQube) antes de usarlo."
             )
+        cmd = [
+            SONAR_SCANNER_BIN,
+            f"-Dsonar.projectBaseDir={self.repo_path}",
+        ]
+        if self.issues_path is not None:
+            cmd.append(f"-Dsonar.externalIssuesReportPaths={self.issues_path}")
         result = subprocess.run(
-            [
-                SONAR_SCANNER_BIN,
-                f"-Dsonar.projectBaseDir={self.repo_path}",
-            ],
+            cmd,
             capture_output=True,
             text=True,
             check=False,

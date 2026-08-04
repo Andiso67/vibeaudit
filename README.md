@@ -208,19 +208,27 @@ dos modos:
 
 - **`--sonar-json <archivo>`**: exporta los hallazgos con archivo (SAST,
   secretos, IaC, CI/CD, custom) al formato **Generic Issue Import**
-  (`sonar-issues.json`, `engineId: vibeaudit`). Ese fichero se importa en un
-  proyecto SonarQube desde *Administration → General Settings → Generic Issue
-  Import*, y los hallazgos aparecen en sus dashboards y Quality Gate.
+  (`sonar-issues.json`, `engineId: vibeaudit`). Este fichero se entrega al
+  escáner de SonarQube durante el análisis vía el parámetro
+  `-Dsonar.externalIssuesReportPaths`, y SonarQube lo importa como issues
+  externas (`external_vibeaudit:*`) visibles en sus dashboards y Quality Gate.
 
   ```bash
   .venv/bin/python -m vibeaudit.cli scan --path ./mi-repo --output report.json \
     --sonar-json /tmp/sonar-issues.json
   ```
 
-- **`--sonar-scan`**: pasa el control a `sonar-scanner` (análisis real de
-  SonarQube sobre el repo). Requiere el binario instalado y la configuración
-  del servidor (URL/token en `sonar-project.properties`); si falta, muestra
-  una advertencia y el scan continúa sin fallar.
+  ```bash
+  sonar-scanner -Dsonar.host.url=http://localhost:9000 \
+    -Dsonar.login=<TOKEN> -Dsonar.projectKey=mi-proyecto -Dsonar.sources=. \
+    -Dsonar.externalIssuesReportPaths=/tmp/sonar-issues.json
+  ```
+
+- **`--sonar-scan`**: ejecuta `sonar-scanner` real sobre el repo, pasándole
+  `sonar.externalIssuesReportPaths` con el `sonar-issues.json` si se generó.
+  Requiere el binario instalado y los parámetros del servidor (URL/token) en
+  `sonar-project.properties` o por línea de comandos; si falta el binario,
+  muestra una advertencia y el scan continúa sin fallar.
 
 ### Checklists como datos
 

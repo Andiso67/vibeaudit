@@ -241,15 +241,30 @@ HTML/MD/dashboard, imagen Docker). Este sprint amplía los módulos 1, 3, 4 y 5.
   descartan. `save_sonar_json` lo escribe; flag CLI `--sonar-json <archivo>`.
   Límite de 1000 issues por import (el de SonarQube).
 - **Pieza 2 — sonar-scanner**: `SonarRunner` (passthrough) con
-  `is_installed()` y `scan()` que ejecuta `sonar-scanner -Dsonar.projectBaseDir`.
+  `is_installed()` y `scan()` que ejecuta `sonar-scanner -Dsonar.projectBaseDir`
+  y, si hay `sonar-issues.json`, añade
+  `-Dsonar.externalIssuesReportPaths=<path>` (la vía real de import en 9.9).
   Flag CLI `--sonar-scan`; sin binario → advertencia y el scan continúa
   (mismo patrón que `--llm` sin motor).
-- **Tests**: `tests/test_sonar.py` (10) + 2 CLI (277 total): formato del
+- **Tests**: `tests/test_sonar.py` (10) + 2 CLI (278 total): formato del
   import, mapeo de severidad, descarte de sin-archivo, fichero escrito,
   is_installed y scan con monkeypatch (sin red).
 - **E2E real** (reporte del dashboard): `/tmp/sonar-issues.json` con 4 issues
   (2 SAST + 2 IaC, todos CRITICAL/HIGH → CRITICAL en SonarQube), engineId y
   tipo correctos.
+- **Integración en vivo (SonarQube 9.9.8 Community en Docker, puerto 9000)**:
+  `sonar-scanner` 8.1 (Homebrew, Java 21) analizó el repo contra el servidor
+  real con `-Dsonar.login=<token> -Dsonar.externalIssuesReportPaths=…`:
+  - **Issues de VibeAudit importadas** como `external_vibeaudit:*` (2 SAST
+    Dockerfile CRITICAL visibles en la lista de VULNERABILITY del proyecto).
+  - Las 2 IaC de checkov sobre `Dockerfile` se ignoraron por el servidor:
+    `Dockerfile` no es archivo fuente analizado en 9.9 Community (limitación
+    del servidor, el JSON estaba bien formado).
+  - SonarQube añadió ~104 issues propias (code smells Python/JS + un AWS
+    secret BLOCKER en `dashboard/public/audit-report.json`, el ejemplo).
+  - **Aprendizaje clave**: en 9.9 el import NO es vía menú/UI ni API pública;
+    es el análisis del scanner con `sonar.externalIssuesReportPaths`. Los
+    tokens van por `-Dsonar.login` (no `sonar.token`).
 
 ## Estado del Sprint 3
 

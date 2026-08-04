@@ -277,7 +277,7 @@ def scan(
                         task, description="Ejecutando sonar-scanner sobre el repo..."
                     )
                     try:
-                        rc = SonarRunner(ingester.repo_path).scan()
+                        rc = SonarRunner(ingester.repo_path, sonar_json).scan()
                         console.print(
                             f"[cyan]sonar-scanner:[/] análisis finalizado (código {rc}). "
                             "Revisa la salida del escáner para más detalle."

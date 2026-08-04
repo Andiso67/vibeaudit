@@ -123,7 +123,7 @@ class TestBacklog:
 
 
 class TestGenerate:
-    def test_generate_escribe_5_archivos(self, tmp_path):
+    def test_generate_escribe_7_archivos(self, tmp_path):
         out = tmp_path / "entregables"
         gen = DeliverablesGenerator(sample_report())
         files = gen.generate(out)
@@ -133,9 +133,45 @@ class TestGenerate:
             "roadmap.md",
             "backlog.csv",
             "backlog.json",
+            "informe-central.md",
+            "informe-central.html",
         }
         assert (out / "c4-context.mmd").exists()
+        assert (out / "informe-central.html").exists()
         assert out.is_dir()
+
+
+class TestInformeCentral:
+    def test_markdown_reune_todos_los_entregables(self, tmp_path):
+        gen = DeliverablesGenerator(sample_report())
+        md = gen.informe_markdown()
+        assert "# Informe central — demo-repo" in md
+        assert "## 2. Resumen ejecutivo" in md
+        assert "## 3. Diagrama C4 — Contexto" in md
+        assert "## 4. Diagrama C4 — Contenedores" in md
+        assert "## 5. Roadmap de remediación por fases" in md
+        assert "## 6. Backlog de remediación" in md
+        assert "## 7. Entregables individuales" in md
+        assert "informe-central.html" in md
+        assert "```mermaid" in md  # embebe el diagrama C4
+
+    def test_html_embebe_tablas_y_escapa_contenido(self):
+        gen = DeliverablesGenerator(sample_report())
+        page = gen.informe_html()
+        assert "<html" in page and "</html>" in page
+        assert "Datos del proyecto" in page
+        assert "python.eval.usage" in page
+        assert '<span style=' in page  # pills de severidad
+        assert "&" not in "boton = a and b"  # sanity
+
+    def test_informe_include_en_generate(self, tmp_path):
+        out = tmp_path / "out"
+        gen = DeliverablesGenerator(sample_report())
+        gen.generate(out)
+        md = (out / "informe-central.md").read_text()
+        html_page = (out / "informe-central.html").read_text()
+        assert "## 2. Resumen ejecutivo" in md
+        assert "<table" in html_page
 
     def test_deps_entra_en_backlog(self, tmp_path):
         from vibeaudit.models import DependencyVulnerability

@@ -87,51 +87,145 @@ class DeliverablesGenerator:
             files[name] = path
         return files
 
-    # --- Diagramas C4 (Mermaid) ---
+    # --- Diagramas C4 (Mermaid), generados a partir del reporte ---
+
+    def _components(self) -> dict:
+        """Detecta los componentes del proyecto auditado desde el reporte."""
+        meta = self.report.project
+        deps = {d.name.lower() for d in self.report.metrics.dependency_vulnerabilities}
+        iac = " ".join(f.lower() for f in (meta.iac_files or []))
+        fw = [f.lower() for f in meta.frameworks]
+
+        # Tipos de recursos de nube: de cloud_resources y de las rules de issues
+        cloud_types = {r.resource_type for r in self.report.cloud_resources}
+        for issue in self.report.cloud_issues:
+            rule = (issue.rule or "").lower()
+            if "s3" in rule:
+                cloud_types.add("s3-bucket")
+            if "security-group" in rule or "ec2" in rule:
+                cloud_types.add("security-group")
+
+        web_label = "Aplicación"
+        web_hint = ""
+        if any("next" in f for f in fw):
+            web_label, web_hint = "Aplicación web Next.js", "Next.js"
+        elif any("react" in f for f in fw) or deps & {"react", "react-dom"}:
+            web_label, web_hint = "Aplicación web React", "React"
+        elif any(f in fw for f in ("vue", "angular", "svelte")):
+            web_label, web_hint = f"Aplicación web {fw[0].title()}", fw[0]
+        elif any(f in fw for f in ("express", "fastify", "hono", "django", "fastapi", "flask")):
+            web_label, web_hint = f"API web ({fw[0].title()})", fw[0]
+
+        api = None
+        api_hint = next(
+            (n for n in ("hono", "express", "fastify", "nestjs", "fastapi", "flask", "django") if n in deps),
+            None,
+        )
+        if api_hint:
+            api = f"API ({api_hint.title()})"
+
+        db = None
+        if "postgres" in iac or deps & {"prisma", "pg", "postgres", "pgvector"}:
+            db = "PostgreSQL"
+        elif "mysql" in iac or deps & {"mysql", "mysql2"}:
+            db = "MySQL"
+        elif "mongo" in iac or deps & {"mongoose", "mongodb"}:
+            db = "MongoDB"
+        elif "redis" in iac or "redis" in deps:
+            db = "Redis"
+
+        return {
+            "web_label": web_label,
+            "web_hint": web_hint,
+            "api": api,
+            "db": db,
+            "has_s3": "s3-bucket" in cloud_types,
+            "has_ec2": "security-group" in cloud_types,
+            "has_docker": "dockerfile" in iac or "docker-compose" in iac,
+            "has_cicd": bool(self.report.cicd_issues),
+            "buckets": sum(1 for r in self.report.cloud_resources if r.resource_type == "s3-bucket"),
+            "sgs": sum(1 for r in self.report.cloud_resources if r.resource_type == "security-group"),
+        }
 
     def c4_context(self) -> str:
-        """C4 nivel 1: contexto del sistema de pre-auditoría."""
-        return "\n".join(
-            [
-                "```mermaid",
-                "flowchart TD",
-                '    A["Usuario cliente<br/>(solicita la pre-auditoría)"]',
-                "    B[\"VibeAudit<br/>Pre-auditoría automatizada en 48h\"]",
-                '    C["JSON maestro<br/>(AuditReport)"]',
-                '    D["Dashboard de cliente<br/>(Next.js)"]',
-                '    E["Entregables<br/>C4 / roadmap / backlog"]',
-                "    A -->|pide auditoría| B",
-                "    B -->|genera| C",
-                "    C -->|lee| D",
-                "    C -->|deriva| E",
-                "```",
+        """C4 nivel 1: el sistema auditado y su entorno (datos del reporte)."""
+        meta = self.report.project
+        comp = self._components()
+        lines = [
+            "```mermaid",
+            "flowchart TD",
+            f'    SYS["{meta.name}<br/>{comp["web_label"]}"]',
+            '    U["Usuarios del servicio"]',
+            "    U -->|usan| SYS",
+        ]
+        if meta.repository_url:
+            lines += [
+                f'    GH["GitHub<br/>({meta.repository_url.split("/")[-1]})"]',
+                "    SYS -->|desarrollado en| GH",
             ]
-        )
+        if comp["db"]:
+            lines += [
+                f'    DB["{comp["db"]}<br/>(base de datos)"]',
+                "    SYS -->|persiste en| DB",
+            ]
+        cloud_bits = []
+        if comp["has_s3"]:
+            cloud_bits.append("S3")
+        if comp["has_ec2"]:
+            cloud_bits.append("EC2/VPC")
+        if cloud_bits:
+            lines += [
+                f'    AWS["Amazon Web Services<br/>({", ".join(cloud_bits)})"]',
+                "    SYS -->|corre y almacena en| AWS",
+            ]
+        if comp["has_cicd"]:
+            lines += [
+                '    CI["CI/CD<br/>(workflow)" ]',
+                "    SYS -->|se despliega vía| CI",
+            ]
+        lines.append("```")
+        return "\n".join(lines)
 
     def c4_container(self) -> str:
-        """C4 nivel 2: contenedores de VibeAudit."""
-        return "\n".join(
-            [
-                "```mermaid",
-                "flowchart LR",
-                '    subgraph VB["VibeAudit"]',
-                '        CLI["CLI (Typer)<br/>vibeaudit scan"]',
-                '        ING["RepoIngester<br/>clone + detección"]',
-                '        SCAN["Scanners<br/>gitleaks / semgrep / checkov<br/>CI-CD / custom / deps / nube"]',
-                '        LLM["Auditor LLM<br/>Ollama / OpenAI"]',
-                '        MEM["Memoria local<br/>hallazgos recurrentes"]',
-                '        REPO["AuditReporter<br/>JSON / HTML / MD / dashboard"]',
-                '        DELIV["Entregables<br/>C4 / roadmap / backlog"]',
-                "    end",
-                "    ING -->|almacena| SCAN",
-                "    SCAN -->|hallazgos| LLM",
-                "    SCAN -->|hallazgos| REPO",
-                "    LLM -->|llmFindings| REPO",
-                "    MEM -->|recurrentFindings| REPO",
-                "    REPO -->|JSON maestro| DELIV",
-                "```",
+        """C4 nivel 2: contenedores del sistema auditado (datos del reporte)."""
+        meta = self.report.project
+        comp = self._components()
+        lines = [
+            "```mermaid",
+            "flowchart LR",
+            f'    subgraph APP["{meta.name}"]',
+            f'        WEB["{comp["web_label"]}"]',
+        ]
+        if comp["api"]:
+            lines += [
+                f'        API["{comp["api"]}"]',
+                "        WEB -->|HTTP| API",
             ]
-        )
+        if comp["db"]:
+            api_or_web = "API" if comp["api"] else "WEB"
+            lines += [
+                f'        DB["{comp["db"]}"]',
+                f"        {api_or_web} -->|persiste| DB",
+            ]
+        lines.append("    end")
+        if comp["has_s3"] or comp["has_ec2"]:
+            targets = []
+            if comp["has_s3"]:
+                lines.append('    S3["Amazon S3<br/>(almacenamiento)"]')
+                targets.append("S3")
+            if comp["has_ec2"]:
+                lines.append('    NET["Amazon EC2 / VPC"]')
+                targets.append("NET")
+            source = "API" if comp["api"] else "WEB"
+            for target in targets:
+                lines.append(f"    {source} -->|usa| {target}")
+        if comp["has_docker"]:
+            lines += [
+                '    DKR["Contenedores<br/>(Docker)"]',
+                f"    {'API' if comp['api'] else 'WEB'} -->|empaquetado en| DKR",
+            ]
+        lines.append("```")
+        return "\n".join(lines)
 
     # --- Hallazgos normalizados ---
 

@@ -1,0 +1,12 @@
+```mermaid
+flowchart TD
+    SYS["golf-tracker<br/>Aplicación web Next.js"]
+    U["Usuarios del servicio"]
+    U -->|usan| SYS
+    GH["GitHub<br/>(golf-tracker.git)"]
+    SYS -->|desarrollado en| GH
+    DB["PostgreSQL<br/>(base de datos)"]
+    SYS -->|persiste en| DB
+    AWS["Amazon Web Services<br/>(S3, EC2/VPC)"]
+    SYS -->|corre y almacena en| AWS
+```

@@ -12,6 +12,7 @@ from vibeaudit.deliverables import (
 from vibeaudit.models import (
     AuditReport,
     CloudIssue,
+    CloudResource,
     LLMFinding,
     Metrics,
     ProjectMetadata,
@@ -72,16 +73,47 @@ class TestC4Diagrams:
     def test_context_es_mermaid_fenced(self):
         report = sample_report()
         gen = DeliverablesGenerator(report)
-        assert gen.c4_context().startswith("```mermaid")
-        assert "VibeAudit" in gen.c4_context()
-        assert "AuditReport" in gen.c4_context()
+        context = gen.c4_context()
+        assert context.startswith("```mermaid")
+        assert context.endswith("```")
+        assert "demo-repo" in context  # nombre del proyecto auditado
+        assert "Usuarios del servicio" in context
 
-    def test_container_enumera_contenedores(self):
+    def test_container_enumera_contenedores_del_cliente(self):
         gen = DeliverablesGenerator(sample_report())
         diagram = gen.c4_container()
-        assert "CLI (Typer)" in diagram
-        assert "RepoIngester" in diagram
-        assert "AuditReporter" in diagram
+        assert "demo-repo" in diagram
+        assert "Aplicación" in diagram
+        assert "subgraph" in diagram
+
+    def test_diagramas_reflejan_tecnologias_detectadas(self):
+        report = AuditReport(
+            project=ProjectMetadata(
+                name="golf-tracker",
+                frameworks=["Next.js"],
+                iac_files=["Dockerfile", "docker-compose.yml"],
+                repository_url="https://github.com/Andiso67/golf-tracker.git",
+            ),
+            cloud_resources=[
+                CloudResource(
+                    provider="aws",
+                    resource_type="s3-bucket",
+                    resource="s3://bucket",
+                    region="us-east-1",
+                )
+            ],
+            metrics=Metrics(lines_of_code=10),
+        )
+        gen = DeliverablesGenerator(report)
+        context = gen.c4_context()
+        assert "Aplicación web Next.js" in context
+        assert "Amazon Web Services" in context
+        assert "S3" in context
+        assert "GitHub" in context
+        assert "VibeAudit" not in context  # ya no describe el proceso propio
+        container = gen.c4_container()
+        assert "Amazon S3" in container
+        assert "Docker" in container
 
 
 class TestBacklog:

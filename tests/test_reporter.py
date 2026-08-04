@@ -51,6 +51,20 @@ class TestAuditReporter:
         assert report.metrics.lines_of_code == 5
         assert report.metrics.test_files == 1
 
+    def test_metricas_ignoran_venv_y_node_modules(self, tmp_path):
+        make_repo(tmp_path)
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".venv" / "site-packages").mkdir(parents=True)
+        (tmp_path / ".venv" / "site-packages" / "dependencia.py").write_text("a = 1\n" * 500)
+        (tmp_path / "node_modules").mkdir()
+        (tmp_path / "node_modules" / "paquete.js").write_text("b = 2\n" * 300)
+        (tmp_path / ".venv" / "site-packages" / "test_x.py").write_text("c = 3\n")
+
+        report = make_reporter(tmp_path).build()
+
+        assert report.metrics.lines_of_code == 5
+        assert report.metrics.test_files == 1
+
     def test_conteo_por_severidad(self, tmp_path):
         repo = make_repo(tmp_path)
         report = make_reporter(repo).build()

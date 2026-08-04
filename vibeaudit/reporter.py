@@ -52,6 +52,23 @@ TEST_PATTERNS = (
     ".spec.",
 )
 
+# Directorios ignorados en métricas (venvs, dependencias, build)
+IGNORED_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    "node_modules",
+    "__pycache__",
+    ".next",
+    ".cache",
+    ".pytest_cache",
+    "dist",
+    "build",
+    ".mypy_cache",
+    ".ruff_cache",
+}
+
 # Colores por severidad para el reporte HTML
 SEVERITY_COLORS = {
     "CRITICAL": "#dc2626",
@@ -96,9 +113,8 @@ class AuditReporter:
             return 0
 
         total = 0
-        for root, _dirs, files in os.walk(self.repo_path):
-            if ".git" in root:
-                continue
+        for root, dirs, files in os.walk(self.repo_path):
+            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
             for filename in files:
                 if filename.endswith(CODE_EXTENSIONS):
                     full_path = os.path.join(root, filename)
@@ -115,9 +131,8 @@ class AuditReporter:
             return 0
 
         count = 0
-        for root, _dirs, files in os.walk(self.repo_path):
-            if ".git" in root:
-                continue
+        for root, dirs, files in os.walk(self.repo_path):
+            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
             for filename in files:
                 name = filename.lower()
                 if any(pattern in name for pattern in TEST_PATTERNS):

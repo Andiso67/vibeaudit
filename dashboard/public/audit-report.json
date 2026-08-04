@@ -3,7 +3,7 @@
     "name": "directorio-local",
     "repositoryUrl": "https://github.com/Andiso67/vibeaudit.git",
     "defaultBranch": "main",
-    "commitHash": "0e18b21cbf8cad06f1fb52cb01b1980dc6eb792c",
+    "commitHash": "7b9b25b4aba05e07cb4e21840d48ce81d1e14504",
     "languages": [
       "C",
       "C++",
@@ -59,32 +59,11 @@
   "customIssues": [],
   "llmFindings": [],
   "recurrentFindings": [],
-  "cloudIssues": [
-    {
-      "provider": "aws",
-      "rule": "aws-s3-bucket-public",
-      "resource": "s3://corp-assets",
-      "resource_type": "s3-bucket",
-      "region": "",
-      "severity": "HIGH",
-      "description": "ACL de bucket público; grants anónimos: AllUsers:READ.",
-      "recommendation": "El bucket S3 permite acceso anónimo. Recomendado: bloquear el acceso público del bucket y usar IAM para acceso autenticado."
-    },
-    {
-      "provider": "aws",
-      "rule": "aws-ec2-security-group-open",
-      "resource": "sg-abc",
-      "resource_type": "security-group",
-      "region": "",
-      "severity": "HIGH",
-      "description": "Security group abierto a Internet (0.0.0.0/0): 443.",
-      "recommendation": "El security group permite tráfico desde 0.0.0.0/0. Restrinje la entrada al rango de IPs necesario y preferí el acceso por VPC/VPNS."
-    }
-  ],
+  "cloudIssues": [],
   "checklists": [],
   "metrics": {
-    "linesOfCode": 3302426,
-    "testFiles": 533,
+    "linesOfCode": 9864,
+    "testFiles": 14,
     "dependenciesWithCves": [
       "gitpython",
       "pytest"
@@ -205,7 +184,9 @@
         "direct": false,
         "dependencyType": "unknown",
         "purl": "pkg:pypi/gitpython@3.1.40",
-        "cveIds": [],
+        "cveIds": [
+          "CVE-2026-69097"
+        ],
         "aliases": [
           "GHSA-3rp5-jjmw-4wv2"
         ],
@@ -222,7 +203,7 @@
         "exploitedInWild": null,
         "epssScore": null,
         "published": "2026-07-24T16:22:02Z",
-        "modified": "2026-07-25T21:44:40.790148429Z",
+        "modified": "2026-08-04T05:41:05.585188057Z",
         "references": [
           "https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-3rp5-jjmw-4wv2",
           "https://github.com/gitpython-developers/GitPython/commit/1ed1b924f4e2d2ee7bab296df77b978af21853f1",

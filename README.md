@@ -7,7 +7,9 @@ y genera un JSON maestro con todos los hallazgos.
 
 Primer paso hacia el servicio de "Pre-Auditoría Automatizada en 48 horas".
 Ver `SPRINT.md` para el alcance del sprint 1, `SPRINT3.md` (LLM/memoria/nube/dashboard/SonarQube),
-`SPRINT4.md` (nube→SonarQube, CI/CD, reglas Vibe Coding, pnpm) y `CONTEXT.md` para la visión completa.
+`SPRINT4.md` (nube→SonarQube, CI/CD, reglas Vibe Coding, pnpm),
+`SPRINT5.md` (memoria Qdrant, historial con evolución, alertas de recurrencia,
+comparativa LLM vs SonarQube, multi-región AWS) y `CONTEXT.md` para la visión completa.
 
 ## Requisitos
 

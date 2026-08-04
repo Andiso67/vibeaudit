@@ -169,43 +169,79 @@ class CloudScanner:
         ec2 = self.clients.get("ec2") or boto3.client(
             "ec2", region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
         )
-        try:
-            sg_response = ec2.describe_security_groups()
-        except Exception as exc:  # noqa: BLE001
-            console.print(f"[yellow]Advertencia:[/] no se pudo consultar EC2: {exc}")
-            return issues
-
-        for group in sg_response.get("SecurityGroups") or []:
-            group_id = group.get("GroupId")
-            if not group_id:
-                continue
-            open_ports = self._open_ingress_ports(group.get("IpPermissions") or [])
-            self.resources.append(
-                {
-                    "provider": "aws",
-                    "resource_type": "security-group",
-                    "resource": group_id,
-                    "region": "",
-                    "status": "issue" if open_ports else "ok",
-                }
-            )
-            if open_ports:
-                issues.append(
-                    CloudIssue(
-                        provider="aws",
-                        rule="aws-ec2-security-group-open",
-                        resource=group_id,
-                        resource_type="security-group",
-                        region=group.get("Region") if group.get("Region") else "",
-                        severity=Severity.HIGH,
-                        description=(
-                            f"Security group abierto a Internet "
-                            f"(0.0.0.0/0): {', '.join(open_ports)}."
-                        ),
-                        recommendation=OPEN_SG_RECOMMENDATION,
-                    )
+        for region in self._aws_regions(ec2):
+            try:
+                regional = (
+                    self.clients.get(f"ec2:{region}")
+                    or (ec2 if region == os.environ.get("AWS_DEFAULT_REGION", "us-east-1") else None)
+                    or boto3.client("ec2", region_name=region)
                 )
+                sg_response = regional.describe_security_groups()
+            except Exception as exc:  # noqa: BLE001 - región sin permiso o deshabilitada
+                console.print(
+                    f"[yellow]Advertencia:[/] no se pudo consultar EC2 en "
+                    f"[cyan]{region}[/]: {exc}"
+                )
+                continue
+            for group in sg_response.get("SecurityGroups") or []:
+                group_id = group.get("GroupId")
+                if not group_id:
+                    continue
+                open_ports = self._open_ingress_ports(group.get("IpPermissions") or [])
+                self.resources.append(
+                    {
+                        "provider": "aws",
+                        "resource_type": "security-group",
+                        "resource": group_id,
+                        "region": region,
+                        "status": "issue" if open_ports else "ok",
+                    }
+                )
+                if open_ports:
+                    issues.append(
+                        CloudIssue(
+                            provider="aws",
+                            rule="aws-ec2-security-group-open",
+                            resource=group_id,
+                            resource_type="security-group",
+                            region=region,
+                            severity=Severity.HIGH,
+                            description=(
+                                f"Security group abierto a Internet "
+                                f"(0.0.0.0/0): {', '.join(open_ports)}."
+                            ),
+                            recommendation=OPEN_SG_RECOMMENDATION,
+                        )
+                    )
         return issues
+
+    def _aws_regions(self, default_ec2) -> List[str]:
+        """Regiones AWS habilitadas; fallback a la región por defecto.
+
+        Usa ``ec2.describe_regions`` (solo lectura) y, si no está permitido o
+        el cliente no lo implementa (fakes de test), devuelve únicamente la
+        región de ``AWS_DEFAULT_REGION`` (o us-east-1).
+        """
+        default = os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+        try:
+            response = default_ec2.describe_regions()
+        except Exception as exc:  # noqa: BLE001
+            console.print(
+                f"[yellow]Advertencia:[/] no se pudieron listar regiones "
+                f"({exc}); escaneando solo {default}."
+            )
+            return [default]
+        regions = [
+            r.get("RegionName")
+            for r in (response.get("Regions") or [])
+            if r.get("RegionName")
+        ]
+        if not regions:
+            return [default]
+        if default in regions:
+            regions.remove(default)
+            regions.insert(0, default)
+        return regions
 
     def scan_azure(self) -> List[CloudIssue]:
         """Placeholder Azure (solo lectura): requiere SDK y credenciales."""

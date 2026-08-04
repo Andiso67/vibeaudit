@@ -1,6 +1,7 @@
 """Interfaz de línea de comandos para vibeaudit."""
 
 import hashlib
+import json
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -11,10 +12,12 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from vibeaudit.compare import compare as compare_llm_sonar
 from vibeaudit.deliverables import DeliverablesGenerator
+from vibeaudit.history import HistoryStore
 from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.llm import LLMAuditor, LLMUnavailableError
-from vibeaudit.memory import MemoryEntry, MemoryStore
+from vibeaudit.memory import MemoryEntry, MemoryStore, new_store
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -101,10 +104,15 @@ def scan(
         "--llm",
         help="Auditoría LLM por checklists (motor local/gratuito, p. ej. Ollama)",
     ),
-    memory: Optional[Path] = typer.Option(
+    memory: Optional[str] = typer.Option(
         None,
         "--memory",
-        help="Directorio de la memoria de hallazgos recurrentes (dedupe y fixes conocidos)",
+        help="Memoria de hallazgos recurrentes: directorio local o URL de Qdrant (http://host:port)",
+    ),
+    history: Optional[Path] = typer.Option(
+        None,
+        "--history",
+        help="Directorio donde guardar el historial de scans (por commit) para ver su evolución",
     ),
     cloud: bool = typer.Option(
         False,
@@ -237,7 +245,7 @@ def scan(
                     progress.update(
                         task, description="Consultando memoria de hallazgos recurrentes..."
                     )
-                    recurrent = MemoryStore(memory).ingest_report(report)
+                    recurrent = new_store(memory).ingest_report(report)
                     report.recurrent_findings = recurrent
                     console.print(
                         f"[cyan]Memoria:[/] {len(recurrent)} hallazgos recurrentes reconocidos"
@@ -255,6 +263,16 @@ def scan(
                     console.print(
                         f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas "
                         f"({len(cloud_scanner.resources)} recursos analizados)"
+                    )
+
+                if history is not None:
+                    progress.update(
+                        task, description=f"Guardando snapshot en historial ({history})..."
+                    )
+                    snapshot_id = HistoryStore(history).save_snapshot(report)
+                    console.print(
+                        f"[bold green]✔ Snapshot en historial[/] [cyan]{history}[/] "
+                        f"(id {snapshot_id})"
                     )
 
                 if deliverables is not None:
@@ -351,7 +369,7 @@ memory_app = typer.Typer(
 
 @memory_app.command("add")
 def memory_add(
-    directory: Path = typer.Argument(..., help="Directorio de la memoria"),
+    directory: str = typer.Argument(..., help="Directorio de la memoria o URL de Qdrant"),
     rule: str = typer.Option(..., "--rule", help="Regla/paquete de la clase de hallazgo"),
     fix: str = typer.Option("", "--fix", help="Solución/fix conocida para esa clase"),
     evidence: str = typer.Option("", "--evidence", help="Texto de evidencia (opcional)"),
@@ -359,7 +377,7 @@ def memory_add(
 ) -> None:
     """Registra en la memoria una clase de hallazgo con su fix conocido."""
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    store = MemoryStore(directory)
+    store = new_store(directory)
     store.upsert(
         MemoryEntry(
             id=hashlib.md5(rule.encode()).hexdigest()[:12],
@@ -378,10 +396,10 @@ def memory_add(
 
 @memory_app.command("list")
 def memory_list(
-    directory: Path = typer.Argument(..., help="Directorio de la memoria"),
+    directory: str = typer.Argument(..., help="Directorio de la memoria o URL de Qdrant"),
 ) -> None:
     """Lista las entradas de la memoria de hallazgos recurrentes."""
-    store = MemoryStore(directory)
+    store = new_store(directory)
     entries = store.entries()
     if not entries:
         console.print("La memoria está vacía.")
@@ -402,6 +420,121 @@ def memory_list(
 
 
 app.add_typer(memory_app)
+
+history_app = typer.Typer(
+    name="history",
+    help="Historial de escaneos (snapshots por commit y evolución)",
+    no_args_is_help=True,
+)
+
+
+@history_app.command("list")
+def history_list(
+    directory: Path = typer.Argument(..., help="Directorio del historial"),
+) -> None:
+    """Lista los snapshots guardados (resúmenes) por fecha."""
+    snapshots = HistoryStore(directory).list_snapshots()
+    if not snapshots:
+        console.print("El historial está vacío.")
+        return
+    table = Table(title=f"Historial de escaneos ({directory})")
+    table.add_column("Fecha", style="cyan")
+    table.add_column("Commit")
+    table.add_column("Total", justify="right")
+    table.add_column("LOC", justify="right")
+    for snap in snapshots:
+        table.add_row(
+            snap["timestamp"],
+            (snap.get("commit") or "")[:12],
+            str(snap["summary"]["total"]),
+            str(snap["summary"].get("linesOfCode", 0)),
+        )
+    console.print(table)
+
+
+@history_app.command("export")
+def history_export(
+    directory: Path = typer.Argument(..., help="Directorio del historial"),
+    output: Path = typer.Option(
+        Path("audit-history.json"),
+        "--output",
+        "-o",
+        help="Ruta del JSON de evolución para el dashboard",
+    ),
+    memory: Optional[str] = typer.Option(
+        None, "--memory", help="Directorio de la memoria (enriquece alertas)"
+    ),
+) -> None:
+    """Exporta la evolución (snapshots + deltas + alertas) para el dashboard."""
+    store = HistoryStore(directory)
+    memory_store = new_store(memory) if memory else None
+    payload = store.export_dashboard(output, memory=memory_store)
+    console.print(
+        f"[bold green]✔ Historial importado a[/] [cyan]{output}[/] "
+        f"({len(payload.get('snapshots', []))} snapshots, "
+        f"{len(payload.get('deltas', []))} deltas, "
+        f"{len(payload.get('alerts', []))} alertas de recurrencia)"
+    )
+
+
+@history_app.command("alerts")
+def history_alerts(
+    directory: Path = typer.Argument(..., help="Directorio del historial"),
+    memory: Optional[str] = typer.Option(
+        None, "--memory", help="Directorio de la memoria (ocurrencias reales)"
+    ),
+    top: int = typer.Option(10, "--top", help="Cuántas alertas mostrar"),
+) -> None:
+    """Ranking de hallazgos que persisten entre escaneos (nunca se arreglan)."""
+    store = HistoryStore(directory)
+    memory_store = new_store(memory) if memory else None
+    alerts = store.recurrence_alerts(memory_store, top=top)
+    if not alerts:
+        console.print("Sin alertas: no hay hallazgos recurrentes persistentes.")
+        return
+    table = Table(title=f"Alertas de recurrencia ({directory})")
+    table.add_column("Nivel", style="bold red")
+    table.add_column("Score", justify="right")
+    table.add_column("Snapshots", justify="right")
+    table.add_column("Ocurrencias", justify="right")
+    table.add_column("Regla", overflow="fold")
+    table.add_column("Archivo", overflow="fold")
+    for alert in alerts:
+        table.add_row(
+            alert["level"],
+            str(alert["score"]),
+            str(alert["snapshots"]),
+            str(alert["occurrences"]),
+            alert["rule"],
+            alert["file"] or "-",
+        )
+    console.print(table)
+
+
+app.add_typer(history_app)
+
+
+@app.command("compare")
+def compare_command(
+    report: Path = typer.Argument(..., help="Reporte de vibeaudit (audit-report.json)"),
+    sonar: Path = typer.Argument(
+        ..., help="Issues de SonarQube (sonar-issues.json exportado o análisis)"
+    ),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o", help="Guardar la comparativa como JSON"
+    ),
+) -> None:
+    """Compara el auditor LLM contra SonarQube: coincidencias y hallazgos únicos."""
+    from vibeaudit.compare import load_report, load_sonar_issues, to_text
+
+    result = compare_llm_sonar(load_report(report), load_sonar_issues(sonar))
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        console.print(f"[bold green]✔ Comparativa guardada en[/] [cyan]{output}[/]")
+    console.print(to_text(result))
 
 
 if __name__ == "__main__":

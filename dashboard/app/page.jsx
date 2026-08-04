@@ -31,6 +31,24 @@ function loadReport() {
   return null;
 }
 
+function loadHistory() {
+  const candidates = [
+    process.env.VIBEAUDIT_HISTORY,
+    path.join(process.cwd(), "public", "audit-history.json"),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const raw = fs.readFileSync(candidate, "utf-8");
+      const data = JSON.parse(raw);
+      if (data && typeof data === "object" && data.snapshots) return data;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 function riskSemaphore(report) {
   const counts = severityCounts(report);
   if (counts.CRITICAL + counts.HIGH > 0) return { level: "red", label: "Riesgo alto" };
@@ -108,6 +126,96 @@ function ProjectHeader({ project }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function EvolutionPanel({ history }) {
+  if (!history || !history.snapshots || history.snapshots.length < 2) {
+    return <p>Se necesitan al menos 2 escaneos guardados para mostrar la evolución.</p>;
+  }
+  return (
+    <>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Commit</th>
+            <th>Total</th>
+            <th>CRITICAL</th>
+            <th>HIGH</th>
+            <th>MEDIUM</th>
+            <th>LOW</th>
+            <th>LOC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {history.snapshots.map((snap) => (
+            <tr key={snap.id}>
+              <td>{snap.timestamp}</td>
+              <td>
+                <code>{(snap.commit || "").slice(0, 12)}</code>
+              </td>
+              <td>{snap.summary.total}</td>
+              <td>{snap.summary.perSeverity.CRITICAL}</td>
+              <td>{snap.summary.perSeverity.HIGH}</td>
+              <td>{snap.summary.perSeverity.MEDIUM}</td>
+              <td>{snap.summary.perSeverity.LOW}</td>
+              <td>(snap.summary.linesOfCode ?? 0).toLocaleString()</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {history.deltas && history.deltas.length > 0 ? (
+        <>
+          <h3>Deltas entre escaneos</h3>
+          <ul>
+            {history.deltas.map((d, i) => (
+              <li key={i}>
+                <code>{(d.from?.commit || "").slice(0, 12)}</code> →{" "}
+                <code>{(d.to?.commit || "").slice(0, 12)}</code>:{" "}
+                <strong>{d.new}</strong> nuevos, <strong>{d.resolved}</strong>{" "}
+                resueltos, <strong>{d.persistent}</strong> persistentes.
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {history.alerts && history.alerts.length > 0 ? (
+        <>
+          <h3>Alertas de recurrencia</h3>
+          <p>
+            Hallazgos que persisten entre escaneos y/o se repiten: merecen un fix
+            definitivo.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Nivel</th>
+                <th>Score</th>
+                <th>Snapshots</th>
+                <th>Ocurrencias</th>
+                <th>Regla</th>
+                <th>Archivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.alerts.map((a) => (
+                <tr key={a.key}>
+                  <td>{a.level}</td>
+                  <td>{a.score}</td>
+                  <td>{a.snapshots}</td>
+                  <td>{a.occurrences}</td>
+                  <td>
+                    <code>{a.rule}</code>
+                  </td>
+                  <td>{a.file || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -380,6 +488,7 @@ function RecurrentTable({ items }) {
 
 export default function Page() {
   const loaded = loadReport();
+  const history = loadHistory();
   if (!loaded) {
     return (
       <main className="container">
@@ -448,6 +557,10 @@ export default function Page() {
           {(report.metrics?.dependenciesWithCves || []).join(", ") || "ninguna"}
         </li>
       </ul>
+      <section>
+        <h2>Evolución (historial)</h2>
+        <EvolutionPanel history={history} />
+      </section>
       {sections.map(([title, table]) => (
         <section key={title}>
           <h2>{title}</h2>

@@ -141,6 +141,53 @@ class TestCloudScannerAws:
         issues = scanner.scan()
         assert issues == []
 
+    def test_multi_region_escanea_security_groups_por_region(self):
+        class FakeEC2Multi:  # noqa: N801 - clase en test, nombre local
+            """describe_security_groups devuelve un SG distinto por región."""
+
+            def __init__(self, region):
+                self.region = region
+
+            def describe_security_groups(self):
+                return {
+                    "SecurityGroups": [
+                        {"GroupId": f"sg-{self.region}", "IpPermissions": []}
+                    ]
+                }
+
+        class FakeRegions:
+            def describe_regions(self):
+                return {
+                    "Regions": [
+                        {"RegionName": "us-east-1"},
+                        {"RegionName": "eu-west-1"},
+                    ]
+                }
+
+        scanner = CloudScanner(
+            providers=["aws"],
+            clients={
+                "s3": FakeS3(),
+                "ec2": FakeRegions(),
+                "ec2:us-east-1": FakeEC2Multi("us-east-1"),
+                "ec2:eu-west-1": FakeEC2Multi("eu-west-1"),
+            },
+        )
+        scanner.scan()
+        by_resource = {r["resource"]: r for r in scanner.resources}
+        assert {"sg-us-east-1", "sg-eu-west-1"} <= set(by_resource)
+        assert by_resource["sg-us-east-1"]["region"] == "us-east-1"
+        assert by_resource["sg-eu-west-1"]["region"] == "eu-west-1"
+
+    def test_sin_describe_regions_fallback_region_por_defecto(self, monkeypatch):
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
+        fake_ec2 = FakeEC2()
+        scanner = CloudScanner(
+            providers=["aws"], clients={"s3": FakeS3(), "ec2": fake_ec2}
+        )
+        issues = scanner.scan()
+        assert any(i.rule == "aws-ec2-security-group-open" for i in issues)
+
 
 class TestCloudScannerCredenciales:
     def test_sin_credenciales_lanza_error_limpio(self, monkeypatch):

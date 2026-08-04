@@ -8,7 +8,9 @@ from vibeaudit.memory import (
     LocalEmbedder,
     MemoryEntry,
     MemoryStore,
+    QdrantMemoryStore,
     STORAGE_FILE,
+    new_store,
 )
 from vibeaudit.models import (
     AuditReport,
@@ -137,5 +139,85 @@ class TestMemoryStore:
 
     def test_corrupto_no_crash(self, tmp_path):
         (tmp_path / STORAGE_FILE).write_text("{ no es json")
-        store = MemoryStore(tmp_path)
-        assert store.entries() == []
+
+
+class FakeQdrant:
+    """Cliente Qdrant simplificado para tests (sin red)."""
+
+    def __init__(self):
+        self.points: dict = {}
+
+    def upsert(self, collection, point_id, vector, payload):
+        self.points[point_id] = {"vector": vector, "payload": dict(payload)}
+
+    def set_payload(self, collection, point_id, payload):
+        self.points[point_id]["payload"].update(payload)
+
+    def scroll(self, collection):
+        return [p["payload"] for p in self.points.values()]
+
+    def find_by_rule(self, collection, rule):
+        for payload in self.scroll(collection):
+            if payload.get("rule") == rule:
+                return payload
+        return None
+
+    def search_vectors(self, collection, vector, k):
+        return [
+            (p["payload"], 0.9)
+            for p in sorted(
+                self.points.values(),
+                key=lambda p: sum(
+                    x * y for x, y in zip(p["vector"], vector)
+                ),
+                reverse=True,
+            )[:k]
+        ]
+
+
+class TestQdrantMemoryStore:
+    def test_primera_vez_registra_segunda_es_recurrente(self):
+        store = QdrantMemoryStore(
+            url="http://qdrant:6333", client=FakeQdrant()
+        )
+        report = make_report(rules=("CKV_AWS_20",))
+        assert store.ingest_report(report) == []
+        assert len(store.entries()) == 1
+
+        recurrent = store.ingest_report(report)
+        assert len(recurrent) == 1
+        assert recurrent[0].rule == "CKV_AWS_20"
+        assert recurrent[0].occurrences == 2
+
+    def test_upsert_y_semantic_similar(self):
+        fake = FakeQdrant()
+        store = QdrantMemoryStore(url="http://qdrant:6333", client=fake)
+        store.upsert(
+            MemoryEntry(
+                id="a",
+                rule="CKV_AWS_20",
+                evidence="S3 bucket public access",
+                recommendation="Block public access",
+                occurrences=1,
+                first_seen="2026-01-01",
+                last_seen="2026-01-01",
+            )
+        )
+        similar = store.semantic_similar("s3 bucket public access", k=1)
+        assert len(similar) == 1
+        assert similar[0][0].rule == "CKV_AWS_20"
+        assert similar[0][1] > 0.5
+
+    def test_new_store_selecciona_backend_segun_url(self):
+        assert isinstance(
+            new_store(
+                "http://localhost:6333",
+                embedder=LocalEmbedder(),
+                client=FakeQdrant(),
+            ),
+            QdrantMemoryStore,
+        )
+        assert isinstance(
+            new_store("/tmp/mem-local", embedder=LocalEmbedder()),
+            MemoryStore,
+        )

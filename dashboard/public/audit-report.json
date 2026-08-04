@@ -405,116 +405,836 @@
       "snippet": "requires login"
     }
   ],
-  "llmFindings": [
+  "llmFindings": [],
+  "recurrentFindings": [
     {
-      "title": "Dockerfile.security.missing-user.missing-user",
+      "rule": "dockerfile.security.missing-user.missing-user",
+      "file": "Dockerfile",
+      "line": 29,
       "severity": "HIGH",
-      "checklistRef": "12-factor.config",
-      "evidence": "Dockerfile:29",
-      "recommendation": "Gestionar los secretos y la configuración desde el entorno y un gestor de secretos.",
-      "relatedFiles": [
-        "Dockerfile"
-      ]
+      "occurrences": 3,
+      "memory_id": "1c356af5e0f4",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "javascript.lang.security.detect-child-process.detect-child-process",
+      "rule": "javascript.lang.security.detect-child-process.detect-child-process",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 22,
       "severity": "HIGH",
-      "checklistRef": "owasp.injection",
-      "evidence": "scripts/scrape-rfeg.js:22",
-      "recommendation": "Usar parámetros/escapado, nunca concatenación de strings.",
-      "relatedFiles": [
-        "scripts/scrape-rfeg.js"
-      ]
+      "occurrences": 3,
+      "memory_id": "c6fa2968163a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "CKV_DOCKER_2",
+      "rule": "CKV_DOCKER_2",
+      "file": "Dockerfile",
+      "line": 1,
       "severity": "HIGH",
-      "checklistRef": "12-factor.backing-services",
-      "evidence": "Dockerfile:1",
-      "recommendation": "Bases de datos, colas y almacenamiento deben ser recursos externos dentro de la app.",
-      "relatedFiles": [
-        "Dockerfile"
-      ]
+      "occurrences": 3,
+      "memory_id": "ce66ef40382a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "CKV_DOCKER_3",
+      "rule": "CKV_DOCKER_3",
+      "file": "Dockerfile",
+      "line": 1,
       "severity": "HIGH",
-      "checklistRef": "12-factor.backing-services",
-      "evidence": "Dockerfile:1",
-      "recommendation": "Bases de datos, colas y almacenamiento deben ser recursos externos dentro de la app.",
-      "relatedFiles": [
-        "Dockerfile"
-      ]
+      "occurrences": 3,
+      "memory_id": "4e107a966b30",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "brace-expansion@1.1.15",
-      "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-13149 fix=1.1.16",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "rule": "vibeaudit.rules.vibe-todo-fixme",
+      "file": "Prueba.md",
+      "line": 208,
+      "severity": "LOW",
+      "occurrences": 3,
+      "memory_id": "32aa3a4bd9ba",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "fast-uri@3.1.2",
-      "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-13676 fix=3.1.3",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 33,
+      "severity": "MEDIUM",
+      "occurrences": 91,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "js-yaml@4.2.0",
-      "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-59869 fix=4.3.0",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 53,
+      "severity": "MEDIUM",
+      "occurrences": 92,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "next@16.2.9",
-      "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-64647 fix=16.2.11",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 61,
+      "severity": "MEDIUM",
+      "occurrences": 93,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "postcss@8.4.31",
-      "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-45623 fix=8.5.12",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 75,
+      "severity": "MEDIUM",
+      "occurrences": 94,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     },
     {
-      "title": "valibot@1.2.0",
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 106,
+      "severity": "MEDIUM",
+      "occurrences": 95,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 131,
+      "severity": "MEDIUM",
+      "occurrences": 96,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 158,
+      "severity": "MEDIUM",
+      "occurrences": 97,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 217,
+      "severity": "MEDIUM",
+      "occurrences": 98,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 230,
+      "severity": "MEDIUM",
+      "occurrences": 99,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "line": 232,
+      "severity": "MEDIUM",
+      "occurrences": 100,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 61,
+      "severity": "MEDIUM",
+      "occurrences": 101,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-eval",
+      "file": "scripts/extract-data.js",
+      "line": 71,
       "severity": "HIGH",
-      "checklistRef": "owasp.vulnerable-deps",
-      "evidence": "CVE-2026-59952 fix=1.4.2",
-      "recommendation": "Actualizar dependencias con CVEs conocidos.",
-      "relatedFiles": [
-        "package.json"
-      ]
+      "occurrences": 5,
+      "memory_id": "13c069a1c249",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-eval",
+      "file": "scripts/extract-data.js",
+      "line": 77,
+      "severity": "HIGH",
+      "occurrences": 6,
+      "memory_id": "13c069a1c249",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 79,
+      "severity": "MEDIUM",
+      "occurrences": 102,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 84,
+      "severity": "MEDIUM",
+      "occurrences": 103,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 85,
+      "severity": "MEDIUM",
+      "occurrences": 104,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 90,
+      "severity": "MEDIUM",
+      "occurrences": 105,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 95,
+      "severity": "MEDIUM",
+      "occurrences": 106,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 100,
+      "severity": "MEDIUM",
+      "occurrences": 107,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 109,
+      "severity": "MEDIUM",
+      "occurrences": 108,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 112,
+      "severity": "MEDIUM",
+      "occurrences": 109,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "line": 115,
+      "severity": "MEDIUM",
+      "occurrences": 110,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 138,
+      "severity": "MEDIUM",
+      "occurrences": 111,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 140,
+      "severity": "MEDIUM",
+      "occurrences": 112,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 142,
+      "severity": "MEDIUM",
+      "occurrences": 113,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 144,
+      "severity": "MEDIUM",
+      "occurrences": 114,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 148,
+      "severity": "MEDIUM",
+      "occurrences": 115,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 160,
+      "severity": "MEDIUM",
+      "occurrences": 116,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 170,
+      "severity": "MEDIUM",
+      "occurrences": 117,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 203,
+      "severity": "MEDIUM",
+      "occurrences": 118,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 205,
+      "severity": "MEDIUM",
+      "occurrences": 119,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 222,
+      "severity": "MEDIUM",
+      "occurrences": 120,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 223,
+      "severity": "MEDIUM",
+      "occurrences": 121,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 224,
+      "severity": "MEDIUM",
+      "occurrences": 122,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "line": 225,
+      "severity": "MEDIUM",
+      "occurrences": 123,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 10,
+      "severity": "MEDIUM",
+      "occurrences": 124,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 11,
+      "severity": "MEDIUM",
+      "occurrences": 125,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 16,
+      "severity": "MEDIUM",
+      "occurrences": 126,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 42,
+      "severity": "MEDIUM",
+      "occurrences": 127,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 56,
+      "severity": "MEDIUM",
+      "occurrences": 128,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 74,
+      "severity": "MEDIUM",
+      "occurrences": 129,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 128,
+      "severity": "MEDIUM",
+      "occurrences": 130,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 174,
+      "severity": "MEDIUM",
+      "occurrences": 131,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 176,
+      "severity": "MEDIUM",
+      "occurrences": 132,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "line": 177,
+      "severity": "MEDIUM",
+      "occurrences": 133,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "src/app/api/auth/forgot-password/route.ts",
+      "line": 31,
+      "severity": "MEDIUM",
+      "occurrences": 134,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "src/app/api/auth/register/route.ts",
+      "line": 45,
+      "severity": "MEDIUM",
+      "occurrences": 135,
+      "memory_id": "b82349e44ca5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-ts-non-null-assertion",
+      "file": "src/store/useStore.ts",
+      "line": 138,
+      "severity": "MEDIUM",
+      "occurrences": 5,
+      "memory_id": "fe851d51eb4a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "vibeaudit.rules.vibe-ts-non-null-assertion",
+      "file": "src/store/useStore.ts",
+      "line": 389,
+      "severity": "MEDIUM",
+      "occurrences": 6,
+      "memory_id": "fe851d51eb4a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "@hono/node-server CVE-2026-39406",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "7a77d5d3849d",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "@hono/node-server",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "0c06c40ebeb1",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "brace-expansion CVE-2026-13149",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "ff8aeed72ca4",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "brace-expansion CVE-2026-14257",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "61f0b4018c1e",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "brace-expansion CVE-2026-69152",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "1f6e77656bf4",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "fast-uri CVE-2026-13676",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "9f587c0d1366",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "fast-uri CVE-2026-18446",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "c11c65a0c3d3",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "fast-uri CVE-2026-16221",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "ac52ceb3b0db",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "hono CVE-2026-69207",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "2ad9ca62742e",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "hono CVE-2026-59896",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "e769947016d2",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "hono CVE-2026-59895",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "f78527878d10",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "hono CVE-2026-59897",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "1a8fca20ece4",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "js-yaml CVE-2026-59869",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "c0ea2fb7e58a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64647",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "2dfa8cbbc509",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64646",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "38c30f2eff39",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64648",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "32e093e22081",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64642",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "dac62be26a98",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64649",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "373cb060ac1e",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64643",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "1dd4bb130352",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64641",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "433b49f4ed06",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64645",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "1591e5761792",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "next CVE-2026-64644",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "0abb237e592a",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "postcss CVE-2026-45623",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "a7b938623bd1",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "postcss CVE-2026-69153",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "47439eab4d13",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "postcss CVE-2026-41305",
+      "file": "",
+      "line": 0,
+      "severity": "MEDIUM",
+      "occurrences": 3,
+      "memory_id": "7b24662cfab5",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "postcss",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "ff56ea6b1cc2",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "sharp",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "a557264a7d6c",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
+    },
+    {
+      "rule": "valibot CVE-2026-59952",
+      "file": "",
+      "line": 0,
+      "severity": "HIGH",
+      "occurrences": 3,
+      "memory_id": "50de94433dad",
+      "suggestion": "Hallazgo recurrente: revisar en el repositorio y registrar un fix con 'memory add'.",
+      "firstSeen": "2026-08-04T19:31:13+00:00"
     }
   ],
-  "recurrentFindings": [],
   "cloudIssues": [
     {
       "provider": "aws",
       "rule": "aws-ec2-security-group-open",
       "resource": "sg-0b173d608eadc8fa3",
       "resource_type": "security-group",
-      "region": "",
+      "region": "us-east-1",
       "severity": "HIGH",
       "description": "Security group abierto a Internet (0.0.0.0/0): 80, 22, 443.",
       "recommendation": "El security group permite tráfico desde 0.0.0.0/0. Restrinje la entrada al rango de IPs necesario y preferí el acceso por VPC/VPNS."
@@ -532,41 +1252,25 @@
       "provider": "aws",
       "resource_type": "security-group",
       "resource": "sg-0a604183ad7870696",
-      "region": "",
+      "region": "us-east-1",
       "status": "ok"
     },
     {
       "provider": "aws",
       "resource_type": "security-group",
       "resource": "sg-0e5b98b8a19958203",
-      "region": "",
+      "region": "us-east-1",
       "status": "ok"
     },
     {
       "provider": "aws",
       "resource_type": "security-group",
       "resource": "sg-0b173d608eadc8fa3",
-      "region": "",
+      "region": "us-east-1",
       "status": "issue"
     }
   ],
-  "checklists": [
-    {
-      "name": "12-Factor",
-      "itemCount": 3,
-      "matchedFindings": 28
-    },
-    {
-      "name": "AWS WAF",
-      "itemCount": 4,
-      "matchedFindings": 0
-    },
-    {
-      "name": "OWASP",
-      "itemCount": 5,
-      "matchedFindings": 23
-    }
-  ],
+  "checklists": [],
   "metrics": {
     "linesOfCode": 317021,
     "testFiles": 0,
@@ -799,7 +1503,7 @@
         "exploitedInWild": null,
         "epssScore": null,
         "published": "2026-07-21T19:03:11Z",
-        "modified": "2026-07-30T12:47:07.836176832Z",
+        "modified": "2026-08-04T15:46:35.064919132Z",
         "references": [
           "https://github.com/fastify/fast-uri/security/advisories/GHSA-4c8g-83qw-93j6",
           "https://nvd.nist.gov/vuln/detail/CVE-2026-13676",
@@ -815,6 +1519,7 @@
           "https://cna.openjsf.org/security-advisories.html",
           "https://bugzilla.redhat.com/show_bug.cgi?id=2494197",
           "https://access.redhat.com/security/cve/CVE-2026-13676",
+          "https://access.redhat.com/errata/RHSA-2026:49642",
           "https://access.redhat.com/errata/RHSA-2026:48126",
           "https://access.redhat.com/errata/RHSA-2026:48124",
           "https://access.redhat.com/errata/RHSA-2026:44268",

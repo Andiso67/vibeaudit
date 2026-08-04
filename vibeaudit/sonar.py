@@ -133,6 +133,40 @@ def to_sonar_issues(report) -> dict:
                 "effortMinutes": 15,
             }
         )
+    for llm in report.llm_findings:
+        file_path = _llm_file_path(report, llm)
+        if not file_path:
+            console.print(
+                f"[bold yellow]Advertencia:[/] hallazgo LLM "
+                f"[cyan]{llm.title}[/] sin archivo al que asociar en "
+                f"SonarQube; se omite del import."
+            )
+            continue
+        message = f"[Auditoría LLM] {llm.title}"
+        if llm.evidence:
+            message += f" — {llm.evidence}"
+        if llm.recommendation:
+            message += f"\nRecomendación: {llm.recommendation}"
+        rule_id = llm.checklist_ref or llm.title
+        issues.append(
+            {
+                "engineId": ENGINE_ID,
+                "ruleId": f"llm-{rule_id}",
+                "severity": _severity_of(llm.severity),
+                "type": SONARQUBE_TYPE,
+                "primaryLocation": {
+                    "message": message,
+                    "filePath": file_path,
+                    "textRange": {
+                        "startLine": 1,
+                        "endLine": 1,
+                        "startOffset": 0,
+                        "endOffset": 0,
+                    },
+                },
+                "effortMinutes": 15,
+            }
+        )
     issues.sort(
         key=lambda issue: SONARQUBE_SEVERITY_RANK.get(issue["severity"], 0),
         reverse=True,
@@ -155,6 +189,14 @@ def _cloud_file_path(report, cloud) -> Optional[str]:
     if candidate is None:
         candidate = getattr(report, "_iac_files_default", None)
     return candidate
+
+
+def _llm_file_path(report, llm) -> str:
+    """Ancla un hallazgo LLM (narrativo, sin línea) al primer archivo citado."""
+    if llm.related_files:
+        return llm.related_files[0]
+    anchored = _cloud_file_path(report, llm)
+    return anchored or ""
 
 
 def save_sonar_json(report, path: Path) -> None:

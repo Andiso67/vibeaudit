@@ -1,0 +1,391 @@
+{
+  "snapshots": [
+    {
+      "id": "226f9a361a59",
+      "timestamp": "2026-08-04T19:31:15+00:00",
+      "commit": "e0fb9cf96a6b9ba34db385dfdf031f13befb76cf",
+      "summary": {
+        "total": 129,
+        "perSeverity": {
+          "CRITICAL": 0,
+          "HIGH": 29,
+          "MEDIUM": 99,
+          "LOW": 1,
+          "INFO": 0
+        },
+        "modules": {
+          "sast": 2,
+          "secrets": 0,
+          "iac": 2,
+          "cicd": 0,
+          "custom": 50,
+          "cloud": 1,
+          "llm": 0,
+          "deps": 28
+        },
+        "linesOfCode": 316945
+      }
+    },
+    {
+      "id": "4dd7a8755437",
+      "timestamp": "2026-08-04T19:32:32+00:00",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "summary": {
+        "total": 165,
+        "perSeverity": {
+          "CRITICAL": 0,
+          "HIGH": 55,
+          "MEDIUM": 108,
+          "LOW": 2,
+          "INFO": 0
+        },
+        "modules": {
+          "sast": 2,
+          "secrets": 0,
+          "iac": 2,
+          "cicd": 0,
+          "custom": 50,
+          "cloud": 1,
+          "llm": 0,
+          "deps": 28
+        },
+        "linesOfCode": 317021
+      }
+    },
+    {
+      "id": "78d74b361269",
+      "timestamp": "2026-08-04T19:47:57+00:00",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "summary": {
+        "total": 165,
+        "perSeverity": {
+          "CRITICAL": 0,
+          "HIGH": 55,
+          "MEDIUM": 108,
+          "LOW": 2,
+          "INFO": 0
+        },
+        "modules": {
+          "sast": 2,
+          "secrets": 0,
+          "iac": 2,
+          "cicd": 0,
+          "custom": 50,
+          "cloud": 1,
+          "llm": 0,
+          "deps": 28
+        },
+        "linesOfCode": 317021
+      }
+    }
+  ],
+  "deltas": [
+    {
+      "from": {
+        "id": "226f9a361a59",
+        "timestamp": "2026-08-04T19:31:15+00:00",
+        "commit": "e0fb9cf96a6b9ba34db385dfdf031f13befb76cf"
+      },
+      "to": {
+        "id": "4dd7a8755437",
+        "timestamp": "2026-08-04T19:32:32+00:00",
+        "commit": "762de699536c4b2cb1633d8c967bd8394fe35925"
+      },
+      "new": 28,
+      "resolved": 0,
+      "persistent": 42,
+      "newItems": [
+        "@hono/node-server CVE-2026-39406||||",
+        "@hono/node-server||||",
+        "brace-expansion CVE-2026-13149||||",
+        "brace-expansion CVE-2026-14257||||",
+        "brace-expansion CVE-2026-69152||||",
+        "fast-uri CVE-2026-13676||||",
+        "fast-uri CVE-2026-16221||||",
+        "fast-uri CVE-2026-18446||||",
+        "hono CVE-2026-59895||||",
+        "hono CVE-2026-59896||||",
+        "hono CVE-2026-59897||||",
+        "hono CVE-2026-69207||||",
+        "js-yaml CVE-2026-59869||||",
+        "next CVE-2026-64641||||",
+        "next CVE-2026-64642||||",
+        "next CVE-2026-64643||||",
+        "next CVE-2026-64644||||",
+        "next CVE-2026-64645||||",
+        "next CVE-2026-64646||||",
+        "next CVE-2026-64647||||",
+        "next CVE-2026-64648||||",
+        "next CVE-2026-64649||||",
+        "postcss CVE-2026-41305||||",
+        "postcss CVE-2026-45623||||",
+        "postcss CVE-2026-69153||||",
+        "postcss||||",
+        "sharp||||",
+        "valibot CVE-2026-59952||||"
+      ],
+      "resolvedItems": [],
+      "persistentItems": [
+        "CKV_DOCKER_2|Dockerfile|||",
+        "CKV_DOCKER_3|Dockerfile|||",
+        "aws-ec2-security-group-open||||",
+        "dockerfile.security.missing-user.missing-user|Dockerfile|||",
+        "javascript.lang.security.detect-child-process.detect-child-process|scripts/scrape-rfeg.js|||",
+        "vibeaudit.rules.vibe-eval|scripts/extract-data.js|||",
+        "vibeaudit.rules.vibe-js-console-log|prisma/seed.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/extract-data.js|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/scrape-rfeg.js|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/seed.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/forgot-password/route.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/register/route.ts|||",
+        "vibeaudit.rules.vibe-todo-fixme|Prueba.md|||",
+        "vibeaudit.rules.vibe-ts-non-null-assertion|src/store/useStore.ts|||",
+        "||@hono/node-server|CVE-2026-39406|@hono/node-server: Middleware bypass via repeated slashes in serveStatic",
+        "||@hono/node-server||Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)",
+        "||brace-expansion|CVE-2026-13149|brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+        "||brace-expansion|CVE-2026-14257|brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+        "||brace-expansion|CVE-2026-69152|brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+        "||fast-uri|CVE-2026-13676|fast-uri vulnerable to host confusion via failed IDN canonicalization",
+        "||fast-uri|CVE-2026-16221|fast-uri vulnerable to host confusion via literal backslash authority delimiter",
+        "||fast-uri|CVE-2026-18446|fast-uri vulnerable to host confusion via backslash authority introducer",
+        "||hono|CVE-2026-59895|Hono: Server-Side XSS via JSX Escaping Bypass in cx() Utility",
+        "||hono|CVE-2026-59896|hono/jsx does not isolate context per request, leading to cross-request data disclosure",
+        "||hono|CVE-2026-59897|Hono: API Gateway v1 adapter can drop a distinct repeated request header value during de-duplication",
+        "||hono|CVE-2026-69207|Hono: ReDoS in CORS middleware via Access-Control-Request-Headers",
+        "||js-yaml|CVE-2026-59869|js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+        "||next|CVE-2026-64641|Next.js: Denial of Service in App Router using Server Actions",
+        "||next|CVE-2026-64642|Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale",
+        "||next|CVE-2026-64643|Next.js: Unauthenticated disclosure of internal Server Function endpoints",
+        "||next|CVE-2026-64644|Next.js: Denial of Service in the Image Optimization API using SVGs",
+        "||next|CVE-2026-64645|Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname",
+        "||next|CVE-2026-64646|Next.js: Unbounded Server Action payload in Edge runtime",
+        "||next|CVE-2026-64647|Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences",
+        "||next|CVE-2026-64648|Next.js: Cache confusion of response bodies for requests with bodies",
+        "||next|CVE-2026-64649|Next.js: Server-Side Request Forgery in Server Actions on custom servers",
+        "||postcss|CVE-2026-41305|PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+        "||postcss|CVE-2026-45623|PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+        "||postcss|CVE-2026-69153|PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+        "||postcss||PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+        "||sharp||sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591",
+        "||valibot|CVE-2026-59952|Valibot: record() issue paths can make flatten() throw for inherited Object property names"
+      ]
+    },
+    {
+      "from": {
+        "id": "4dd7a8755437",
+        "timestamp": "2026-08-04T19:32:32+00:00",
+        "commit": "762de699536c4b2cb1633d8c967bd8394fe35925"
+      },
+      "to": {
+        "id": "78d74b361269",
+        "timestamp": "2026-08-04T19:47:57+00:00",
+        "commit": "762de699536c4b2cb1633d8c967bd8394fe35925"
+      },
+      "new": 0,
+      "resolved": 0,
+      "persistent": 70,
+      "newItems": [],
+      "resolvedItems": [],
+      "persistentItems": [
+        "@hono/node-server CVE-2026-39406||||",
+        "@hono/node-server||||",
+        "CKV_DOCKER_2|Dockerfile|||",
+        "CKV_DOCKER_3|Dockerfile|||",
+        "aws-ec2-security-group-open||||",
+        "brace-expansion CVE-2026-13149||||",
+        "brace-expansion CVE-2026-14257||||",
+        "brace-expansion CVE-2026-69152||||",
+        "dockerfile.security.missing-user.missing-user|Dockerfile|||",
+        "fast-uri CVE-2026-13676||||",
+        "fast-uri CVE-2026-16221||||",
+        "fast-uri CVE-2026-18446||||",
+        "hono CVE-2026-59895||||",
+        "hono CVE-2026-59896||||",
+        "hono CVE-2026-59897||||",
+        "hono CVE-2026-69207||||",
+        "javascript.lang.security.detect-child-process.detect-child-process|scripts/scrape-rfeg.js|||",
+        "js-yaml CVE-2026-59869||||",
+        "next CVE-2026-64641||||",
+        "next CVE-2026-64642||||",
+        "next CVE-2026-64643||||",
+        "next CVE-2026-64644||||",
+        "next CVE-2026-64645||||",
+        "next CVE-2026-64646||||",
+        "next CVE-2026-64647||||",
+        "next CVE-2026-64648||||",
+        "next CVE-2026-64649||||",
+        "postcss CVE-2026-41305||||",
+        "postcss CVE-2026-45623||||",
+        "postcss CVE-2026-69153||||",
+        "postcss||||",
+        "sharp||||",
+        "valibot CVE-2026-59952||||",
+        "vibeaudit.rules.vibe-eval|scripts/extract-data.js|||",
+        "vibeaudit.rules.vibe-js-console-log|prisma/seed.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/extract-data.js|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/scrape-rfeg.js|||",
+        "vibeaudit.rules.vibe-js-console-log|scripts/seed.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/forgot-password/route.ts|||",
+        "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/register/route.ts|||",
+        "vibeaudit.rules.vibe-todo-fixme|Prueba.md|||",
+        "vibeaudit.rules.vibe-ts-non-null-assertion|src/store/useStore.ts|||",
+        "||@hono/node-server|CVE-2026-39406|@hono/node-server: Middleware bypass via repeated slashes in serveStatic",
+        "||@hono/node-server||Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)",
+        "||brace-expansion|CVE-2026-13149|brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+        "||brace-expansion|CVE-2026-14257|brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+        "||brace-expansion|CVE-2026-69152|brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+        "||fast-uri|CVE-2026-13676|fast-uri vulnerable to host confusion via failed IDN canonicalization",
+        "||fast-uri|CVE-2026-16221|fast-uri vulnerable to host confusion via literal backslash authority delimiter",
+        "||fast-uri|CVE-2026-18446|fast-uri vulnerable to host confusion via backslash authority introducer"
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|scripts/extract-data.js|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/extract-data.js",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|scripts/scrape-rfeg.js|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/scrape-rfeg.js",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/forgot-password/route.ts|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "src/app/api/auth/forgot-password/route.ts",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|scripts/seed.ts|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "scripts/seed.ts",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|prisma/seed.ts|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "prisma/seed.ts",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-js-console-log|src/app/api/auth/register/route.ts|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-js-console-log",
+      "file": "src/app/api/auth/register/route.ts",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 135,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 165,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-eval|scripts/extract-data.js|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-eval",
+      "file": "scripts/extract-data.js",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 6,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 36,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-ts-non-null-assertion|src/store/useStore.ts|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-ts-non-null-assertion",
+      "file": "src/store/useStore.ts",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 6,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 36,
+      "level": "ALERTA"
+    },
+    {
+      "key": "vibeaudit.rules.vibe-todo-fixme|Prueba.md|||",
+      "snapshots": 3,
+      "rule": "vibeaudit.rules.vibe-todo-fixme",
+      "file": "Prueba.md",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 3,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 33,
+      "level": "ALERTA"
+    },
+    {
+      "key": "CKV_DOCKER_2|Dockerfile|||",
+      "snapshots": 3,
+      "rule": "CKV_DOCKER_2",
+      "file": "Dockerfile",
+      "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+      "occurrences": 3,
+      "firstSeen": "2026-08-04T19:31:13+00:00",
+      "recommendation": "",
+      "score": 33,
+      "level": "ALERTA"
+    }
+  ],
+  "latest": {
+    "id": "78d74b361269",
+    "timestamp": "2026-08-04T19:47:57+00:00",
+    "commit": "762de699536c4b2cb1633d8c967bd8394fe35925",
+    "summary": {
+      "total": 165,
+      "perSeverity": {
+        "CRITICAL": 0,
+        "HIGH": 55,
+        "MEDIUM": 108,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "modules": {
+        "sast": 2,
+        "secrets": 0,
+        "iac": 2,
+        "cicd": 0,
+        "custom": 50,
+        "cloud": 1,
+        "llm": 0,
+        "deps": 28
+      },
+      "linesOfCode": 317021
+    }
+  }
+}

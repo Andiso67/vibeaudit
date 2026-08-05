@@ -21,6 +21,7 @@ from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.llm import LLMAuditor, LLMUnavailableError
 from vibeaudit.memory import MemoryEntry, MemoryStore, new_store
 from vibeaudit.models import AuditReport
+from vibeaudit.multirepo import score_report
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -648,6 +649,78 @@ def compare_command(
         )
         console.print(f"[bold green]✔ Comparativa guardada en[/] [cyan]{output}[/]")
     console.print(to_text(result))
+
+
+@app.command("compare-multi")
+def compare_multi_command(
+    paths: List[Path] = typer.Argument(
+        ..., help="Directorios o repositorios (URLs) a comparar"
+    ),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o", help="Directorio donde guardar ranking-riesgo.csv/.html"
+    ),
+    llm: bool = typer.Option(
+        False, "--llm", help="Auditoría LLM por checklists en cada repo"
+    ),
+    history: Optional[Path] = typer.Option(
+        None, "--history", help="Directorio de historial (snapshot por repo)"
+    ),
+) -> None:
+    """Escanea N repos y genera un ranking de riesgo normalizado."""
+    from vibeaudit.multirepo import ranking, ranking_csv, ranking_html
+
+    if len(paths) < 2:
+        raise typer.Exit(
+            "Indica al menos 2 directorios o URLs para comparar"
+        )
+    results = []
+    for i, source in enumerate(paths):
+        console.print(
+            f"[bold cyan]({i + 1}/{len(paths)})[/] Auditando "
+            f"[cyan]{sanitize_url(str(source))}[/]..."
+        )
+        config = ScanConfig(
+            repo_url=str(source) if "://" in str(source) else None,
+            local_path=Path(source) if not "://" in str(source) else None,
+            llm=llm,
+            history=history,
+        )
+        if config.output is None:
+            config.output = Path(f"audit-report-{source.name if hasattr(source, 'name') else i}.json")
+        report, _ = run_scan(config, echo=lambda msg: None)
+        results.append(report)
+    scored = [score_report(r) for r in results]
+    scored = ranking(scored)
+    table = Table(title="Ranking de riesgo (score ponderado por severidad)")
+    table.add_column("#", justify="right")
+    table.add_column("Repositorio")
+    table.add_column("Score", justify="right")
+    table.add_column("Densidad/KLOC", justify="right")
+    table.add_column("Total", justify="right")
+    table.add_column("Críticas", justify="right", style="red")
+    table.add_column("Altas", justify="right", style="yellow")
+    for item in scored:
+        table.add_row(
+            str(item["position"]), item["name"], str(item["score"]),
+            str(item["density"]), str(item["total"]),
+            str(item["counts"]["CRITICAL"]), str(item["counts"]["HIGH"]),
+        )
+    console.print(table)
+    if output is not None:
+        output.mkdir(parents=True, exist_ok=True)
+        (output / "ranking-riesgo.csv").write_text(
+            ranking_csv(scored), encoding="utf-8"
+        )
+        (output / "ranking-riesgo.html").write_text(
+            ranking_html(scored), encoding="utf-8"
+        )
+        (output / "ranking-riesgo.json").write_text(
+            json.dumps(scored, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        console.print(
+            f"[bold green]✔ Ranking guardado en[/] [cyan]{output}[/] "
+            "(ranking-riesgo.csv/.html/.json)"
+        )
 
 
 if __name__ == "__main__":

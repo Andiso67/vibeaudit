@@ -1,0 +1,34 @@
+[
+  {
+    "name": "golf-tracker",
+    "repository_url": "https://github.com/Andiso67/golf-tracker.git",
+    "loc": 332325,
+    "total": 76,
+    "counts": {
+      "CRITICAL": 9,
+      "HIGH": 44,
+      "MEDIUM": 21,
+      "LOW": 2,
+      "INFO": 0
+    },
+    "score": 354.0,
+    "density": 1.07,
+    "position": 1
+  },
+  {
+    "name": "bojuboard-main",
+    "repository_url": "",
+    "loc": 47536,
+    "total": 66,
+    "counts": {
+      "CRITICAL": 1,
+      "HIGH": 44,
+      "MEDIUM": 16,
+      "LOW": 5,
+      "INFO": 0
+    },
+    "score": 267.0,
+    "density": 5.62,
+    "position": 2
+  }
+]

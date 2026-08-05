@@ -23,9 +23,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.3.4"]
+api = ["fastapi==0.128.8", "uvicorn==0.39.0"]
 
 [project.scripts]
 vibeaudit = "vibeaudit.cli:main"
+vibeaudit-api = "vibeaudit.api:main"
 
 [tool.setuptools.packages.find]
 include = ["vibeaudit*"]

@@ -30,6 +30,7 @@ class RunRecorder:
     def __call__(self, args, **kwargs):
         self.calls.append(args)
         key = tuple(args[:2])
+        key = (Path(key[0]).name, *key[1:]) if key else key
         return self.responses.get(key, self.responses.get("default", FakeResult(1)))
 
 

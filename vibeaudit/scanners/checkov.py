@@ -2,7 +2,9 @@
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -12,6 +14,17 @@ from vibeaudit.ingester import IAC_FILES
 from vibeaudit.models import Severity, Vulnerability
 
 console = Console()
+
+
+def checkov_command() -> List[str]:
+    """Localiza el binario de checkov (PATH o venv del proceso actual)."""
+    found = shutil.which("checkov")
+    if found:
+        return [found]
+    venv_bin = Path(sys.executable).parent / "checkov"
+    if venv_bin.exists():
+        return [str(venv_bin)]
+    return ["checkov"]
 
 # Marcadores de Kubernetes / CloudFormation dentro de archivos YAML
 K8S_MARKERS = ("kind: Deployment", "kind: Service", "apiVersion: apps/", "kind: Pod")
@@ -30,7 +43,7 @@ class CheckovScanner:
         """Verifica si checkov está disponible en el sistema."""
         try:
             result = subprocess.run(
-                ["checkov", "--version"],
+                [*checkov_command(), "--version"],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -131,7 +144,7 @@ class CheckovScanner:
             return []
 
         command = [
-            "checkov",
+            *checkov_command(),
             "-d",
             str(self.repo_path),
             "--output",

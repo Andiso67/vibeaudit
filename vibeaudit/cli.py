@@ -3,10 +3,11 @@
 import hashlib
 import json
 import shutil
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Callable, List, Optional, Tuple
 
 import typer
 from rich.console import Console
@@ -19,6 +20,7 @@ from vibeaudit.history import HistoryStore
 from vibeaudit.ingester import RepoIngester, sanitize_url
 from vibeaudit.llm import LLMAuditor, LLMUnavailableError
 from vibeaudit.memory import MemoryEntry, MemoryStore, new_store
+from vibeaudit.models import AuditReport
 from vibeaudit.reporter import AuditReporter
 from vibeaudit.scanners.checkov import CheckovScanner
 from vibeaudit.scanners.cicd import CICDScanner
@@ -37,6 +39,178 @@ app = typer.Typer(
 )
 
 console = Console()
+
+
+@dataclass
+class ScanConfig:
+    """Opciones de un scan, compartidas por el CLI y el servicio HTTP."""
+
+    repo_url: Optional[str] = None
+    local_path: Optional[Path] = None
+    token: Optional[str] = None
+    branch: Optional[str] = None
+    tag: Optional[str] = None
+    depth: int = 1
+    rules: Optional[Path] = None
+    output: Optional[Path] = None
+    output_format: str = "json"
+    dashboard: bool = False
+    llm: bool = False
+    memory: Optional[str] = None
+    history: Optional[Path] = None
+    cloud: bool = False
+    deliverables: Optional[Path] = None
+    sonar_json: Optional[Path] = None
+    sonar_scan: bool = False
+    publish: Optional[Path] = None
+
+
+def run_scan(
+    config: ScanConfig,
+    log: Optional[Callable[[str], None]] = None,
+    echo: Optional[Callable[[str], None]] = None,
+) -> Tuple[AuditReport, AuditReporter]:
+    """Ejecuta el pipeline completo de auditoría.
+
+    Devuelve (reporte, reporter). ``log`` recibe descripciones de fase (para
+    barras de progreso); ``echo`` recibe las líneas informativas (default:
+    imprimir por consola).
+    """
+    log = log or (lambda msg: None)
+    echo = echo or (lambda msg: console.print(msg))
+
+    source = config.local_path if config.local_path is not None else config.repo_url
+    with RepoIngester(
+        repo_url=config.repo_url,
+        local_path=config.local_path,
+        token=config.token,
+        branch=config.branch or config.tag,
+        depth=config.depth,
+    ) as ingester:
+        ingester.clone()
+        project = ingester.analyze()
+        assert ingester.repo_path is not None
+
+        log(f"Ejecutando Gitleaks en {project.name}...")
+        secrets = GitleaksScanner(ingester.repo_path).scan()
+
+        log("Ejecutando Semgrep...")
+        vulnerabilities = SemgrepScanner(ingester.repo_path).scan()
+
+        log("Ejecutando Checkov...")
+        iac_issues = CheckovScanner(ingester.repo_path).scan()
+
+        log("Analizando CI/CD...")
+        cicd_issues = CICDScanner(ingester.repo_path).scan()
+
+        log("Analizando dependencias...")
+        dependency_vulnerabilities = DependencyScanner(ingester.repo_path).scan()
+
+        custom_issues = []
+        if config.rules is not None:
+            log("Ejecutando reglas custom (Vibe Coding)...")
+            custom_issues = CustomRulesScanner(
+                ingester.repo_path, config.rules
+            ).scan()
+
+        log("Generando reporte...")
+        reporter = AuditReporter(
+            project=project,
+            vulnerabilities=vulnerabilities,
+            secrets=secrets,
+            iac_issues=iac_issues,
+            cicd_issues=cicd_issues,
+            dependency_vulnerabilities=dependency_vulnerabilities,
+            custom_issues=custom_issues,
+            repo_path=ingester.repo_path,
+        )
+        report = reporter.build()
+
+        if config.llm:
+            log("Ejecutando auditor LLM (checklists)...")
+            try:
+                report.llm_findings = LLMAuditor(report).audit()
+            except LLMUnavailableError as exc:
+                echo(f"[yellow]Advertencia:[/] {exc}")
+                echo("[yellow]Se genera el reporte sin análisis LLM.[/]")
+
+        recurrent: list = []
+        if config.memory is not None:
+            log("Consultando memoria de hallazgos recurrentes...")
+            recurrent = new_store(config.memory).ingest_report(report)
+            report.recurrent_findings = recurrent
+            echo(
+                f"[cyan]Memoria:[/] {len(recurrent)} hallazgos recurrentes reconocidos"
+            )
+
+        cloud_issues: list = []
+        if config.cloud:
+            log("Escaneando la nube (solo lectura)...")
+            cloud_scanner = CloudScanner()
+            cloud_issues = cloud_scanner.scan()
+            report.cloud_issues = cloud_issues
+            report.cloud_resources = cloud_scanner.resources
+            echo(
+                f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas "
+                f"({len(cloud_scanner.resources)} recursos analizados)"
+            )
+
+        if config.history is not None:
+            log(f"Guardando snapshot en historial ({config.history})...")
+            snapshot_id = HistoryStore(config.history).save_snapshot(report)
+            echo(
+                f"[bold green]✔ Snapshot en historial[/] [cyan]{config.history}[/] "
+                f"(id {snapshot_id})"
+            )
+
+        if config.deliverables is not None:
+            log("Generando entregables (C4, roadmap, backlog)...")
+            files = DeliverablesGenerator(report).generate(config.deliverables)
+            echo(
+                f"[bold green]✔ Entregables en[/] [cyan]{config.deliverables}[/]: "
+                + ", ".join(sorted(files))
+            )
+
+        if config.sonar_json is not None:
+            log("Exportando issues a SonarQube (Generic Import)...")
+            save_sonar_json(report, config.sonar_json)
+            echo(
+                f"[bold green]✔ sonar-issues en[/] [cyan]{config.sonar_json}[/] "
+                f"(importar vía 'Generic Issue Import' de SonarQube)"
+            )
+
+        if config.sonar_scan:
+            log("Ejecutando sonar-scanner sobre el repo...")
+            try:
+                rc = SonarRunner(ingester.repo_path, config.sonar_json).scan()
+                echo(f"[cyan]sonar-scanner:[/] análisis finalizado (código {rc}).")
+            except RuntimeError as exc:
+                echo(f"[yellow]Advertencia:[/] {exc}")
+
+    # Fuera del with: el directorio temporal ya fue limpiado
+    output = config.output
+    assert output is not None
+    if config.output_format == "json":
+        reporter.save_to_file(output)
+    elif config.output_format == "md":
+        reporter.save_markdown(output)
+    else:
+        reporter.save_html(output)
+    if config.dashboard:
+        dashboard_path = output.with_name(f"{output.stem}-dashboard.html")
+        reporter.save_dashboard(dashboard_path)
+        echo(
+            f"[bold green]✔ Dashboard guardado en[/] [cyan]{dashboard_path}[/]"
+        )
+    if config.publish:
+        self_publish(
+            config.publish,
+            report,
+            history=config.history,
+            memory=config.memory,
+            deliverables=config.deliverables,
+        )
+    return report, reporter
 
 
 class OutputFormat(str, Enum):
@@ -171,183 +345,63 @@ def scan(
             f"[bold green]▶ Auditando[/] [cyan]{sanitize_url(str(source))}[/] "
             f"[bold green]→[/] [cyan]{output}[/]"
         )
+        config = ScanConfig(
+            repo_url=repo_url,
+            local_path=local_path,
+            token=token,
+            branch=branch,
+            tag=tag,
+            depth=depth,
+            rules=rules,
+            output=output,
+            output_format=output_format.value,
+            dashboard=dashboard,
+            llm=llm,
+            memory=memory,
+            history=history,
+            cloud=cloud,
+            deliverables=deliverables,
+            sonar_json=sonar_json,
+            sonar_scan=sonar_scan,
+            publish=publish,
+        )
         with Progress(
             SpinnerColumn(),
             TextColumn("{task.description}"),
             console=console,
             transient=True,
         ) as progress:
-            if local_path is not None:
-                task = progress.add_task("Analizando directorio local...", total=None)
-            else:
-                task = progress.add_task("Clonando repositorio...", total=None)
-
-            with RepoIngester(
-                repo_url=repo_url,
-                local_path=local_path,
-                token=token,
-                branch=branch or tag,
-                depth=depth,
-            ) as ingester:
-                ingester.clone()
-                project = ingester.analyze()
-                assert ingester.repo_path is not None
-
-                progress.update(
-                    task, description=f"Ejecutando Gitleaks en [cyan]{project.name}[/]..."
-                )
-                secrets = GitleaksScanner(ingester.repo_path).scan()
-
-                progress.update(task, description="Ejecutando Semgrep...")
-                vulnerabilities = SemgrepScanner(ingester.repo_path).scan()
-
-                progress.update(task, description="Ejecutando Checkov...")
-                iac_issues = CheckovScanner(ingester.repo_path).scan()
-
-                progress.update(task, description="Analizando CI/CD...")
-                cicd_issues = CICDScanner(ingester.repo_path).scan()
-
-                progress.update(task, description="Analizando dependencias...")
-                dependency_vulnerabilities = DependencyScanner(
-                    ingester.repo_path
-                ).scan()
-
-                custom_issues = []
-                if rules is not None:
-                    progress.update(
-                        task, description="Ejecutando reglas custom (Vibe Coding)..."
-                    )
-                    custom_issues = CustomRulesScanner(
-                        ingester.repo_path, rules
-                    ).scan()
-
-                progress.update(task, description="Generando reporte...")
-                reporter = AuditReporter(
-                    project=project,
-                    vulnerabilities=vulnerabilities,
-                    secrets=secrets,
-                    iac_issues=iac_issues,
-                    cicd_issues=cicd_issues,
-                    dependency_vulnerabilities=dependency_vulnerabilities,
-                    custom_issues=custom_issues,
-                    repo_path=ingester.repo_path,
-                )
-                report = reporter.build()
-
-                if llm:
-                    progress.update(
-                        task, description="Ejecutando auditor LLM (checklists)..."
-                    )
-                    try:
-                        report.llm_findings = LLMAuditor(report).audit()
-                    except LLMUnavailableError as exc:
-                        console.print(f"[yellow]Advertencia:[/] {exc}")
-                        console.print(
-                            "[yellow]Se genera el reporte sin análisis LLM.[/]"
-                        )
-
-                recurrent: list = []
-                if memory is not None:
-                    progress.update(
-                        task, description="Consultando memoria de hallazgos recurrentes..."
-                    )
-                    recurrent = new_store(memory).ingest_report(report)
-                    report.recurrent_findings = recurrent
-                    console.print(
-                        f"[cyan]Memoria:[/] {len(recurrent)} hallazgos recurrentes reconocidos"
-                    )
-
-                cloud_issues: list = []
-                if cloud:
-                    progress.update(
-                        task, description="Escaneando la nube (solo lectura)..."
-                    )
-                    cloud_scanner = CloudScanner()
-                    cloud_issues = cloud_scanner.scan()
-                    report.cloud_issues = cloud_issues
-                    report.cloud_resources = cloud_scanner.resources
-                    console.print(
-                        f"[cyan]Nube:[/] {len(cloud_issues)} configs inseguras detectadas "
-                        f"({len(cloud_scanner.resources)} recursos analizados)"
-                    )
-
-                if history is not None:
-                    progress.update(
-                        task, description=f"Guardando snapshot en historial ({history})..."
-                    )
-                    snapshot_id = HistoryStore(history).save_snapshot(report)
-                    console.print(
-                        f"[bold green]✔ Snapshot en historial[/] [cyan]{history}[/] "
-                        f"(id {snapshot_id})"
-                    )
-
-                if deliverables is not None:
-                    progress.update(
-                        task, description="Generando entregables (C4, roadmap, backlog)..."
-                    )
-                    files = DeliverablesGenerator(report).generate(deliverables)
-                    console.print(
-                        f"[bold green]✔ Entregables en[/] [cyan]{deliverables}[/]: "
-                        + ", ".join(sorted(files))
-                    )
-
-                if sonar_json is not None:
-                    progress.update(
-                        task, description="Exportando issues a SonarQube (Generic Import)..."
-                    )
-                    save_sonar_json(report, sonar_json)
-                    console.print(
-                        f"[bold green]✔ sonar-issues en[/] [cyan]{sonar_json}[/] "
-                        f"(importar vía 'Generic Issue Import' de SonarQube)"
-                    )
-
-                if sonar_scan:
-                    progress.update(
-                        task, description="Ejecutando sonar-scanner sobre el repo..."
-                    )
-                    try:
-                        rc = SonarRunner(ingester.repo_path, sonar_json).scan()
-                        console.print(
-                            f"[cyan]sonar-scanner:[/] análisis finalizado (código {rc}). "
-                            "Revisa la salida del escáner para más detalle."
-                        )
-                    except RuntimeError as exc:
-                        console.print(f"[yellow]Advertencia:[/] {exc}")
-
-        # Fuera del with: el directorio temporal ya fue limpiado
-        if output_format == OutputFormat.JSON:
-            reporter.save_to_file(output)
-        elif output_format == OutputFormat.MD:
-            reporter.save_markdown(output)
-        else:
-            reporter.save_html(output)
-        if dashboard:
-            dashboard_path = output.with_name(f"{output.stem}-dashboard.html")
-            reporter.save_dashboard(dashboard_path)
-            console.print(
-                f"[bold green]✔ Dashboard guardado en[/] [cyan]{dashboard_path}[/]"
+            task = progress.add_task(
+                "Analizando directorio local..." if local_path is not None
+                else "Clonando repositorio...",
+                total=None,
             )
+            report, reporter = run_scan(
+                config,
+                log=lambda msg: progress.update(task, description=msg),
+            )
+        counts = (
+            len(report.secrets),
+            len(report.vulnerabilities),
+            len(report.iac_issues),
+            len(report.cicd_issues),
+            len(report.metrics.dependency_vulnerabilities),
+            len(report.llm_findings),
+            len(report.recurrent_findings),
+            len(report.cloud_issues),
+        )
         console.print(
             f"[bold green]✔ Reporte guardado en[/] [cyan]{output}[/] "
-            f"([bold]{len(secrets)} secretos, "
-            f"{len(vulnerabilities)} vulnerabilidades, "
-            f"{len(iac_issues)} problemas IaC, "
-            f"{len(cicd_issues)} riesgos CI/CD, "
-            f"{len(dependency_vulnerabilities)} deps con CVEs, "
-            f"{len(report.llm_findings)} hallazgos LLM, "
-            f"{len(report.recurrent_findings)} recurrentes, "
-            f"{len(report.cloud_issues)} nube[/])"
+            f"([bold]{counts[0]} secretos, "
+            f"{counts[1]} vulnerabilidades, "
+            f"{counts[2]} problemas IaC, "
+            f"{counts[3]} riesgos CI/CD, "
+            f"{counts[4]} deps con CVEs, "
+            f"{counts[5]} hallazgos LLM, "
+            f"{counts[6]} recurrentes, "
+            f"{counts[7]} nube[/])"
         )
         reporter.print_summary()
-
-        if publish:
-            self_publish(
-                publish,
-                report,
-                history=history,
-                memory=memory,
-                deliverables=deliverables,
-            )
 
     except ValueError as exc:
         console.print(f"[bold red]Error:[/] {exc}")

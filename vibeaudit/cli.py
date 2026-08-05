@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shutil
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -123,6 +124,11 @@ def scan(
         None,
         "--deliverables",
         help="Directorio donde generar entregables de cliente (C4, roadmap, backlog)",
+    ),
+    publish: Optional[Path] = typer.Option(
+        None,
+        "--publish",
+        help="Webroot para servir por URL (dashboard/public): copia reporte, historial y entregables",
     ),
     sonar_json: Optional[Path] = typer.Option(
         None,
@@ -334,6 +340,15 @@ def scan(
         )
         reporter.print_summary()
 
+        if publish:
+            self_publish(
+                publish,
+                report,
+                history=history,
+                memory=memory,
+                deliverables=deliverables,
+            )
+
     except ValueError as exc:
         console.print(f"[bold red]Error:[/] {exc}")
         raise typer.Exit(code=1) from exc
@@ -358,6 +373,50 @@ def scan(
             f"[bold red]Error de archivo:[/] no se pudo escribir el reporte: {exc}"
         )
         raise typer.Exit(code=1) from exc
+
+
+def self_publish(
+    webroot: Path,
+    report,
+    history: Optional[Path] = None,
+    memory: Optional[str] = None,
+    deliverables: Optional[Path] = None,
+) -> None:
+    """Publica reporte, historial y entregables en un webroot de Next.js.
+
+    Copia a ``<webroot>/public/`` lo que el frontend sirve por URL:
+    ``audit-report.json``, ``audit-history.json`` y ``deliverables/``.
+    """
+    public_dir = Path(webroot) / "public"
+    public_dir.mkdir(parents=True, exist_ok=True)
+    import json as _json
+
+    public_dir.joinpath("audit-report.json").write_text(
+        _json.dumps(
+            report.model_dump(by_alias=True, exclude_none=True),
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    if history is not None:
+        HistoryStore(history).export_dashboard(
+            public_dir / "audit-history.json",
+            memory=new_store(memory) if memory else None,
+        )
+    if deliverables is not None and Path(deliverables).is_dir():
+        target = public_dir / "deliverables"
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(deliverables, target)
+    console.print(
+        f"[bold green]✔ Publicado en[/] [cyan]{public_dir}[/] "
+        f"(audit-report.json, audit-history.json, deliverables/)"
+    )
+    console.print(
+        "[yellow]Nota:[/] reinicia el servidor Next.js para que sirva los "
+        "archivos nuevos de public/ (npm start)."
+    )
 
 
 memory_app = typer.Typer(

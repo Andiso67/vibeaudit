@@ -172,6 +172,22 @@ class TestGenerate:
         assert (out / "informe-central.html").exists()
         assert out.is_dir()
 
+    def test_self_publish_copia_reporte_e_informe(self, tmp_path):
+        from vibeaudit.cli import self_publish
+
+        gen = DeliverablesGenerator(sample_report())
+        gen.generate(tmp_path / "entregables")
+        webroot = tmp_path / "webroot"
+        self_publish(
+            webroot,
+            sample_report(),
+            deliverables=tmp_path / "entregables",
+        )
+        pub = webroot / "public"
+        assert (pub / "audit-report.json").exists()
+        assert (pub / "deliverables" / "informe-central.html").exists()
+        assert (pub / "deliverables" / "backlog.csv").exists()
+
 
 class TestInformeCentral:
     def test_markdown_reune_todos_los_entregables(self, tmp_path):

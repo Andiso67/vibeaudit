@@ -1,10 +1,14 @@
-# Despliegue de producción (EC2): Postgres + API + Dashboard.
+# Stack completo de VibeAudit (producción y desarrollo vía docker compose).
 #
-# Uso:
-#   cp .env.example .env   # ajusta contraseñas y URLs
+# Uso en desarrollo:
+#   cp .env.example .env
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# Producción (EC2):
 #   docker compose up -d --build
+#   docker compose --profile sonar up -d   # + SonarQube (opcional)
 #
-# SonarQube se arranca aparte con el profile: docker compose --profile sonar up -d
+# Parar: docker compose down  (conserva los volúmenes pgdata/artifacts/history)
 
 services:
   postgres:
@@ -38,22 +42,26 @@ services:
       SUPABASE_ACCESS_TOKEN: ${SUPABASE_ACCESS_TOKEN:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
     volumes:
       - artifacts:/data/artifacts
       - history:/data/history
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   dashboard:
-    image: node:20-alpine
+    build: ./dashboard
     restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - ./dashboard:/app
-      - dashboard_next:/app/.next
+    depends_on:
+      api:
+        condition: service_healthy
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-    command: sh -c "npm ci && npm run build && npm start"
     ports:
       - "3000:3000"
 
@@ -75,7 +83,6 @@ volumes:
   pgdata:
   artifacts:
   history:
-  dashboard_next:
   sonarqube_conf:
   sonarqube_data:
   sonarqube_logs:

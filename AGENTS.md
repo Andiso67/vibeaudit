@@ -11,6 +11,21 @@ y genera un JSON maestro (`AuditReport`). Ver `SPRINT.md` para el alcance.
 - Tests: `.venv/bin/python -m pytest` (pytest en requirements.txt)
 - No hay formatter/linter configurado todavía. Mantener el estilo del código existente.
 
+## Docker (flujo de desarrollo estándar desde 08/2026)
+- **Todo el stack se prueba con docker compose** (desarrollo y producción):
+  `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`
+  (prod/EC2: `docker compose up -d --build`; + SonarQube con `--profile sonar`).
+- Stack: `postgres:16` (pgdata), `api` (FastAPI :8000, build Dockerfile con
+  git+gitleaks+semgrep+checkov+boto3), `dashboard` (Next.js :3000).
+- Dev: API con `--reload` (volumen `./vibeaudit`), dashboard `npm run dev`
+  (volúmenes dashboard/node_modules/.next), postgres expuesto en :5432 y
+  `/tmp` montado en la API para escanear repos locales.
+- Artefactos en volumen `artifacts` (host: `docker volume inspect`); en EC2 se
+  montará en el EBS. Logs: `docker compose logs -f api`.
+- **Gotcha keychain**: los pulls de imágenes fallan en sesiones no
+  interactivas con "keychain cannot be accessed". Solución (en terminal del
+  usuario): `security unlock-keychain ~/Library/Keychains/login.keychain-db`.
+
 ## Arquitectura (flujo de datos)
 ```
 CLI (cli.py) → RepoIngester (clone a temp dir)

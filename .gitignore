@@ -18,6 +18,13 @@ dist/
 
 # Testing
 .pytest_cache/
+
+# Resultados de escaneos y artefactos (se persisten en BD/disco, no en git)
+artifacts/
+audit-report-*.json
+sonar-issues.json
+remediaciones.*
+ranking-riesgo.*
 .mypy_cache/
 .ruff_cache/
 .coverage

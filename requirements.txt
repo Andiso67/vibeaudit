@@ -19,5 +19,9 @@ httpx==0.28.1
 # Psycopg 3: persistencia de análisis en PostgreSQL (opcional; API sin BD si no hay DATABASE_URL)
 psycopg[binary]==3.2.13
 
+# FastAPI + Uvicorn: servicio HTTP de la API
+fastapi==0.128.8
+uvicorn==0.39.0
+
 # Pytest: framework de tests unitarios
 pytest==8.3.4

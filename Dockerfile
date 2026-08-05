@@ -1,34 +1,34 @@
-# VibeAudit: imagen autocontenida con Python + gitleaks + semgrep + checkov
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-ARG GITLEAKS_VERSION=8.30.1
-ARG TARGETARCH
-
-# git es necesario para que GitPython pueda clonar repositorios
-# ca-certificates se mantiene: pip necesita HTTPS para PyPI
-# TARGETARCH (buildx) selecciona el binario de gitleaks correcto (x64/arm64)
+# Herramientas del pipeline: git (clone), gitleaks (secretos), semgrep y
+# checkov (SAST/IaC) se instalan en la imagen de producción.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates git \
-    && case "$TARGETARCH" in \
-         arm64) GITLEAKS_ARCH="arm64" ;; \
-         *) GITLEAKS_ARCH="x64" ;; \
-       esac \
-    && curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz" \
-        -o /tmp/gitleaks.tar.gz \
-    && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
-    && chmod +x /usr/local/bin/gitleaks \
-    && rm /tmp/gitleaks.tar.gz \
-    && apt-get purge -y curl \
-    && apt-get autoremove -y \
+    && apt-get install -y --no-install-recommends git ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# checkov 2.5.20: 3.3.8 se cuelga en repos grandes (10+ min sin output)
-RUN pip install --no-cache-dir checkov==2.5.20 semgrep click==8.1.8
+ARG GITLEAKS_VERSION=8.24.3
+RUN curl -fsSL \
+    "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+    -o /tmp/gitleaks.tar.gz \
+    && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
+    && rm /tmp/gitleaks.tar.gz \
+    && gitleaks version
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir semgrep checkov boto3
 
 WORKDIR /app
-COPY pyproject.toml README.md ./
-COPY vibeaudit/ ./vibeaudit/
-RUN pip install --no-cache-dir .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT ["vibeaudit"]
-CMD ["--help"]
+COPY vibeaudit/ ./vibeaudit/
+COPY .gitignore .
+
+# El runner necesita repos temporales y artefactos en disco.
+ENV VIBEAUDIT_ARTIFACTS=/data/artifacts
+ENV VIBEAUDIT_API_HOST=0.0.0.0
+ENV VIBEAUDIT_API_PORT=8000
+VOLUME /data
+
+EXPOSE 8000
+CMD ["python", "-m", "vibeaudit.api"]

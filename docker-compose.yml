@@ -1,0 +1,82 @@
+# Despliegue de producción (EC2): Postgres + API + Dashboard.
+#
+# Uso:
+#   cp .env.example .env   # ajusta contraseñas y URLs
+#   docker compose up -d --build
+#
+# SonarQube se arranca aparte con el profile: docker compose --profile sonar up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vibeaudit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibeaudit}
+      POSTGRES_DB: ${POSTGRES_DB:-vibeaudit}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibeaudit} -d ${POSTGRES_DB:-vibeaudit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VIBEAUDIT_DATABASE_URL: postgresql://${POSTGRES_USER:-vibeaudit}:${POSTGRES_PASSWORD:-vibeaudit}@postgres:5432/${POSTGRES_DB:-vibeaudit}
+      VIBEAUDIT_ARTIFACTS: /data/artifacts
+      VIBEAUDIT_HISTORY: /data/history
+      VIBEAUDIT_API_HOST: 0.0.0.0
+      VIBEAUDIT_API_PORT: 8000
+      VERCEL_TOKEN: ${VERCEL_TOKEN:-}
+      SUPABASE_ACCESS_TOKEN: ${SUPABASE_ACCESS_TOKEN:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - artifacts:/data/artifacts
+      - history:/data/history
+    ports:
+      - "8000:8000"
+
+  dashboard:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./dashboard:/app
+      - dashboard_next:/app/.next
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    command: sh -c "npm ci && npm run build && npm start"
+    ports:
+      - "3000:3000"
+
+  sonarqube:
+    image: sonarqube:community
+    profiles: ["sonar"]
+    restart: unless-stopped
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    ports:
+      - "9000:9000"
+
+volumes:
+  pgdata:
+  artifacts:
+  history:
+  dashboard_next:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:

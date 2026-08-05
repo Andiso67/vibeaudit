@@ -110,3 +110,16 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
   dominio/URL definitivo, revisar puertos/CORS del dashboard y de la API
   (`vibeaudit/api.py`, uvicorn :8901), y actualizar las credenciales de
   SonarQube (hoy `admin`/`Admin!VibeAudit2026`).
+
+## Persistencia (Postgres + artefactos)
+- **Postgres opcional**: la API persiste los análisis si existe
+  `VIBEAUDIT_DATABASE_URL` (metadatos + summary + `AuditReport` JSONB en la
+  tabla `analyses`, módulo `vibeaudit/db.py`). Sin la URL todo queda en
+  memoria (dev). Endpoints: `GET /api/analyses` (filtros repo/status/fechas),
+  `GET /api/analyses/{id}`, `GET /api/repos`.
+- **Artefactos en disco**: `VIBEAUDIT_ARTIFACTS` (default `./artifacts/`),
+  un subdirectorio por análisis con `audit-report.json` y copia de los
+  deliverables si se generaron. En EC2 el volumen se monta en el EBS.
+- **Docker Compose** (`docker-compose.yml`): postgres (volumen pgdata), api
+  (Dockerfile con git+gitleaks+semgrep+checkov+boto3), dashboard (Next.js) y
+  sonarqube con `--profile sonar`. Config en `.env.example`.

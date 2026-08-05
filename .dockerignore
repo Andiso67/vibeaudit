@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+artifacts/
+audit-report-*.json
+sonar-issues.json
+remediaciones.*
+ranking-riesgo.*
+dashboard/node_modules/
+dashboard/.next/
+dashboard/public/deliverables/
+dashboard/public/audit-report.json
+dashboard/public/audit-history.json

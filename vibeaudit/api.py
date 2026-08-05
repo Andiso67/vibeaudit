@@ -1,13 +1,24 @@
 """Servicio HTTP (FastAPI) que expone el pipeline de vibeaudit.
 
 Endpoints:
-- GET  /api/health      estado del servicio
-- POST /api/scan        lanza un scan en segundo plano (devuelve job_id)
-- GET  /api/scan/{id}   estado/progreso y reporte del scan
-- GET  /api/history     lista los snapshots del historial configurado
+- GET  /api/health          estado del servicio
+- POST /api/scan            lanza un scan en segundo plano (devuelve job_id)
+- GET  /api/scan/{id}       estado/progreso y reporte del scan
+- GET  /api/analyses        lista los análisis guardados (filtros + paginado)
+- GET  /api/analyses/{id}   análisis completo con su reporte
+- GET  /api/repos           repos con análisis guardados (autocompletado)
+- GET  /api/history         lista los snapshots del historial configurado
+
+Persistencia opcional: si existe ``VIBEAUDIT_DATABASE_URL`` los análisis se
+guardan en Postgres (metadatos + JSONB) y los artefactos en
+``VIBEAUDIT_ARTIFACTS`` (default ./artifacts). Sin la URL, todo queda en
+memoria (dev local).
 """
 
+import datetime as _dt
+import json
 import os
+import shutil
 import threading
 import uuid
 from pathlib import Path
@@ -16,13 +27,14 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from vibeaudit import db as db_store
 from vibeaudit.cli import ScanConfig, run_scan
 from vibeaudit.history import HistoryStore
 
 app = FastAPI(
     title="VibeAudit API",
     description="Servicio de auditoría de seguridad para repositorios Git",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 JOBS: Dict[str, Dict[str, Any]] = {}
@@ -60,6 +72,9 @@ class ScanRequest(BaseModel):
     output: Optional[str] = Field(
         None, description="Ruta del reporte JSON generado"
     )
+    label: Optional[str] = Field(
+        None, description="Etiqueta opcional para identificar el análisis"
+    )
 
 
 def _history_dir(req_history: Optional[str]) -> Optional[Path]:
@@ -67,6 +82,27 @@ def _history_dir(req_history: Optional[str]) -> Optional[Path]:
         return Path(req_history)
     env = os.environ.get("VIBEAUDIT_HISTORY")
     return Path(env) if env else None
+
+
+def _persist_artifacts(job_id: str, report_dict: Dict[str, Any], config: ScanConfig) -> Path:
+    """Guarda el reporte (y los entregables generados, si existen) en disco.
+
+    Devuelve el directorio de artefactos del análisis.
+    """
+    base = Path(db_store.artifacts_dir()) / job_id
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "audit-report.json").write_text(
+        json.dumps(report_dict, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    if config.deliverables and config.deliverables.exists():
+        for src in config.deliverables.iterdir():
+            dest = base / "deliverables" / src.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_dir():
+                shutil.copytree(src, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dest)
+    return base
 
 
 def _run_job(job_id: str, req: ScanRequest) -> None:
@@ -77,6 +113,13 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
     with JOBS_LOCK:
         JOBS[job_id]["status"] = "running"
         JOBS[job_id]["step"] = "Iniciando..."
+    started = _dt.datetime.now(_dt.timezone.utc)
+    if db_store.enabled():
+        db_store.update_status(
+            job_id,
+            status="running",
+            started_at=started.isoformat(),
+        )
     try:
         if (req.repo_url is None) == (req.local_path is None):
             raise ValueError("Indica repo_url o local_path (exactamente uno)")
@@ -96,18 +139,63 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
             output=output,
         )
         report, _ = run_scan(config, log=log, echo=lambda msg: None)
+        report_dict = report.model_dump(by_alias=True, exclude_none=True)
+        artifacts = _persist_artifacts(job_id, report_dict, config)
+        finished = _dt.datetime.now(_dt.timezone.utc)
         with JOBS_LOCK:
             JOBS[job_id]["status"] = "done"
             JOBS[job_id]["step"] = "Finalizado"
             JOBS[job_id]["output"] = str(output)
-            JOBS[job_id]["report"] = report.model_dump(
-                by_alias=True, exclude_none=True
+            JOBS[job_id]["report"] = report_dict
+            JOBS[job_id]["artifacts_dir"] = str(artifacts)
+        if db_store.enabled():
+            project = report_dict.get("project") or {}
+            db_store.save_analysis(
+                {
+                    "id": job_id,
+                    "repo": req.repo_url or req.local_path or "local",
+                    "branch": req.branch,
+                    "commit_hash": project.get("commitHash"),
+                    "status": "done",
+                    "started_at": started.isoformat(),
+                    "finished_at": finished.isoformat(),
+                    "duration_seconds": round(
+                        (finished - started).total_seconds(), 2
+                    ),
+                    "tool_versions": report_dict.get("toolVersions"),
+                    "summary": db_store.build_summary(report_dict),
+                    "report": report_dict,
+                    "artifacts_dir": str(artifacts),
+                    "request": {
+                        "repo_url": req.repo_url,
+                        "local_path": req.local_path,
+                        "branch": req.branch,
+                        "depth": req.depth,
+                        "llm": req.llm,
+                        "cloud": req.cloud,
+                        "label": req.label,
+                    },
+                    "error": None,
+                }
             )
     except Exception as exc:  # noqa: BLE001 - el error queda en el job
         with JOBS_LOCK:
             JOBS[job_id]["status"] = "error"
             JOBS[job_id]["step"] = str(exc)
             JOBS[job_id]["error"] = str(exc)
+        if db_store.enabled():
+            db_store.update_status(
+                job_id,
+                status="error",
+                finished_at=_dt.datetime.now(_dt.timezone.utc).isoformat(),
+                error=str(exc),
+            )
+
+
+@app.on_event("startup")
+def _startup() -> None:
+    """Crea el esquema de Postgres si la persistencia está configurada."""
+    db_store.init_db()
 
 
 @app.get("/api/health")
@@ -135,12 +223,72 @@ def create_scan(req: ScanRequest) -> Dict[str, str]:
 
 @app.get("/api/scan/{job_id}")
 def get_scan(job_id: str) -> Dict[str, Any]:
-    """Estado, progreso y reporte (si terminó) de un scan."""
+    """Estado, progreso y reporte (si terminó) de un scan.
+
+    Si el job no está en memoria (p. ej. reinicio del servicio), se lee de
+    Postgres cuando la persistencia está activa.
+    """
     with JOBS_LOCK:
         job = JOBS.get(job_id)
+    if job is None and db_store.enabled():
+        row = db_store.get_analysis(job_id)
+        if row is not None:
+            job = {
+                "status": row.get("status"),
+                "step": "Recuperado de la base de datos",
+                "report": row.get("report"),
+                "error": row.get("error"),
+            }
     if job is None:
         raise HTTPException(status_code=404, detail="job no encontrado")
     return {"job_id": job_id, **job}
+
+
+@app.get("/api/analyses")
+def analyses(
+    repo: Optional[str] = Query(None, description="Filtro por repo (subcadena)"),
+    status: Optional[str] = Query(None, description="Filtro por estado (queued/running/done/error)"),
+    since: Optional[str] = Query(None, description="Fecha mínima (ISO 8601)"),
+    until: Optional[str] = Query(None, description="Fecha máxima (ISO 8601)"),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> Dict[str, Any]:
+    """Lista los análisis guardados en Postgres (metadatos + resumen)."""
+    if not db_store.enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
+        )
+    items = db_store.list_analyses(
+        repo=repo, status=status, since=since, until=until,
+        limit=limit, offset=offset,
+    )
+    return {"total": len(items), "items": items}
+
+
+@app.get("/api/analyses/{analysis_id}")
+def get_analysis(analysis_id: str) -> Dict[str, Any]:
+    """Análisis completo guardado (incluye el reporte JSONB)."""
+    if not db_store.enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
+        )
+    row = db_store.get_analysis(analysis_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="análisis no encontrado")
+    return row
+
+
+@app.get("/api/repos")
+def repos() -> Dict[str, Any]:
+    """Repos con análisis guardados (para autocompletado del frontend)."""
+    if not db_store.enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
+        )
+    return {"repos": db_store.list_repos()}
 
 
 @app.get("/api/history")

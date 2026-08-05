@@ -723,5 +723,61 @@ def compare_multi_command(
         )
 
 
+@app.command("remediate")
+def remediate_command(
+    report: Path = typer.Argument(
+        ..., help="Reporte de vibeaudit (audit-report.json)"
+    ),
+    source: Optional[Path] = typer.Option(
+        None,
+        "--source",
+        help="Directorio del repo auditado para generar diffs con contexto real",
+    ),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o", help="Base de los informes (default: remediaciones.* junto al reporte)"
+    ),
+) -> None:
+    """Genera el informe de diffs propuestos (solo lectura, nunca aplica cambios)."""
+    from vibeaudit.models import AuditReport
+    from vibeaudit.remediate import (
+        ACTION_COMMAND,
+        ACTION_DIFF,
+        ACTION_MANUAL,
+        build_proposals,
+        proposals_json,
+        proposals_markdown,
+        proposals_patch,
+    )
+
+    data = json.loads(report.read_text(encoding="utf-8"))
+    audit = AuditReport.model_validate(data)
+    proposals = build_proposals(audit, source_dir=source)
+
+    base = output or report.with_name("remediaciones")
+    (base.with_suffix(".patch")).write_text(
+        proposals_patch(proposals), encoding="utf-8"
+    )
+    (base.with_suffix(".json")).write_text(
+        proposals_json(proposals), encoding="utf-8"
+    )
+    (base.with_suffix(".md")).write_text(
+        proposals_markdown(proposals), encoding="utf-8"
+    )
+    counts = {
+        a: sum(1 for p in proposals if p["action"] == a)
+        for a in (ACTION_DIFF, ACTION_COMMAND, ACTION_MANUAL)
+    }
+    console.print(
+        f"[bold green]✔ Informe de remediación guardado en[/] [cyan]{base}[/] "
+        f"(.patch/.json/.md) — {len(proposals)} propuestas "
+        f"({counts[ACTION_DIFF]} con diff, {counts[ACTION_COMMAND]} solo comando, "
+        f"{counts[ACTION_MANUAL]} revisión manual)"
+    )
+    console.print(
+        "[yellow]Solo informativo: la aplicación nunca se ejecuta; "
+        "revisa los diffs y aplícalos manualmente.[/]"
+    )
+
+
 if __name__ == "__main__":
     main()

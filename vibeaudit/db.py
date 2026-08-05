@@ -129,6 +129,7 @@ def update_status(
     started_at: Optional[str] = None,
     finished_at: Optional[str] = None,
     error: Optional[str] = None,
+    repo: Optional[str] = None,
 ) -> None:
     """Actualiza el estado de un análisis en curso/fallido."""
     if not enabled():
@@ -140,6 +141,7 @@ def update_status(
                 INSERT INTO analyses (id, repo, status, started_at, finished_at, error)
                 VALUES (%(id)s, %(repo)s, %(status)s, %(started_at)s, %(finished_at)s, %(error)s)
                 ON CONFLICT (id) DO UPDATE SET
+                    repo = COALESCE(EXCLUDED.repo, analyses.repo),
                     status = EXCLUDED.status,
                     started_at = COALESCE(EXCLUDED.started_at, analyses.started_at),
                     finished_at = EXCLUDED.finished_at,
@@ -147,13 +149,34 @@ def update_status(
                 """,
                 {
                     "id": job_id,
-                    "repo": "",
+                    "repo": repo or "",
                     "status": status,
                     "started_at": started_at,
                     "finished_at": finished_at,
                     "error": error,
                 },
             )
+
+
+def abort_stale_running() -> int:
+    """Marca como error los análisis 'running' (jobs huérfanos tras un reinicio).
+
+    Devuelve cuántos se marcaron.
+    """
+    if not enabled():
+        return 0
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE analyses
+                SET status = 'error',
+                    error = 'Interrumpido por reinicio del servicio (job huérfano)',
+                    finished_at = COALESCE(finished_at, now())
+                WHERE status = 'running'
+                """
+            )
+            return cur.rowcount
 
 
 def list_analyses(
@@ -163,10 +186,14 @@ def list_analyses(
     until: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-) -> List[Dict[str, Any]]:
-    """Lista los análisis sin el reporte completo (solo metadatos + summary)."""
+) -> Dict[str, Any]:
+    """Lista los análisis sin el reporte completo.
+
+    Devuelve ``{"total": int, "items": [...]}``; ``total`` es el recuento real
+    con los mismos filtros (para paginar bien en el frontend).
+    """
     if not enabled():
-        return []
+        return {"total": 0, "items": []}
     where, params = [], {}
     if repo:
         where.append("repo ILIKE %(repo)s")
@@ -185,6 +212,11 @@ def list_analyses(
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
+                f"SELECT COUNT(*) FROM analyses {clause}",
+                {k: v for k, v in params.items() if k not in ("limit", "offset")},
+            )
+            total = cur.fetchone()[0]
+            cur.execute(
                 f"""
                 SELECT id, repo, branch, commit_hash, status, started_at,
                        finished_at, duration_seconds, tool_versions, summary,
@@ -199,7 +231,10 @@ def list_analyses(
             )
             rows = cur.fetchall()
             columns = [d.name for d in cur.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return {
+        "total": total,
+        "items": [dict(zip(columns, row)) for row in rows],
+    }
 
 
 def get_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
@@ -232,7 +267,7 @@ def list_repos() -> List[str]:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT DISTINCT repo FROM analyses ORDER BY repo"
+                "SELECT DISTINCT repo FROM analyses WHERE repo <> '' ORDER BY repo"
             )
             return [row[0] for row in cur.fetchall()]
 

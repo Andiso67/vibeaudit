@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from vibeaudit import db as db_store
@@ -35,6 +37,25 @@ app = FastAPI(
     title="VibeAudit API",
     description="Servicio de auditoría de seguridad para repositorios Git",
     version="0.2.0",
+)
+
+# Orígenes permitidos para el dashboard (CORS). Configurable con
+# VIBEAUDIT_CORS_ORIGINS (separados por comas).
+_default_cors = (
+    "http://localhost:3000,"
+    "http://andiso67lab.tail809b38.ts.net:3000,"
+    "http://andiso67lab.tail809b38.ts.net:8000"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        origin.strip()
+        for origin in os.environ.get("VIBEAUDIT_CORS_ORIGINS", _default_cors).split(",")
+        if origin.strip()
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 JOBS: Dict[str, Dict[str, Any]] = {}
@@ -114,11 +135,13 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
         JOBS[job_id]["status"] = "running"
         JOBS[job_id]["step"] = "Iniciando..."
     started = _dt.datetime.now(_dt.timezone.utc)
+    repo = req.repo_url or req.local_path or "local"
     if db_store.enabled():
         db_store.update_status(
             job_id,
             status="running",
             started_at=started.isoformat(),
+            repo=repo,
         )
     try:
         if (req.repo_url is None) == (req.local_path is None):
@@ -153,7 +176,7 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
             db_store.save_analysis(
                 {
                     "id": job_id,
-                    "repo": req.repo_url or req.local_path or "local",
+                    "repo": repo,
                     "branch": req.branch,
                     "commit_hash": project.get("commitHash"),
                     "status": "done",
@@ -194,8 +217,12 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
-    """Crea el esquema de Postgres si la persistencia está configurada."""
+    """Crea el esquema de Postgres y aborta jobs huérfanos (reinicios)."""
     db_store.init_db()
+    aborted = db_store.abort_stale_running()
+    if aborted:
+        print(f"VibeAudit API: {aborted} análisis 'running' marcados como "
+              f"interrumpidos por reinicio.")
 
 
 @app.get("/api/health")
@@ -253,17 +280,20 @@ def analyses(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> Dict[str, Any]:
-    """Lista los análisis guardados en Postgres (metadatos + resumen)."""
+    """Lista los análisis guardados en Postgres (metadatos + resumen).
+
+    ``total`` es el recuento real con los filtros aplicados; los items NO
+    incluyen el reporte completo (usar /api/analyses/{id} para el detalle).
+    """
     if not db_store.enabled():
         raise HTTPException(
             status_code=503,
             detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
         )
-    items = db_store.list_analyses(
+    return db_store.list_analyses(
         repo=repo, status=status, since=since, until=until,
         limit=limit, offset=offset,
     )
-    return {"total": len(items), "items": items}
 
 
 @app.get("/api/analyses/{analysis_id}")
@@ -278,6 +308,34 @@ def get_analysis(analysis_id: str) -> Dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail="análisis no encontrado")
     return row
+
+
+@app.get("/api/analyses/{analysis_id}/artifacts")
+def analysis_artifacts(analysis_id: str) -> Dict[str, Any]:
+    """Lista los archivos de artefactos de un análisis (reporte + entregables)."""
+    row = db_store.get_analysis(analysis_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="análisis no encontrado")
+    base = Path(row.get("artifacts_dir") or "")
+    files = []
+    if base.is_dir():
+        for f in sorted(base.rglob("*")):
+            if f.is_file():
+                files.append(str(f.relative_to(base)))
+    return {"analysis_id": analysis_id, "files": files}
+
+
+@app.get("/api/analyses/{analysis_id}/artifacts/{filename:path}")
+def analysis_artifact_file(analysis_id: str, filename: str) -> FileResponse:
+    """Sirve un archivo concreto de los artefactos del análisis."""
+    row = db_store.get_analysis(analysis_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="análisis no encontrado")
+    base = Path(row.get("artifacts_dir") or "")
+    target = (base / filename).resolve()
+    if not target.is_relative_to(base.resolve()) or not target.is_file():
+        raise HTTPException(status_code=404, detail="artefacto no encontrado")
+    return FileResponse(target, filename=Path(filename).name)
 
 
 @app.get("/api/repos")

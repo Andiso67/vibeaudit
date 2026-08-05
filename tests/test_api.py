@@ -4,10 +4,40 @@ import time
 
 import pytest
 from fastapi.testclient import TestClient
+from pathlib import Path
 
+from vibeaudit import api as api_module
 from vibeaudit.api import app
 
 client = TestClient(app)
+
+
+class FakePersistencia:
+    """Sustituto de vibeaudit.db que captura las llamadas del job."""
+
+    def __init__(self):
+        self.updates = []
+        self.saves = []
+
+    def enabled(self):
+        return True
+
+    def update_status(self, *args, **kwargs):
+        self.updates.append(kwargs)
+
+    def save_analysis(self, analysis):
+        self.saves.append(analysis)
+
+    def artifacts_dir(self):
+        return "./artifacts"
+
+    def build_summary(self, report_dict):
+        return {"total": 0}
+
+
+class FakeReporte:
+    def model_dump(self, by_alias=True, exclude_none=True):
+        return {"project": {"name": "proyecto", "commitHash": "abc123"}}
 
 
 class FakeScanner:
@@ -73,6 +103,34 @@ def test_scan_job_completo(monkeypatch, proyecto, tmp_path):
 
     guard = client.get("/api/scan/nonexist")
     assert guard.status_code == 404
+
+
+def test_scan_job_registra_repo_en_running_y_save(monkeypatch, proyecto):
+    persistencia = FakePersistencia()
+    monkeypatch.setattr(api_module, "db_store", persistencia)
+    monkeypatch.setattr(
+        api_module, "run_scan", lambda *a, **k: (FakeReporte(), None)
+    )
+    monkeypatch.setattr(
+        api_module, "_persist_artifacts", lambda *a, **k: Path("artifacts/x")
+    )
+
+    resp = client.post("/api/scan", json={"local_path": str(proyecto)})
+    assert resp.status_code == 202
+    job_id = resp.json()["job_id"]
+
+    estado = None
+    for _ in range(50):
+        estado = client.get(f"/api/scan/{job_id}").json()
+        if estado["status"] in ("done", "error"):
+            break
+        time.sleep(0.1)
+    assert estado["status"] == "done", estado.get("error")
+
+    running = [u for u in persistencia.updates if u.get("status") == "running"]
+    assert running, "no se registró el estado running"
+    assert running[0]["repo"] == str(proyecto)
+    assert persistencia.saves[0]["repo"] == str(proyecto)
 
 
 def test_scan_job_falla_sin_path(monkeypatch):

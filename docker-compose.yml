@@ -61,7 +61,10 @@ services:
       api:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      # URL que el navegador usará para llamar a la API. Default: el host
+      # Tailscale de la máquina (accesible desde cualquier dispositivo del
+      # tailnet). Sobrescribir con NEXT_PUBLIC_API_URL en .env si cambia.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://andiso67lab.tail809b38.ts.net:8000}
     ports:
       - "3000:3000"
 

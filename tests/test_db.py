@@ -40,7 +40,7 @@ class TestEnabled:
     def test_sin_url_la_persistencia_es_noop(self, monkeypatch):
         monkeypatch.delenv("VIBEAUDIT_DATABASE_URL", raising=False)
         assert db_store.enabled() is False
-        assert db_store.list_analyses() == []
+        assert db_store.list_analyses() == {"total": 0, "items": []}
         assert db_store.list_repos() == []
         assert db_store.get_analysis("x") is None
         db_store.save_analysis({"id": "x"})
@@ -72,6 +72,7 @@ class FakeDB:
 
     def __init__(self):
         self.enabled_flag = False
+        self.abort_calls = 0
         self.rows = [
             {
                 "id": "job1",
@@ -92,7 +93,7 @@ class FakeDB:
         return None
 
     def list_analyses(self, **kwargs):
-        return self.rows
+        return {"total": len(self.rows), "items": self.rows}
 
     def get_analysis(self, analysis_id):
         if analysis_id == "job1":
@@ -104,6 +105,10 @@ class FakeDB:
 
     def update_status(self, *args, **kwargs):
         return None
+
+    def abort_stale_running(self):
+        self.abort_calls += 1
+        return 0
 
     def save_analysis(self, analysis):
         return None
@@ -130,6 +135,94 @@ class TestAnalysesEndpoints:
         body = resp.json()
         assert body["total"] == 1
         assert body["items"][0]["repo"].endswith("demo")
+
+    def test_analyses_pasa_filtros_a_la_capa_db(self, monkeypatch):
+        captured = {}
+
+        def fake_list(**kwargs):
+            captured.update(kwargs)
+            return {"total": 0, "items": []}
+
+        fake = FakeDB()
+        fake.enabled_flag = True
+        fake.list_analyses = fake_list
+        client = self._client(monkeypatch, fake)
+        client.get(
+            "/api/analyses?repo=org%2Fdemo&status=running"
+            "&since=2026-01-01T00:00:00Z&until=2026-02-01T00:00:00Z&limit=5&offset=10"
+        )
+        assert captured == {
+            "repo": "org/demo",
+            "status": "running",
+            "since": "2026-01-01T00:00:00Z",
+            "until": "2026-02-01T00:00:00Z",
+            "limit": 5,
+            "offset": 10,
+        }
+
+    def test_cors_permite_origen_del_dashboard(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        client = self._client(monkeypatch, fake)
+        resp = client.get(
+            "/api/repos",
+            headers={"Origin": "http://localhost:3000"},
+        )
+        assert resp.status_code == 200
+        assert resp.headers.get("access-control-allow-origin") == (
+            "http://localhost:3000"
+        )
+
+    def test_startup_aborta_jobs_huerfanos(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        monkeypatch.setattr(api_module, "db_store", fake)
+        api_module._startup()
+        assert fake.abort_calls == 1
+
+    def test_artefactos_lista_archivos(self, monkeypatch, tmp_path):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        (tmp_path / "audit-report.json").write_text("{}")
+        (tmp_path / "deliverables").mkdir()
+        (tmp_path / "deliverables" / "informe.html").write_text("<h1>ok</h1>")
+        fake.rows[0]["artifacts_dir"] = str(tmp_path)
+        client = self._client(monkeypatch, fake)
+        resp = client.get("/api/analyses/job1/artifacts")
+        assert resp.status_code == 200
+        assert resp.json()["files"] == [
+            "audit-report.json",
+            "deliverables/informe.html",
+        ]
+
+    def test_artefacto_concreto_se_sirve(self, monkeypatch, tmp_path):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        (tmp_path / "deliverables").mkdir()
+        (tmp_path / "deliverables" / "informe.html").write_text("<h1>ok</h1>")
+        fake.rows[0]["artifacts_dir"] = str(tmp_path)
+        client = self._client(monkeypatch, fake)
+        resp = client.get("/api/analyses/job1/artifacts/deliverables/informe.html")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/html")
+        assert resp.text == "<h1>ok</h1>"
+
+    def test_artefacto_fuera_del_directorio_404(self, monkeypatch, tmp_path):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        (tmp_path / "audit-report.json").write_text("{}")
+        fake.rows[0]["artifacts_dir"] = str(tmp_path)
+        client = self._client(monkeypatch, fake)
+        resp = client.get(
+            "/api/analyses/job1/artifacts/..%2f..%2f..%2fetc%2fpasswd"
+        )
+        assert resp.status_code == 404
+
+    def test_artefactos_de_analisis_desconocido_404(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        client = self._client(monkeypatch, fake)
+        assert client.get("/api/analyses/nope/artifacts").status_code == 404
 
     def test_analyses_por_id_devuelve_reporte(self, monkeypatch):
         fake = FakeDB()

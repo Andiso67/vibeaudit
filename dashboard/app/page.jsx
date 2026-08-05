@@ -561,6 +561,47 @@ export default function Page() {
         <h2>Evolución (historial)</h2>
         <EvolutionPanel history={history} />
       </section>
+      <section>
+        <h2>Informes y entregables</h2>
+        <ul>
+          <li>
+            <a href="/deliverables/informe-central.html">Informe maestro</a>{" "}
+            (informe central con C4, roadmap y backlog)
+          </li>
+          <li>
+            <a href="/deliverables/informe-ejecutivo.html">
+              Informe ejecutivo
+            </a>{" "}
+            (<a href="/deliverables/informe-ejecutivo.pdf">PDF</a>) — resumen
+            para stakeholders
+          </li>
+          <li>
+            <a href="/deliverables/remediaciones.md">Remediaciones</a>{" "}
+            (diffs propuestos:{" "}
+            <a href="/deliverables/remediaciones.patch">patch</a>,{" "}
+            <a href="/deliverables/remediaciones.json">json</a>)
+          </li>
+          <li>
+            <a href="/deliverables/ranking-riesgo.html">
+              Ranking multi-repo
+            </a>{" "}
+            (<a href="/deliverables/ranking-riesgo.csv">csv</a>)
+          </li>
+          <li>
+            <a href="/deliverables/c4-context.mmd">C4 contexto</a> ·{" "}
+            <a href="/deliverables/c4-container.mmd">C4 contenedores</a>
+          </li>
+          <li>
+            <a href="/deliverables/roadmap.md">Roadmap</a> ·{" "}
+            <a href="/deliverables/backlog.csv">Backlog CSV</a> ·{" "}
+            <a href="/deliverables/backlog.json">Backlog JSON</a>
+          </li>
+          <li>
+            Reporte maestro: <a href="/audit-report.json">audit-report.json</a>{" "}
+            · Evolución: <a href="/audit-history.json">audit-history.json</a>
+          </li>
+        </ul>
+      </section>
       {sections.map(([title, table]) => (
         <section key={title}>
           <h2>{title}</h2>

@@ -536,16 +536,34 @@ class DeliverablesGenerator:
             "",
             self._backlog_table(),
             "",
-            "## 7. Entregables descargables",
+            "## 7. Índice de informes y entregables",
             "",
-            "Los entregables individuales se generan junto a este informe. "
-            "Pulsa el enlace (desde el mismo directorio) para abrirlos:",
+            "### Entregables generados junto a este informe",
             "",
             "- [`c4-context.mmd`](./c4-context.mmd) — diagrama de contexto (Mermaid).",
             "- [`c4-container.mmd`](./c4-container.mmd) — diagrama de contenedores (Mermaid).",
             "- [`roadmap.md`](./roadmap.md) — roadmap por fases según severidad.",
             "- [`backlog.csv`](./backlog.csv) — backlog de remediación (CSV).",
             "- [`backlog.json`](./backlog.json) — backlog de remediación (JSON).",
+            "- [`informe-central.md`](./informe-central.md) — este informe (Markdown).",
+            "- [`informe-central.html`](./informe-central.html) — este informe (HTML).",
+            "- [`informe-ejecutivo.html`](./informe-ejecutivo.html) — informe one-page para stakeholders.",
+            "- [`informe-ejecutivo.pdf`](./informe-ejecutivo.pdf) — el mismo informe en PDF.",
+            "",
+            "### Informes y datos asociados",
+            "",
+            "Se generan junto al reporte o en la raíz del dashboard (si los flujos "
+            "`--sonar-json`, `--publish`, `compare-multi` y `remediate` se ejecutaron):",
+            "",
+            "- [`audit-report.json`](../audit-report.json) — reporte maestro (JSON).",
+            "- [`audit-history.json`](../audit-history.json) — evolución y snapshots.",
+            "- [`sonar-issues.json`](../sonar-issues.json) — issues para importar a SonarQube.",
+            "- [`remediaciones.md`](./remediaciones.md) — informe de diffs propuestos (MD).",
+            "- [`remediaciones.json`](./remediaciones.json) — informe de diffs propuestos (JSON).",
+            "- [`remediaciones.patch`](./remediaciones.patch) — patch unificado propuesto.",
+            "- [`ranking-riesgo.html`](./ranking-riesgo.html) — ranking multi-repo (HTML).",
+            "- [`ranking-riesgo.json`](./ranking-riesgo.json) — ranking multi-repo (JSON).",
+            "- [`ranking-riesgo.csv`](./ranking-riesgo.csv) — ranking multi-repo (CSV).",
             "",
         ]
         return "\n".join(lines)
@@ -632,6 +650,33 @@ class DeliverablesGenerator:
                 ("backlog.csv", "backlog de remediación (CSV)"),
                 ("backlog.json", "backlog de remediación (JSON)"),
                 ("informe-central.md", "este informe en Markdown"),
+                ("informe-central.html", "este informe (HTML)"),
+                ("informe-ejecutivo.html", "informe one-page para stakeholders"),
+                ("informe-ejecutivo.pdf", "informe ejecutivo en PDF"),
+            ]
+        )
+        associated_links = "\n".join(
+            f"<li><a href='{href}' style='text-decoration:none;'>"
+            f"<code>{name}</code></a> — {description}</li>"
+            for name, href, description in [
+                ("audit-report.json", "../audit-report.json",
+                 "reporte maestro (JSON)"),
+                ("audit-history.json", "../audit-history.json",
+                 "evolución y snapshots (dashboard)"),
+                ("sonar-issues.json", "../sonar-issues.json",
+                 "issues para importar a SonarQube"),
+                ("remediaciones.md", "remediaciones.md",
+                 "informe de diffs propuestos (MD)"),
+                ("remediaciones.json", "remediaciones.json",
+                 "informe de diffs propuestos (JSON)"),
+                ("remediaciones.patch", "remediaciones.patch",
+                 "patch unificado propuesto"),
+                ("ranking-riesgo.html", "ranking-riesgo.html",
+                 "comparativa multi-repo (HTML)"),
+                ("ranking-riesgo.json", "ranking-riesgo.json",
+                 "comparativa multi-repo (JSON)"),
+                ("ranking-riesgo.csv", "ranking-riesgo.csv",
+                 "comparativa multi-repo (CSV)"),
             ]
         )
         mermaid_style = (
@@ -688,10 +733,17 @@ class DeliverablesGenerator:
 {"".join(backlog_rows)}
 </table>
 
-<h2>7. Entregables descargables</h2>
-<p>Pulsa cada enlace para abrir o descargar el entregable individual.</p>
+<h2>7. Índice de informes y entregables</h2>
+<h3>Entregables generados junto a este informe</h3>
 <ul>
 {deliverables_links}
+</ul>
+<h3>Informes y datos asociados</h3>
+<p>Se generan junto al reporte o en la raíz del dashboard (si se ejecutaron
+<code>--sonar-json</code>, <code>--publish</code>, <code>compare-multi</code> y
+<code>remediate</code>):</p>
+<ul>
+{associated_links}
 </ul>
 </body>
 </html>

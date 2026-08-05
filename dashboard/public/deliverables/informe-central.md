@@ -396,12 +396,30 @@ Mejora continua (más de 6 semanas): higiene y deuda técnica.
 | `deps-xlsx@0.18.5` | deps | `xlsx@0.18.5` | — | **HIGH** | Corregir dependencia xlsx@0.18.5; sin versión corregida aún |
 | `deps-xlsx@0.18.5` | deps | `xlsx@0.18.5` | — | **HIGH** | Corregir dependencia xlsx@0.18.5; sin versión corregida aún |
 
-## 7. Entregables descargables
+## 7. Índice de informes y entregables
 
-Los entregables individuales se generan junto a este informe. Pulsa el enlace (desde el mismo directorio) para abrirlos:
+### Entregables generados junto a este informe
 
 - [`c4-context.mmd`](./c4-context.mmd) — diagrama de contexto (Mermaid).
 - [`c4-container.mmd`](./c4-container.mmd) — diagrama de contenedores (Mermaid).
 - [`roadmap.md`](./roadmap.md) — roadmap por fases según severidad.
 - [`backlog.csv`](./backlog.csv) — backlog de remediación (CSV).
 - [`backlog.json`](./backlog.json) — backlog de remediación (JSON).
+- [`informe-central.md`](./informe-central.md) — este informe (Markdown).
+- [`informe-central.html`](./informe-central.html) — este informe (HTML).
+- [`informe-ejecutivo.html`](./informe-ejecutivo.html) — informe one-page para stakeholders.
+- [`informe-ejecutivo.pdf`](./informe-ejecutivo.pdf) — el mismo informe en PDF.
+
+### Informes y datos asociados
+
+Se generan junto al reporte o en la raíz del dashboard (si los flujos `--sonar-json`, `--publish`, `compare-multi` y `remediate` se ejecutaron):
+
+- [`audit-report.json`](../audit-report.json) — reporte maestro (JSON).
+- [`audit-history.json`](../audit-history.json) — evolución y snapshots.
+- [`sonar-issues.json`](../sonar-issues.json) — issues para importar a SonarQube.
+- [`remediaciones.md`](./remediaciones.md) — informe de diffs propuestos (MD).
+- [`remediaciones.json`](./remediaciones.json) — informe de diffs propuestos (JSON).
+- [`remediaciones.patch`](./remediaciones.patch) — patch unificado propuesto.
+- [`ranking-riesgo.html`](./ranking-riesgo.html) — ranking multi-repo (HTML).
+- [`ranking-riesgo.json`](./ranking-riesgo.json) — ranking multi-repo (JSON).
+- [`ranking-riesgo.csv`](./ranking-riesgo.csv) — ranking multi-repo (CSV).

@@ -16,8 +16,9 @@ import csv
 import html
 import io
 import json
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # Fase de roadmap sugerida según severidad del hallazgo
 PHASE_BY_SEVERITY = {
@@ -81,9 +82,14 @@ class DeliverablesGenerator:
             ("backlog.json", self.backlog_json()),
             ("informe-central.md", self.informe_markdown()),
             ("informe-central.html", self.informe_html()),
+            ("informe-ejecutivo.html", self.informe_ejecutivo_html()),
+            ("informe-ejecutivo.pdf", self.informe_ejecutivo_pdf()),
         ]:
             path = out_dir / name
-            path.write_text(content, encoding="utf-8")
+            if isinstance(content, bytes):
+                path.write_bytes(content)
+            else:
+                path.write_text(content, encoding="utf-8")
             files[name] = path
         return files
 
@@ -690,3 +696,247 @@ class DeliverablesGenerator:
 </body>
 </html>
 """
+
+    # --- Informe ejecutivo (one-page para stakeholders, sin secretos) ---
+
+    def _ejecutivo_datos(self) -> Dict:
+        """Datos resumidos del informe ejecutivo (nunca incluye secretos)."""
+        meta = self.report.project
+        metrics = self.report.metrics
+        entries, counters = self._grouped_findings()
+        sev_counts = {s: 0 for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")}
+        for entry in entries:
+            sev_counts[entry["severity"]] = sev_counts.get(entry["severity"], 0) + 1
+        sev_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+        top = sorted(
+            entries,
+            key=lambda e: (sev_order.get(e["severity"], 9), e["file"] or ""),
+        )[:12]
+        critical = sev_counts.get("CRITICAL", 0)
+        if critical:
+            estado, color = "Riesgo crítico", "#d93025"
+        elif sev_counts.get("HIGH", 0):
+            estado, color = "Atención requerida", "#ea8600"
+        elif sev_counts.get("MEDIUM", 0):
+            estado, color = "Mejoras recomendadas", "#f2c300"
+        else:
+            estado, color = "Sin hallazgos relevantes", "#188038"
+        return {
+            "entries": entries,
+            "counters": counters,
+            "sev_counts": sev_counts,
+            "top": top,
+            "estado": estado,
+            "estado_color": color,
+        }
+
+    def informe_ejecutivo_html(self) -> str:
+        """Informe one-page para stakeholders: métricas, semáforo y top hallazgos.
+
+        Diseñado para imprimirse/exportarse a PDF desde el navegador. No
+        incluye secretos ni contenido sensible en claro.
+        """
+        meta = self.report.project
+        metrics = self.report.metrics
+        d = self._ejecutivo_datos()
+
+        def esc(text) -> str:
+            return html.escape(str(text or ""))
+
+        sev_color = {
+            "CRITICAL": "#d93025", "HIGH": "#ea8600", "MEDIUM": "#f2c300",
+            "LOW": "#188038", "INFO": "#5f6368",
+        }
+        badges = " ".join(
+            f"<span style='background:{sev_color[s]};color:#fff;padding:3px 10px;"
+            f"border-radius:12px;font-weight:600;'>{s} · {n}</span>"
+            for s, n in d["sev_counts"].items() if n
+        )
+        top_rows = "".join(
+            f"<tr><td>{esc(e['kind'])}</td><td><code>{esc(e['rule'])}</code></td>"
+            f"<td><code>{esc(e['file'])}</code></td>"
+            f"<td style='color:{sev_color.get(e['severity'], '#5f6368')};"
+            f"font-weight:700;'>{esc(e['severity'])}</td>"
+            f"<td>{esc(e['recommendation'])}</td></tr>"
+            for e in d["top"]
+        )
+        fecha = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        nube = self.report.cloud_issues
+        nube_html = (
+            f"<p>🟠 {len(nube)} configuraciones inseguras detectadas "
+            f"en {len(self.report.cloud_resources)} recursos analizados.</p>"
+            if nube
+            else "<p>✅ Sin configuraciones inseguras en la nube.</p>"
+        )
+        return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Informe ejecutivo — {esc(meta.name)}</title>
+<style>
+  body {{ font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         max-width: 860px; margin: 0 auto; padding: 28px; color: #202124; }}
+  h1 {{ font-size: 26px; margin-bottom: 4px; }}
+  .meta {{ color: #5f6368; font-size: 13px; }}
+  .estado {{ display:inline-block; color:#fff; font-weight:700;
+             padding:6px 16px; border-radius:6px; font-size:15px; }}
+  table {{ border-collapse: collapse; width: 100%; font-size: 13px; }}
+  th {{ text-align: left; border-bottom: 1px solid #ccc; padding: 6px; }}
+  td {{ border-bottom: 1px solid #eee; padding: 6px; }}
+  @media print {{ body {{ padding: 0; }} }}
+</style>
+</head>
+<body>
+<h1>Informe ejecutivo — {esc(meta.name)}</h1>
+<p class="meta">{esc(meta.repository_url or "origen local")} · {esc(meta.default_branch or "—")} · {fecha}</p>
+<p><span class="estado" style="background:{d['estado_color']};">{esc(d['estado'])}</span></p>
+
+<h2>Métricas</h2>
+<table>
+<tr><th>Líneas de código</th><td>{esc(metrics.lines_of_code or 0)}</td>
+    <th>Archivos de test</th><td>{esc(metrics.test_files or 0)}</td></tr>
+<tr><th>Hallazgos totales</th><td>{len(d['entries'])}</td>
+    <th>Dependencias con CVE</th><td>{len(self.report.metrics.dependency_vulnerabilities)}</td></tr>
+<tr><th>Frameworks</th><td colspan="3">{esc(', '.join(meta.frameworks) or '—')}</td></tr>
+</table>
+<p>{badges}</p>
+
+<h2>Principales hallazgos (top 12)</h2>
+<table>
+<tr><th>Tipo</th><th>Regla</th><th>Archivo</th><th>Severidad</th><th>Recomendación</th></tr>
+{top_rows or "<tr><td colspan='5'>Sin hallazgos.</td></tr>"}
+</table>
+
+<h2>Seguridad en la nube</h2>
+{nube_html}
+
+<h2>Siguientes pasos</h2>
+<p>Revisa el <a href="informe-central.html">informe central</a> (diagramas C4, roadmap
+por fases y backlog completo) y el <a href="roadmap.md">roadmap</a> para el detalle de remediación.</p>
+<p class="meta">Generado por VibeAudit. Documento ejecutivo: no incluye secretos ni contenido sensible.</p>
+</body>
+</html>
+"""
+
+    def informe_ejecutivo_pdf(self) -> bytes:
+        """PDF one-page (reportlab) con métricas, semáforo y top hallazgos."""
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import mm
+        from reportlab.platypus import (
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
+
+        meta = self.report.project
+        metrics = self.report.metrics
+        d = self._ejecutivo_datos()
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            leftMargin=18 * mm,
+            rightMargin=18 * mm,
+            topMargin=16 * mm,
+            bottomMargin=16 * mm,
+            title=f"Informe ejecutivo — {meta.name}",
+        )
+        styles = getSampleStyleSheet()
+        h1 = ParagraphStyle("h1", parent=styles["Title"], fontSize=20, spaceAfter=2)
+        h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontSize=13, spaceBefore=10)
+        small = ParagraphStyle(
+            "small", parent=styles["Normal"], fontSize=9, textColor=colors.grey
+        )
+        sev_color = {
+            "CRITICAL": colors.HexColor("#d93025"),
+            "HIGH": colors.HexColor("#ea8600"),
+            "MEDIUM": colors.HexColor("#b8860b"),
+            "LOW": colors.HexColor("#188038"),
+            "INFO": colors.HexColor("#5f6368"),
+        }
+
+        top_table = Table(
+            [
+                ["Tipo", "Regla", "Archivo", "Severidad", "Recomendación"]
+            ]
+            + [
+                [e["kind"], e["rule"], e["file"] or "", e["severity"],
+                 e["recommendation"]]
+                for e in d["top"]
+            ],
+            colWidths=[18 * mm, 34 * mm, 40 * mm, 18 * mm, 62 * mm],
+            repeatRows=1,
+        )
+        story = [
+            Paragraph(f"Informe ejecutivo — {meta.name}", h1),
+            Paragraph(
+                f"{meta.repository_url or 'origen local'} · "
+                f"{meta.default_branch or '—'} · "
+                f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+                small,
+            ),
+            Spacer(1, 4),
+            Paragraph(f"<b>Estado: {d['estado']}</b>", styles["Normal"]),
+            Spacer(1, 2),
+            Paragraph(
+                " · ".join(
+                    f"{s}: {n}" for s, n in d["sev_counts"].items() if n
+                ) or "Sin hallazgos",
+                styles["Normal"],
+            ),
+            Spacer(1, 8),
+            Paragraph("Métricas", h2),
+            Table(
+                [
+                    ["Líneas de código", metrics.lines_of_code or 0,
+                     "Archivos de test", metrics.test_files or 0],
+                    ["Hallazgos totales", len(d["entries"]),
+                     "Dependencias con CVE",
+                     len(self.report.metrics.dependency_vulnerabilities)],
+                    ["Frameworks", ", ".join(meta.frameworks) or "—", "", ""],
+                ],
+                colWidths=[40 * mm, 45 * mm, 40 * mm, 45 * mm],
+            ),
+            Spacer(1, 4),
+            Paragraph("Principales hallazgos (top 12)", h2),
+            top_table,
+            Spacer(1, 4),
+            Paragraph("Seguridad en la nube", h2),
+            Paragraph(
+                f"{len(self.report.cloud_issues)} configuraciones inseguras en "
+                f"{len(self.report.cloud_resources)} recursos analizados."
+                if self.report.cloud_issues
+                else "Sin configuraciones inseguras.",
+                styles["Normal"],
+            ),
+            Spacer(1, 6),
+            Paragraph("Generado por VibeAudit. Sin secretos ni contenido sensible.", small),
+        ]
+        for table in story:
+            if isinstance(table, Table):
+                table.setStyle(
+                    TableStyle(
+                        [
+                            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                            ("FONTSIZE", (0, 0), (-1, -1), 8),
+                            ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.93, 0.93, 0.93)),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ]
+                    )
+                )
+        for row_idx, entry in enumerate(d["top"], start=1):
+            top_table.setStyle(
+                TableStyle(
+                    [
+                        ("TEXTCOLOR", (3, row_idx), (3, row_idx),
+                         sev_color.get(entry["severity"], colors.black)),
+                    ]
+                )
+            )
+        doc.build(story)
+        return buffer.getvalue()

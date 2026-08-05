@@ -155,7 +155,7 @@ class TestBacklog:
 
 
 class TestGenerate:
-    def test_generate_escribe_7_archivos(self, tmp_path):
+    def test_generate_escribe_9_archivos(self, tmp_path):
         out = tmp_path / "entregables"
         gen = DeliverablesGenerator(sample_report())
         files = gen.generate(out)
@@ -167,10 +167,26 @@ class TestGenerate:
             "backlog.json",
             "informe-central.md",
             "informe-central.html",
+            "informe-ejecutivo.html",
+            "informe-ejecutivo.pdf",
         }
         assert (out / "c4-context.mmd").exists()
         assert (out / "informe-central.html").exists()
         assert out.is_dir()
+
+    def test_informe_ejecutivo_html_no_incluye_secretos(self, tmp_path):
+        gen = DeliverablesGenerator(sample_report())
+        html_content = gen.informe_ejecutivo_html()
+        assert "Informe ejecutivo" in html_content
+        assert "AKIA" not in html_content
+        assert "ghp_" not in html_content
+        assert "contraseña" not in html_content.lower()
+
+    def test_informe_ejecutivo_pdf_genera_bytes_validos(self, tmp_path):
+        gen = DeliverablesGenerator(sample_report())
+        pdf = gen.informe_ejecutivo_pdf()
+        assert pdf[:5] == b"%PDF-"
+        assert len(pdf) > 1000
 
     def test_self_publish_copia_reporte_e_informe(self, tmp_path):
         from vibeaudit.cli import self_publish

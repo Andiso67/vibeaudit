@@ -396,30 +396,21 @@ Mejora continua (más de 6 semanas): higiene y deuda técnica.
 | `deps-xlsx@0.18.5` | deps | `xlsx@0.18.5` | — | **HIGH** | Corregir dependencia xlsx@0.18.5; sin versión corregida aún |
 | `deps-xlsx@0.18.5` | deps | `xlsx@0.18.5` | — | **HIGH** | Corregir dependencia xlsx@0.18.5; sin versión corregida aún |
 
-## 7. Índice de informes y entregables
+## 7. Cuadro de accesos
 
-### Entregables generados junto a este informe
+Acceso directo a todos los informes y servicios del análisis:
 
-- [`c4-context.mmd`](./c4-context.mmd) — diagrama de contexto (Mermaid).
-- [`c4-container.mmd`](./c4-container.mmd) — diagrama de contenedores (Mermaid).
-- [`roadmap.md`](./roadmap.md) — roadmap por fases según severidad.
-- [`backlog.csv`](./backlog.csv) — backlog de remediación (CSV).
-- [`backlog.json`](./backlog.json) — backlog de remediación (JSON).
-- [`informe-central.md`](./informe-central.md) — este informe (Markdown).
-- [`informe-central.html`](./informe-central.html) — este informe (HTML).
-- [`informe-ejecutivo.html`](./informe-ejecutivo.html) — informe one-page para stakeholders.
-- [`informe-ejecutivo.pdf`](./informe-ejecutivo.pdf) — el mismo informe en PDF.
-
-### Informes y datos asociados
-
-Se generan junto al reporte o en la raíz del dashboard (si los flujos `--sonar-json`, `--publish`, `compare-multi` y `remediate` se ejecutaron):
-
-- [`audit-report.json`](../audit-report.json) — reporte maestro (JSON).
-- [`audit-history.json`](../audit-history.json) — evolución y snapshots.
-- [`sonar-issues.json`](../sonar-issues.json) — issues para importar a SonarQube.
-- [`remediaciones.md`](./remediaciones.md) — informe de diffs propuestos (MD).
-- [`remediaciones.json`](./remediaciones.json) — informe de diffs propuestos (JSON).
-- [`remediaciones.patch`](./remediaciones.patch) — patch unificado propuesto.
-- [`ranking-riesgo.html`](./ranking-riesgo.html) — ranking multi-repo (HTML).
-- [`ranking-riesgo.json`](./ranking-riesgo.json) — ranking multi-repo (JSON).
-- [`ranking-riesgo.csv`](./ranking-riesgo.csv) — ranking multi-repo (CSV).
+| Acceso | Enlaces | Descripción |
+|---|---|---|
+| Dashboard de cliente | `../` | Visor interactivo (KPIs, módulos, evolución) |
+| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://localhost:9000) | Servidor de calidad del proyecto |
+| Informe maestro | `informe-central.html` · `informe-central.md` | Este documento |
+| Informe ejecutivo | `informe-ejecutivo.html` · `.pdf` | Resumen para stakeholders |
+| Remediaciones | `remediaciones.md` · `.json` · `.patch` | Diffs propuestos (solo informativo) |
+| Ranking multi-repo | `ranking-riesgo.html` · `.json` · `.csv` | Comparativa entre repos |
+| Diagramas C4 | `c4-context.mmd` · `c4-container.mmd` | Arquitectura (Mermaid) |
+| Roadmap | `roadmap.md` | Remediación por fases |
+| Backlog | `backlog.csv` · `backlog.json` | Tareas de remediación |
+| Reporte maestro (JSON) | `../audit-report.json` | Datos completos |
+| Evolución (JSON) | `../audit-history.json` | Snapshots y deltas |
+| Import SonarQube (JSON) | `../sonar-issues.json` | Issues para Generic Issue Import |

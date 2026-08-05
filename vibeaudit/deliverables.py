@@ -536,34 +536,24 @@ class DeliverablesGenerator:
             "",
             self._backlog_table(),
             "",
-            "## 7. Índice de informes y entregables",
+            "## 7. Cuadro de accesos",
             "",
-            "### Entregables generados junto a este informe",
+            "Acceso directo a todos los informes y servicios del análisis:",
             "",
-            "- [`c4-context.mmd`](./c4-context.mmd) — diagrama de contexto (Mermaid).",
-            "- [`c4-container.mmd`](./c4-container.mmd) — diagrama de contenedores (Mermaid).",
-            "- [`roadmap.md`](./roadmap.md) — roadmap por fases según severidad.",
-            "- [`backlog.csv`](./backlog.csv) — backlog de remediación (CSV).",
-            "- [`backlog.json`](./backlog.json) — backlog de remediación (JSON).",
-            "- [`informe-central.md`](./informe-central.md) — este informe (Markdown).",
-            "- [`informe-central.html`](./informe-central.html) — este informe (HTML).",
-            "- [`informe-ejecutivo.html`](./informe-ejecutivo.html) — informe one-page para stakeholders.",
-            "- [`informe-ejecutivo.pdf`](./informe-ejecutivo.pdf) — el mismo informe en PDF.",
-            "",
-            "### Informes y datos asociados",
-            "",
-            "Se generan junto al reporte o en la raíz del dashboard (si los flujos "
-            "`--sonar-json`, `--publish`, `compare-multi` y `remediate` se ejecutaron):",
-            "",
-            "- [`audit-report.json`](../audit-report.json) — reporte maestro (JSON).",
-            "- [`audit-history.json`](../audit-history.json) — evolución y snapshots.",
-            "- [`sonar-issues.json`](../sonar-issues.json) — issues para importar a SonarQube.",
-            "- [`remediaciones.md`](./remediaciones.md) — informe de diffs propuestos (MD).",
-            "- [`remediaciones.json`](./remediaciones.json) — informe de diffs propuestos (JSON).",
-            "- [`remediaciones.patch`](./remediaciones.patch) — patch unificado propuesto.",
-            "- [`ranking-riesgo.html`](./ranking-riesgo.html) — ranking multi-repo (HTML).",
-            "- [`ranking-riesgo.json`](./ranking-riesgo.json) — ranking multi-repo (JSON).",
-            "- [`ranking-riesgo.csv`](./ranking-riesgo.csv) — ranking multi-repo (CSV).",
+            "| Acceso | Enlaces | Descripción |",
+            "|---|---|---|",
+            "| Dashboard de cliente | `../` | Visor interactivo (KPIs, módulos, evolución) |",
+            "| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://localhost:9000) | Servidor de calidad del proyecto |",
+            "| Informe maestro | `informe-central.html` · `informe-central.md` | Este documento |",
+            "| Informe ejecutivo | `informe-ejecutivo.html` · `.pdf` | Resumen para stakeholders |",
+            "| Remediaciones | `remediaciones.md` · `.json` · `.patch` | Diffs propuestos (solo informativo) |",
+            "| Ranking multi-repo | `ranking-riesgo.html` · `.json` · `.csv` | Comparativa entre repos |",
+            "| Diagramas C4 | `c4-context.mmd` · `c4-container.mmd` | Arquitectura (Mermaid) |",
+            "| Roadmap | `roadmap.md` | Remediación por fases |",
+            "| Backlog | `backlog.csv` · `backlog.json` | Tareas de remediación |",
+            "| Reporte maestro (JSON) | `../audit-report.json` | Datos completos |",
+            "| Evolución (JSON) | `../audit-history.json` | Snapshots y deltas |",
+            "| Import SonarQube (JSON) | `../sonar-issues.json` | Issues para Generic Issue Import |",
             "",
         ]
         return "\n".join(lines)
@@ -640,44 +630,12 @@ class DeliverablesGenerator:
                 f"<th style='text-align:left;border-bottom:1px solid #ccc;padding:6px;'>Severidad</th></tr>"
                 f"{content}</table>"
             )
-        deliverables_links = "\n".join(
-            f"<li><a href='{name}' style='text-decoration:none;'>"
-            f"<code>{name}</code></a> — {description}</li>"
-            for name, description in [
-                ("c4-context.mmd", "diagrama C4 de contexto (Mermaid)"),
-                ("c4-container.mmd", "diagrama C4 de contenedores (Mermaid)"),
-                ("roadmap.md", "roadmap de remediación (Markdown)"),
-                ("backlog.csv", "backlog de remediación (CSV)"),
-                ("backlog.json", "backlog de remediación (JSON)"),
-                ("informe-central.md", "este informe en Markdown"),
-                ("informe-central.html", "este informe (HTML)"),
-                ("informe-ejecutivo.html", "informe one-page para stakeholders"),
-                ("informe-ejecutivo.pdf", "informe ejecutivo en PDF"),
-            ]
-        )
-        associated_links = "\n".join(
-            f"<li><a href='{href}' style='text-decoration:none;'>"
-            f"<code>{name}</code></a> — {description}</li>"
-            for name, href, description in [
-                ("audit-report.json", "../audit-report.json",
-                 "reporte maestro (JSON)"),
-                ("audit-history.json", "../audit-history.json",
-                 "evolución y snapshots (dashboard)"),
-                ("sonar-issues.json", "../sonar-issues.json",
-                 "issues para importar a SonarQube"),
-                ("remediaciones.md", "remediaciones.md",
-                 "informe de diffs propuestos (MD)"),
-                ("remediaciones.json", "remediaciones.json",
-                 "informe de diffs propuestos (JSON)"),
-                ("remediaciones.patch", "remediaciones.patch",
-                 "patch unificado propuesto"),
-                ("ranking-riesgo.html", "ranking-riesgo.html",
-                 "comparativa multi-repo (HTML)"),
-                ("ranking-riesgo.json", "ranking-riesgo.json",
-                 "comparativa multi-repo (JSON)"),
-                ("ranking-riesgo.csv", "ranking-riesgo.csv",
-                 "comparativa multi-repo (CSV)"),
-            ]
+        accesos_rows = "\n".join(
+            f"<tr><td style='border-bottom:1px solid #eee;padding:6px;'>"
+            f"<strong>{servicio}</strong></td>"
+            f"<td style='border-bottom:1px solid #eee;padding:6px;'>{enlaces}</td>"
+            f"<td style='border-bottom:1px solid #eee;padding:6px;'>{descripcion}</td></tr>"
+            for servicio, enlaces, descripcion in self._accesos_html()
         )
         mermaid_style = (
             "background:#f5f5f5;border:1px solid #ddd;border-radius:4px;"
@@ -733,21 +691,79 @@ class DeliverablesGenerator:
 {"".join(backlog_rows)}
 </table>
 
-<h2>7. Índice de informes y entregables</h2>
-<h3>Entregables generados junto a este informe</h3>
-<ul>
-{deliverables_links}
-</ul>
-<h3>Informes y datos asociados</h3>
-<p>Se generan junto al reporte o en la raíz del dashboard (si se ejecutaron
-<code>--sonar-json</code>, <code>--publish</code>, <code>compare-multi</code> y
-<code>remediate</code>):</p>
-<ul>
-{associated_links}
-</ul>
+<h2>7. Cuadro de accesos</h2>
+<p>Acceso directo a todos los informes y servicios del análisis (los enlaces
+relativos funcionan desde este mismo directorio; los servicios externos, si
+están corriendo):</p>
+<table style="border-collapse:collapse;width:100%;font-size:13px;">
+<tr><th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Acceso</th>
+<th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Enlaces</th>
+<th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">Descripción</th></tr>
+{accesos_rows}
+</table>
 </body>
 </html>
 """
+
+    # --- Cuadro de accesos (tabla de links en el informe maestro) ---
+
+    def _accesos_html(self) -> List[Tuple[str, str, str]]:
+        """Filas de la tabla de accesos: (servicio, enlaces html, descripción)."""
+        import os
+
+        sonar_url = os.environ.get("VIBEAUDIT_SONAR_URL", "http://localhost:9000")
+        dashboard_url = os.environ.get("VIBEAUDIT_DASHBOARD_URL", "../")
+        dashboard_label = (
+            dashboard_url
+            if dashboard_url != "../"
+            else "dashboard (raíz del servidor)"
+        )
+
+        def link(href: str, label: str) -> str:
+            return (
+                f"<a href='{html.escape(href)}' "
+                f"style='text-decoration:none;'><code>{html.escape(label)}</code></a>"
+            )
+
+        return [
+            ("Dashboard de cliente", link(dashboard_url, dashboard_label),
+             "Visor interactivo del análisis (KPIs, módulos, evolución)"),
+            ("SonarQube", link(sonar_url, sonar_url),
+             "Servidor de calidad; proyecto del repo auditado"),
+            ("Informe maestro", link("informe-central.html", "informe-central.html"),
+             "Este documento (HTML)"),
+            ("Informe maestro (MD)", link("informe-central.md", "informe-central.md"),
+             "Este documento en Markdown"),
+            ("Informe ejecutivo",
+             link("informe-ejecutivo.html", "html") + " · "
+             + link("informe-ejecutivo.pdf", "pdf"),
+             "Resumen one-page para stakeholders"),
+            ("Remediaciones",
+             link("remediaciones.md", "md") + " · "
+             + link("remediaciones.json", "json") + " · "
+             + link("remediaciones.patch", "patch"),
+             "Diffs propuestos (solo informativo)"),
+            ("Ranking multi-repo",
+             link("ranking-riesgo.html", "html") + " · "
+             + link("ranking-riesgo.json", "json") + " · "
+             + link("ranking-riesgo.csv", "csv"),
+             "Comparativa de riesgo entre repos"),
+            ("Diagramas C4",
+             link("c4-context.mmd", "contexto") + " · "
+             + link("c4-container.mmd", "contenedores"),
+             "Arquitectura del sistema (Mermaid)"),
+            ("Roadmap", link("roadmap.md", "roadmap.md"),
+             "Remediación por fases según severidad"),
+            ("Backlog",
+             link("backlog.csv", "csv") + " · " + link("backlog.json", "json"),
+             "Tareas de remediación"),
+            ("Reporte maestro (JSON)", link("../audit-report.json", "audit-report.json"),
+             "Datos completos del análisis"),
+            ("Evolución (JSON)", link("../audit-history.json", "audit-history.json"),
+             "Snapshots y deltas del historial"),
+            ("Import SonarQube (JSON)", link("../sonar-issues.json", "sonar-issues.json"),
+             "Issues para Generic Issue Import"),
+        ]
 
     # --- Informe ejecutivo (one-page para stakeholders, sin secretos) ---
 

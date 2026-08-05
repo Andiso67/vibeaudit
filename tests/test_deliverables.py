@@ -215,11 +215,12 @@ class TestInformeCentral:
         assert "## 4. Diagrama C4 — Contenedores" in md
         assert "## 5. Roadmap de remediación por fases" in md
         assert "## 6. Backlog de remediación" in md
-        assert "## 7. Índice de informes y entregables" in md
-        assert "[`backlog.csv`](./backlog.csv)" in md
-        assert "[`informe-ejecutivo.pdf`](./informe-ejecutivo.pdf)" in md
-        assert "remediaciones.patch" in md
+        assert "## 7. Cuadro de accesos" in md
+        assert "| Acceso | Enlaces | Descripción |" in md
+        assert "SonarQube" in md
+        assert "remediaciones.md" in md
         assert "ranking-riesgo.html" in md
+        assert "audit-report.json" in md
         assert "```mermaid" in md  # embebe el diagrama C4
 
     def test_html_embebe_tablas_y_escapa_contenido(self):
@@ -240,12 +241,13 @@ class TestInformeCentral:
         assert "<h3>Fase 2</h3>" in page
         assert "<h3>Fase 3</h3>" in page
         assert "Sin hallazgos en esta fase" in page  # fase 3 vacía en el sample
-        assert "Índice de informes y entregables" in page
-        assert "backlog.csv" in page and "backlog.json" in page
-        assert "roadmap.md" in page and "c4-context.mmd" in page
+        assert "Cuadro de accesos" in page
+        assert "Dashboard de cliente" in page
+        assert "SonarQube" in page and "http://localhost:9000" in page
         assert "informe-ejecutivo.pdf" in page
         assert "ranking-riesgo.csv" in page and "remediaciones.patch" in page
         assert "../audit-report.json" in page
+        assert "../audit-history.json" in page
 
     def test_html_backlog_no_trunca_recomendacion(self):
         report = AuditReport(

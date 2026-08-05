@@ -270,7 +270,7 @@ class LLMFinding(BaseModel):
 class CloudIssue(BaseModel):
     """Configuración insegura detectada en la nube (escaneo de solo lectura)."""
 
-    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP)")
+    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP, Vercel, Supabase)")
     rule: str = Field(..., min_length=1, description="Identificador de la regla (ej. aws-s3-public)")
     resource: str = Field(..., min_length=1, description="Identificador del recurso afectado")
     resource_type: str = Field(default="", description="Tipo de recurso (bucket, security-group...)")
@@ -285,7 +285,7 @@ class CloudIssue(BaseModel):
 class CloudResource(BaseModel):
     """Recurso de nube analizado (solo lectura), aunque no tenga hallazgos."""
 
-    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP)")
+    provider: str = Field(..., min_length=1, description="Proveedor (AWS, Azure, GCP, Vercel, Supabase)")
     resource_type: str = Field(..., min_length=1, description="Tipo de recurso (bucket, security-group...)")
     resource: str = Field(..., min_length=1, description="Identificador del recurso")
     region: str = Field(default="", description="Región del recurso")

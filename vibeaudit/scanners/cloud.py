@@ -1,12 +1,18 @@
-"""Escaneo de nube de solo lectura (AWS/Azure/GCP).
+"""Escaneo de nube de solo lectura (AWS/Azure/GCP/Vercel/Supabase).
 
 Ejecuta consultas seguras a las APIs del proveedor para detectar configuraciones
-inseguras (buckets S3 públicos, security groups abiertos, etc.). Nunca modifica
+inseguras (buckets S3 públicos, security groups abiertos, previews de Vercel
+sin protección, PITR deshabilitado en Supabase, etc.). Nunca modifica
 recursos y no exige permisos de escritura. Sin credenciales configuradas lanza
 un error limpio (RuntimeError) que el CLI propaga como exit 1.
+
+AWS/Azure/GCP usan SDK (boto3); Vercel y Supabase usan sus APIs REST con
+token (``urllib``, sin dependencias extra).
 """
 
+import json
 import os
+import urllib.request
 from typing import Dict, List, Optional
 
 from rich.console import Console
@@ -20,6 +26,14 @@ PROVIDER_ENV_VARS: Dict[str, List[str]] = {
     "aws": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_PROFILE", "AWS_SESSION_TOKEN"],
     "azure": ["AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"],
     "gcp": ["GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_PROJECT"],
+    "vercel": ["VERCEL_TOKEN"],
+    "supabase": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_PROJECT_REF"],
+}
+
+# Base URLs de las APIs REST de solo lectura
+REST_API_BASE: Dict[str, str] = {
+    "vercel": "https://api.vercel.com",
+    "supabase": "https://api.supabase.com",
 }
 
 OPEN_SG_RECOMMENDATION = (
@@ -30,14 +44,45 @@ PUBLIC_S3_RECOMMENDATION = (
     "El bucket S3 permite acceso anónimo. Recomendado: bloquear el acceso "
     "público del bucket y usar IAM para acceso autenticado."
 )
+VERCEL_PROTECTION_RECOMMENDATION = (
+    "Activa la protección por contraseña (o SSO) en el proyecto de Vercel "
+    "para que los deployments de preview no sean accesibles públicamente."
+)
+VERCEL_PUBLIC_SECRET_RECOMMENDATION = (
+    "Las variables con prefijo NEXT_PUBLIC_ viajan al navegador. Renombra y "
+    "sustituye el secreto por una variable de servidor (sin NEXT_PUBLIC_) y "
+    "usa un backend proxy si el cliente lo necesita."
+)
+VERCEL_TARGET_RECOMMENDATION = (
+    "Restringe los secrets de entorno únicamente al target 'production' en "
+    "Vercel (target 'preview'/'development' los expone a despliegues de "
+    "pruebas y a más personas con acceso al equipo)."
+)
+SUPABASE_PITR_RECOMMENDATION = (
+    "Activa el Point-in-Time Recovery (PITR) en Supabase para poder restaurar "
+    "la base de datos ante errores o incidentes (mantiene daily backups y "
+    "logs de redo)."
+)
+SUPABASE_SSL_RECOMMENDATION = (
+    "Fuerza conexiones SSL/TLS a la base de datos de Supabase "
+    "(connection_ssl en el config de Postgres)."
+)
+SUPABASE_SIGNUP_RECOMMENDATION = (
+    "Desactiva el registro público (enable_signup) si el alta de usuarios se "
+    "gestiona de forma controlada, y aplica reglas de confirmación de email."
+)
+SUPABASE_NETWORK_RECOMMENDATION = (
+    "Define network restrictions (allowlist de CIDRs) en Supabase para "
+    "restringir qué direcciones IP pueden conectar con la API y la base de datos."
+)
 
 
 class CloudScanner:
     """Escanea proveedores de nube (solo lectura) y devuelve configs inseguras
     como :class:`CloudIssue`.
 
-    Solo consulta APIs de lectura (boto3). El constructor acepta un dict
-    ``clients`` (provider -> cliente fake) para los tests, sin red.
+    Solo consulta APIs de lectura (boto3 y APIs REST). El constructor acepta
+    un dict ``clients`` (provider -> cliente fake) para los tests, sin red.
     """
 
     def __init__(
@@ -45,7 +90,7 @@ class CloudScanner:
         providers: Optional[List[str]] = None,
         clients: Optional[Dict[str, object]] = None,
     ):
-        self.providers = providers or ["aws", "azure", "gcp"]
+        self.providers = providers or ["aws", "azure", "gcp", "vercel", "supabase"]
         self.clients = clients or {}
         self.resources: List[dict] = []
 
@@ -95,8 +140,9 @@ class CloudScanner:
         if not providers:
             raise RuntimeError(
                 "No hay credenciales de nube configuradas. Define AWS_ACCESS_KEY_ID/"
-                "AWS_SECRET_ACCESS_KEY (o --profile), AZURE_CLIENT_ID/... o "
-                "GOOGLE_APPLICATION_CREDENTIALS y reintenta."
+                "AWS_SECRET_ACCESS_KEY (o --profile), AZURE_CLIENT_ID/..., "
+                "GOOGLE_APPLICATION_CREDENTIALS, VERCEL_TOKEN o "
+                "SUPABASE_ACCESS_TOKEN y reintenta."
             )
 
         issues: List[CloudIssue] = []
@@ -107,6 +153,8 @@ class CloudScanner:
                         "aws": self.scan_aws,
                         "azure": self.scan_azure,
                         "gcp": self.scan_gcp,
+                        "vercel": self.scan_vercel,
+                        "supabase": self.scan_supabase,
                     }[provider]()
                 )
             except NotImplementedError as exc:
@@ -256,6 +304,267 @@ class CloudScanner:
             "El escaneo GCP requiere el SDK google-cloud-storage y credenciales "
             "(GOOGLE_APPLICATION_CREDENTIALS); se omitirá hasta configurarlo."
         )
+
+    # --- Proveedores REST (Vercel / Supabase) --------------------------------
+
+    def _api_get(self, provider: str, path: str, headers: Dict[str, str]) -> Optional[dict]:
+        """GET de solo lectura a la API REST del proveedor; JSON o None.
+
+        En tests se inyecta un cliente fake con ``clients[provider]`` que
+        implementa ``request(method, url, headers)`` y devuelve una respuesta
+        con ``.status`` y ``.json()``. Errores de red o status >= 400 devuelven
+        None (se omiten, con advertencia en consola).
+        """
+        url = REST_API_BASE[provider] + path
+        fake = self.clients.get(provider)
+        if fake is not None:
+            response = fake.request("GET", url, headers)
+            if response.status >= 400:
+                return None
+            return response.json()
+        try:
+            with urllib.request.urlopen(
+                urllib.request.Request(url, headers=headers), timeout=15
+            ) as resp:
+                status = resp.status
+                body = resp.read().decode("utf-8", "replace")
+        except Exception as exc:  # noqa: BLE001 - errores de red/API se omiten
+            console.print(f"[yellow]Advertencia:[/] {provider}: {path}: {exc}")
+            return None
+        if status >= 400:
+            console.print(
+                f"[yellow]Advertencia:[/] {provider}: {path}: HTTP {status}"
+            )
+            return None
+        return json.loads(body) if body else None
+
+    def scan_vercel(self) -> List[CloudIssue]:
+        """Consulta la API de Vercel (solo lectura) para detectar previews sin
+        protección y env vars con secretos expuestos (NEXT_PUBLIC_)."""
+        token = os.environ.get("VERCEL_TOKEN")
+        if not token:
+            raise RuntimeError(
+                "VERCEL_TOKEN no configurado; el escaneo de Vercel requiere el "
+                "token de la cuenta (Settings > Tokens)."
+            )
+        headers = {"Authorization": f"Bearer {token}"}
+        issues: List[CloudIssue] = []
+
+        projects = self._api_get("vercel", "/v9/projects", headers) or {}
+        for project in projects.get("projects") or []:
+            pid = project.get("id")
+            name = project.get("name") or pid or "proyecto-desconocido"
+            if not pid:
+                continue
+            self.resources.append(
+                {
+                    "provider": "vercel",
+                    "resource_type": "vercel-project",
+                    "resource": name,
+                    "region": "",
+                    "status": "ok",
+                }
+            )
+
+            password = self._api_get(
+                "vercel", f"/v1/projects/{pid}/password-protection", headers
+            ) or {}
+            sso = self._api_get(
+                "vercel", f"/v1/projects/{pid}/sso-protection", headers
+            ) or {}
+            protected = bool(
+                password.get("protectionEnabled")
+                or sso.get("ssoEnabled")
+            )
+            if not protected:
+                self.resources[-1]["status"] = "issue"
+                issues.append(
+                    CloudIssue(
+                        provider="vercel",
+                        rule="vercel-preview-protection-disabled",
+                        resource=name,
+                        resource_type="vercel-project",
+                        severity=Severity.MEDIUM,
+                        description=(
+                            f"El proyecto '{name}' tiene deployments de "
+                            f"preview accesibles públicamente (protección por "
+                            f"contraseña y SSO deshabilitados)."
+                        ),
+                        recommendation=VERCEL_PROTECTION_RECOMMENDATION,
+                    )
+                )
+
+            envs = self._api_get(
+                "vercel", f"/v9/projects/{pid}/env", headers
+            ) or {}
+            for env in envs.get("envs") or []:
+                key = env.get("key") or ""
+                targets = env.get("target") or []
+                secret_hint = any(
+                    hint in key.upper()
+                    for hint in ("SECRET", "SERVICE_ROLE", "PRIVATE", "TOKEN", "PASSWORD", "API_KEY")
+                )
+                if key.startswith("NEXT_PUBLIC_") and secret_hint:
+                    self.resources[-1]["status"] = "issue"
+                    issues.append(
+                        CloudIssue(
+                            provider="vercel",
+                            rule="vercel-public-env-secret",
+                            resource=f"{name}:{key}",
+                            resource_type="vercel-env",
+                            severity=Severity.HIGH,
+                            description=(
+                                f"La variable '{key}' del proyecto '{name}' "
+                                f"es pública (NEXT_PUBLIC_) y su nombre sugiere "
+                                f"un secreto: se envía al navegador."
+                            ),
+                            recommendation=VERCEL_PUBLIC_SECRET_RECOMMENDATION,
+                        )
+                    )
+                elif secret_hint and (
+                    "preview" in targets or "development" in targets
+                ):
+                    self.resources[-1]["status"] = "issue"
+                    issues.append(
+                        CloudIssue(
+                            provider="vercel",
+                            rule="vercel-env-secret-unprotected-targets",
+                            resource=f"{name}:{key}",
+                            resource_type="vercel-env",
+                            severity=Severity.LOW,
+                            description=(
+                                f"El secreto '{key}' del proyecto '{name}' "
+                                f"está disponible en targets "
+                                f"{', '.join(targets) or 'no-production'}."
+                            ),
+                            recommendation=VERCEL_TARGET_RECOMMENDATION,
+                        )
+                    )
+        return issues
+
+    def scan_supabase(self) -> List[CloudIssue]:
+        """Consulta la Management API de Supabase (solo lectura) para detectar
+        PITR deshabilitado, SSL de conexión apagado, signup público y red sin
+        restricciones."""
+        token = os.environ.get("SUPABASE_ACCESS_TOKEN")
+        if not token:
+            raise RuntimeError(
+                "SUPABASE_ACCESS_TOKEN no configurado; el escaneo de Supabase "
+                "requiere el access token de la cuenta (Dashboard > Account "
+                "Settings > Access Tokens)."
+            )
+        headers = {"Authorization": f"Bearer {token}"}
+        issues: List[CloudIssue] = []
+
+        ref = os.environ.get("SUPABASE_PROJECT_REF")
+        if ref:
+            refs = [ref]
+        else:
+            projects = self._api_get("supabase", "/v1/projects", headers) or {}
+            refs = [
+                p.get("ref")
+                for p in (projects.get("projects") or [])
+                if p.get("ref")
+            ]
+
+        for ref in refs:
+            self.resources.append(
+                {
+                    "provider": "supabase",
+                    "resource_type": "supabase-project",
+                    "resource": ref,
+                    "region": "",
+                    "status": "ok",
+                }
+            )
+
+            backups = self._api_get(
+                "supabase", f"/v1/projects/{ref}/backups", headers
+            ) or {}
+            if backups.get("pitr_enabled") is False:
+                self.resources[-1]["status"] = "issue"
+                issues.append(
+                    CloudIssue(
+                        provider="supabase",
+                        rule="supabase-pitr-disabled",
+                        resource=ref,
+                        resource_type="supabase-project",
+                        severity=Severity.HIGH,
+                        description=(
+                            f"El proyecto '{ref}' tiene el Point-in-Time "
+                            f"Recovery deshabilitado; ante un error o ataque "
+                            f"solo se puede restaurar al último backup diario."
+                        ),
+                        recommendation=SUPABASE_PITR_RECOMMENDATION,
+                    )
+                )
+
+            pg = self._api_get(
+                "supabase",
+                f"/v1/projects/{ref}/config/database/postgres",
+                headers,
+            ) or {}
+            if pg.get("connection_ssl") is False:
+                self.resources[-1]["status"] = "issue"
+                issues.append(
+                    CloudIssue(
+                        provider="supabase",
+                        rule="supabase-connection-ssl-disabled",
+                        resource=ref,
+                        resource_type="supabase-project",
+                        severity=Severity.MEDIUM,
+                        description=(
+                            f"El proyecto '{ref}' no fuerza SSL/TLS en las "
+                            f"conexiones a Postgres."
+                        ),
+                        recommendation=SUPABASE_SSL_RECOMMENDATION,
+                    )
+                )
+
+            auth = self._api_get(
+                "supabase", f"/v1/projects/{ref}/config/auth", headers
+            ) or {}
+            if auth.get("enable_signup") is True:
+                self.resources[-1]["status"] = "issue"
+                issues.append(
+                    CloudIssue(
+                        provider="supabase",
+                        rule="supabase-public-signup-enabled",
+                        resource=ref,
+                        resource_type="supabase-project",
+                        severity=Severity.LOW,
+                        description=(
+                            f"El proyecto '{ref}' permite el registro público "
+                            f"de usuarios sin validación adicional."
+                        ),
+                        recommendation=SUPABASE_SIGNUP_RECOMMENDATION,
+                    )
+                )
+
+            net = self._api_get(
+                "supabase",
+                f"/v1/projects/{ref}/config/network-restrictions",
+                headers,
+            )
+            if net is not None and not (net.get("config") or {}).get(
+                "allowedCidrs"
+            ):
+                self.resources[-1]["status"] = "issue"
+                issues.append(
+                    CloudIssue(
+                        provider="supabase",
+                        rule="supabase-network-restrictions-off",
+                        resource=ref,
+                        resource_type="supabase-project",
+                        severity=Severity.LOW,
+                        description=(
+                            f"El proyecto '{ref}' no tiene restricciones de "
+                            f"red (allowlist de IPs) configuradas."
+                        ),
+                        recommendation=SUPABASE_NETWORK_RECOMMENDATION,
+                    )
+                )
+        return issues
 
     @staticmethod
     def _public_acl_permissions(acl: dict) -> List[str]:

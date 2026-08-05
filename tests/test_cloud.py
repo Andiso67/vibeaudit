@@ -6,6 +6,34 @@ from vibeaudit.models import Severity
 from vibeaudit.scanners.cloud import CloudScanner
 
 
+class _FakeHTTPResponse:
+    """Respuesta de la API REST fake: status + JSON."""
+
+    def __init__(self, status, data):
+        self.status = status
+        self._data = data
+
+    def json(self):
+        return self._data
+
+
+class FakeHTTP:
+    """Cliente HTTP fake para Vercel/Supabase: url -> (status, json)."""
+
+    def __init__(self, routes):
+        self.routes = routes
+        self.calls = []
+
+    def request(self, method, url, headers):
+        self.calls.append((method, url))
+        for prefix, (status, data) in sorted(
+            self.routes.items(), key=lambda kv: len(kv[0]), reverse=True
+        ):
+            if url.startswith(prefix):
+                return _FakeHTTPResponse(status, data)
+        return _FakeHTTPResponse(404, {})
+
+
 class FakeS3:
     """Cliente S3 fake: un bucket público y otro privado."""
 
@@ -203,6 +231,9 @@ class TestCloudScannerCredenciales:
             "GOOGLE_APPLICATION_CREDENTIALS",
             "GCLOUD_PROJECT",
             "GOOGLE_PROJECT",
+            "VERCEL_TOKEN",
+            "SUPABASE_ACCESS_TOKEN",
+            "SUPABASE_PROJECT_REF",
         ):
             monkeypatch.delenv(var, raising=False)
         scanner = CloudScanner()
@@ -219,3 +250,171 @@ class TestCloudScannerCredenciales:
         monkeypatch.setenv("AZURE_TENANT_ID", "fake-tenant")
         scanner = CloudScanner(providers=["azure"])
         assert scanner.configured_providers() == ["azure"]
+
+    def test_vercel_configurado_por_env(self, monkeypatch):
+        monkeypatch.setenv("VERCEL_TOKEN", "fake-token")
+        scanner = CloudScanner(providers=["vercel"])
+        assert scanner.configured_providers() == ["vercel"]
+
+    def test_supabase_configurado_por_env(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_ACCESS_TOKEN", "fake-token")
+        scanner = CloudScanner(providers=["supabase"])
+        assert scanner.configured_providers() == ["supabase"]
+
+
+class TestCloudScannerVercel:
+    ROUTES = {
+        "https://api.vercel.com/v9/projects": (
+            200,
+            {"projects": [{"id": "prj_1", "name": "bojuboard"}]},
+        ),
+        "https://api.vercel.com/v1/projects/prj_1/password-protection": (
+            200,
+            {"protectionEnabled": False},
+        ),
+        "https://api.vercel.com/v1/projects/prj_1/sso-protection": (
+            200,
+            {"ssoEnabled": False},
+        ),
+        "https://api.vercel.com/v9/projects/prj_1/env": (
+            200,
+            {
+                "envs": [
+                    {"key": "NEXT_PUBLIC_SUPABASE_URL", "target": ["production"]},
+                    {
+                        "key": "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY",
+                        "target": ["production"],
+                    },
+                    {
+                        "key": "SUPABASE_SERVICE_ROLE_KEY",
+                        "target": ["preview", "development"],
+                    },
+                ]
+            },
+        ),
+    }
+
+    def test_detecta_previews_sin_proteccion(self, monkeypatch):
+        monkeypatch.setenv("VERCEL_TOKEN", "t")
+        fake = FakeHTTP(self.ROUTES)
+        scanner = CloudScanner(providers=["vercel"], clients={"vercel": fake})
+        issues = scanner.scan()
+
+        rules = {i.rule: i for i in issues}
+        assert "vercel-preview-protection-disabled" in rules
+        issue = rules["vercel-preview-protection-disabled"]
+        assert issue.resource == "bojuboard"
+        assert issue.severity == Severity.MEDIUM
+        assert any(r["resource"] == "bojuboard" and r["status"] == "issue" for r in scanner.resources)
+
+    def test_env_secret_publico_y_targets_no_protegidos(self, monkeypatch):
+        monkeypatch.setenv("VERCEL_TOKEN", "t")
+        fake = FakeHTTP(self.ROUTES)
+        scanner = CloudScanner(providers=["vercel"], clients={"vercel": fake})
+        issues = scanner.scan()
+
+        rules = {i.rule: i for i in issues}
+        public = rules["vercel-public-env-secret"]
+        assert public.resource == "bojuboard:NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY"
+        assert public.severity == Severity.HIGH
+
+        targets = rules["vercel-env-secret-unprotected-targets"]
+        assert targets.resource == "bojuboard:SUPABASE_SERVICE_ROLE_KEY"
+        assert targets.severity == Severity.LOW
+
+    def test_proyecto_protegido_no_genera_issue_de_preview(self, monkeypatch):
+        routes = dict(self.ROUTES)
+        routes["https://api.vercel.com/v1/projects/prj_1/password-protection"] = (
+            200,
+            {"protectionEnabled": True},
+        )
+        routes["https://api.vercel.com/v9/projects/prj_1/env"] = (
+            200,
+            {"envs": []},
+        )
+        monkeypatch.setenv("VERCEL_TOKEN", "t")
+        scanner = CloudScanner(
+            providers=["vercel"], clients={"vercel": FakeHTTP(routes)}
+        )
+        issues = scanner.scan()
+        assert not any(i.rule == "vercel-preview-protection-disabled" for i in issues)
+        assert not any(i.rule == "vercel-public-env-secret" for i in issues)
+
+
+class TestCloudScannerSupabase:
+    ROUTES = {
+        "https://api.supabase.com/v1/projects": (
+            200,
+            {"projects": [{"ref": "abc123"}]},
+        ),
+        "https://api.supabase.com/v1/projects/abc123/backups": (
+            200,
+            {"pitr_enabled": False},
+        ),
+        "https://api.supabase.com/v1/projects/abc123/config/database/postgres": (
+            200,
+            {"connection_ssl": False},
+        ),
+        "https://api.supabase.com/v1/projects/abc123/config/auth": (
+            200,
+            {"enable_signup": True},
+        ),
+        "https://api.supabase.com/v1/projects/abc123/config/network-restrictions": (
+            200,
+            {"config": {"allowedCidrs": []}},
+        ),
+    }
+
+    def test_detecta_pitr_ssl_signup_y_red(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_ACCESS_TOKEN", "t")
+        fake = FakeHTTP(self.ROUTES)
+        scanner = CloudScanner(providers=["supabase"], clients={"supabase": fake})
+        issues = scanner.scan()
+
+        rules = {i.rule: i for i in issues}
+        assert rules["supabase-pitr-disabled"].severity == Severity.HIGH
+        assert rules["supabase-pitr-disabled"].resource == "abc123"
+        assert rules["supabase-connection-ssl-disabled"].severity == Severity.MEDIUM
+        assert rules["supabase-public-signup-enabled"].severity == Severity.LOW
+        assert rules["supabase-network-restrictions-off"].severity == Severity.LOW
+        assert all(r["status"] == "issue" for r in scanner.resources)
+
+    def test_project_ref_por_env_omite_listado(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_ACCESS_TOKEN", "t")
+        monkeypatch.setenv("SUPABASE_PROJECT_REF", "xyz789")
+        routes = {
+            "https://api.supabase.com/v1/projects/xyz789/backups": (
+                200,
+                {"pitr_enabled": True},
+            ),
+            "https://api.supabase.com/v1/projects/xyz789/config/database/postgres": (
+                200,
+                {"connection_ssl": True},
+            ),
+            "https://api.supabase.com/v1/projects/xyz789/config/auth": (
+                200,
+                {"enable_signup": False},
+            ),
+            "https://api.supabase.com/v1/projects/xyz789/config/network-restrictions": (
+                200,
+                {"config": {"allowedCidrs": ["10.0.0.0/8"]}},
+            ),
+        }
+        fake = FakeHTTP(routes)
+        scanner = CloudScanner(providers=["supabase"], clients={"supabase": fake})
+        issues = scanner.scan()
+
+        assert issues == []
+        assert not any(url == "https://api.supabase.com/v1/projects" for _, url in fake.calls)
+        assert all(r["resource"] == "xyz789" for r in scanner.resources)
+
+    def test_errores_api_no_generan_falsos_positivos(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_ACCESS_TOKEN", "t")
+        routes = {
+            "https://api.supabase.com/v1/projects": (200, {"projects": []}),
+        }
+        scanner = CloudScanner(
+            providers=["supabase"], clients={"supabase": FakeHTTP(routes)}
+        )
+        issues = scanner.scan()
+        assert issues == []

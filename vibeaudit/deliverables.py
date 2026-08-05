@@ -103,13 +103,7 @@ class DeliverablesGenerator:
         fw = [f.lower() for f in meta.frameworks]
 
         # Tipos de recursos de nube: de cloud_resources y de las rules de issues
-        cloud_types = {r.resource_type for r in self.report.cloud_resources}
-        for issue in self.report.cloud_issues:
-            rule = (issue.rule or "").lower()
-            if "s3" in rule:
-                cloud_types.add("s3-bucket")
-            if "security-group" in rule or "ec2" in rule:
-                cloud_types.add("security-group")
+        cloud_types = self._cloud_types()
 
         web_label = "Aplicación"
         web_hint = ""
@@ -153,6 +147,21 @@ class DeliverablesGenerator:
             "sgs": sum(1 for r in self.report.cloud_resources if r.resource_type == "security-group"),
         }
 
+    def _cloud_types(self) -> set:
+        """Tipos de recursos de nube: de cloud_resources y de las rules de issues."""
+        cloud_types = {r.resource_type for r in self.report.cloud_resources}
+        for issue in self.report.cloud_issues:
+            rule = (issue.rule or "").lower()
+            if "s3" in rule:
+                cloud_types.add("s3-bucket")
+            if "security-group" in rule or "ec2" in rule:
+                cloud_types.add("security-group")
+            if rule.startswith("vercel-"):
+                cloud_types.add("vercel-project")
+            if rule.startswith("supabase-"):
+                cloud_types.add("supabase-project")
+        return cloud_types
+
     def c4_context(self) -> str:
         """C4 nivel 1: el sistema auditado y su entorno (datos del reporte)."""
         meta = self.report.project
@@ -179,9 +188,26 @@ class DeliverablesGenerator:
             cloud_bits.append("S3")
         if comp["has_ec2"]:
             cloud_bits.append("EC2/VPC")
+        if "vercel-project" in self._cloud_types():
+            cloud_bits.append("Vercel")
+        if "supabase-project" in self._cloud_types():
+            cloud_bits.append("Supabase")
         if cloud_bits:
+            if not any(b in ("Vercel", "Supabase") for b in cloud_bits):
+                label = "Amazon Web Services"
+            elif not any(b in ("S3", "EC2/VPC") for b in cloud_bits):
+                label = ", ".join(cloud_bits)
+            else:
+                label = "Amazon Web Services + " + ", ".join(
+                    b for b in cloud_bits if b in ("Vercel", "Supabase")
+                )
+            detail = (
+                ""
+                if label == ", ".join(cloud_bits)
+                else f'<br/>({", ".join(cloud_bits)})'
+            )
             lines += [
-                f'    AWS["Amazon Web Services<br/>({", ".join(cloud_bits)})"]',
+                f'    AWS["{label}{detail}"]',
                 "    SYS -->|corre y almacena en| AWS",
             ]
         if comp["has_cicd"]:

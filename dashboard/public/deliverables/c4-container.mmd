@@ -1,16 +1,6 @@
 ```mermaid
 flowchart LR
-    subgraph APP["golf-tracker"]
+    subgraph APP["bojuboard-main"]
         WEB["Aplicación web Next.js"]
-        API["API (Hono)"]
-        WEB -->|HTTP| API
-        DB["PostgreSQL"]
-        API -->|persiste| DB
     end
-    S3["Amazon S3<br/>(almacenamiento)"]
-    NET["Amazon EC2 / VPC"]
-    API -->|usa| S3
-    API -->|usa| NET
-    DKR["Contenedores<br/>(Docker)"]
-    API -->|empaquetado en| DKR
 ```

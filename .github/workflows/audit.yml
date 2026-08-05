@@ -1,0 +1,52 @@
+name: VibeAudit
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Auditoría de seguridad
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar vibeaudit y herramientas de escaneo
+        run: |
+          pip install --quiet --upgrade pip
+          pip install --quiet .
+          pip install --quiet semgrep checkov
+          mkdir -p "$HOME/bin"
+          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
+          curl -sL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" | tar -xz -C "$HOME/bin" gitleaks
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Escanear (solo lectura, sin modificar el repo)
+        run: |
+          vibeaudit scan --path . \
+            --output audit-report.json \
+            --sonar-json sonar-issues.json \
+            --history .vibeaudit-history
+
+      - name: Subir reportes como artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: vibeaudit-reportes
+          path: |
+            audit-report.json
+            sonar-issues.json
+            .vibeaudit-history/index.json
+          if-no-files-found: error

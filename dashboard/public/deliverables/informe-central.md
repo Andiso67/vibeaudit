@@ -403,7 +403,7 @@ Acceso directo a todos los informes y servicios del análisis:
 | Acceso | Enlaces | Descripción |
 |---|---|---|
 | Dashboard de cliente | `../` | Visor interactivo (KPIs, módulos, evolución) |
-| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://localhost:9000) | Servidor de calidad del proyecto |
+| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://andiso67lab.tail809b38.ts.net:9000) | Servidor de calidad del proyecto |
 | Informe maestro | `informe-central.html` · `informe-central.md` | Este documento |
 | Informe ejecutivo | `informe-ejecutivo.html` · `.pdf` | Resumen para stakeholders |
 | Remediaciones | `remediaciones.md` · `.json` · `.patch` | Diffs propuestos (solo informativo) |

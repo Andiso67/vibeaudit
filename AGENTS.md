@@ -98,3 +98,15 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
 - `FakeResult(returncode, stdout, stderr)` imita el resultado de subprocess.
 - El test de ingester crea un repo git real en `tmp_path` (git init + commit).
 - Repos de prueba: `docker/compose` (Go), usar `git init` local para el resto.
+
+## URLs de acceso y producción (pendiente)
+- Acceso actual a servicios por **Tailscale** (NO localhost): dashboard
+  `http://andiso67lab.tail809b38.ts.net:3000`, SonarQube
+  `http://andiso67lab.tail809b38.ts.net:9000`. Los links del informe maestro
+  usan estos defaults, sobreescribibles con `VIBEAUDIT_SONAR_URL` y
+  `VIBEAUDIT_DASHBOARD_URL`.
+- **Producción (planeada, aún NO hacerla)**: llevarlo a Docker y desplegarlo
+  en una EC2. En ese momento habrá que cambiar estos defaults por el
+  dominio/URL definitivo, revisar puertos/CORS del dashboard y de la API
+  (`vibeaudit/api.py`, uvicorn :8901), y actualizar las credenciales de
+  SonarQube (hoy `admin`/`Admin!VibeAudit2026`).

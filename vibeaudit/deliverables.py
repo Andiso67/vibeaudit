@@ -543,7 +543,7 @@ class DeliverablesGenerator:
             "| Acceso | Enlaces | Descripción |",
             "|---|---|---|",
             "| Dashboard de cliente | `../` | Visor interactivo (KPIs, módulos, evolución) |",
-            "| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://localhost:9000) | Servidor de calidad del proyecto |",
+            "| SonarQube | `VIBEAUDIT_SONAR_URL` (default http://andiso67lab.tail809b38.ts.net:9000) | Servidor de calidad del proyecto |",
             "| Informe maestro | `informe-central.html` · `informe-central.md` | Este documento |",
             "| Informe ejecutivo | `informe-ejecutivo.html` · `.pdf` | Resumen para stakeholders |",
             "| Remediaciones | `remediaciones.md` · `.json` · `.patch` | Diffs propuestos (solo informativo) |",
@@ -711,8 +711,14 @@ están corriendo):</p>
         """Filas de la tabla de accesos: (servicio, enlaces html, descripción)."""
         import os
 
-        sonar_url = os.environ.get("VIBEAUDIT_SONAR_URL", "http://localhost:9000")
-        dashboard_url = os.environ.get("VIBEAUDIT_DASHBOARD_URL", "../")
+        # Acceso actual por Tailscale; en producción se sustituirá por el
+        # dominio/URL definitivo al desplegar en EC2 (ver AGENTS.md).
+        sonar_url = os.environ.get(
+            "VIBEAUDIT_SONAR_URL", "http://andiso67lab.tail809b38.ts.net:9000"
+        )
+        dashboard_url = os.environ.get(
+            "VIBEAUDIT_DASHBOARD_URL", "http://andiso67lab.tail809b38.ts.net:3000"
+        )
         dashboard_label = (
             dashboard_url
             if dashboard_url != "../"

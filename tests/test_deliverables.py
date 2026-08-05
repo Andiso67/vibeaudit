@@ -243,7 +243,8 @@ class TestInformeCentral:
         assert "Sin hallazgos en esta fase" in page  # fase 3 vacía en el sample
         assert "Cuadro de accesos" in page
         assert "Dashboard de cliente" in page
-        assert "SonarQube" in page and "http://localhost:9000" in page
+        assert "SonarQube" in page and "andiso67lab.tail809b38.ts.net:9000" in page
+        assert "andiso67lab.tail809b38.ts.net:3000" in page
         assert "informe-ejecutivo.pdf" in page
         assert "ranking-riesgo.csv" in page and "remediaciones.patch" in page
         assert "../audit-report.json" in page

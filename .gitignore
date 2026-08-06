@@ -48,3 +48,14 @@ reports/
 
 # Sonar scanner
 .scannerwork/
+
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+
+# Claves SSH generadas por Terraform
+*-key.pem
+

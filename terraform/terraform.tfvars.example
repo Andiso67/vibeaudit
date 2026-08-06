@@ -1,0 +1,19 @@
+# Copia este archivo a terraform.tfvars y rellena los valores reales.
+# terraform.tfvars NO debe subirse al repositorio (está en .gitignore).
+
+region            = "us-east-1"
+stack_name        = "vibeaudit"
+instance_type     = "t3.medium"
+volume_size_gb    = 20
+
+# Hostname sin sufijo (p. ej. vibeaudit -> vibeaudit.duckdns.org)
+duckdns_host      = "miApp"
+
+# Token de la cuenta en https://www.duckdns.org
+duckdns_token     = "cambia-por-tu-token"
+
+# Contraseña maestra de Postgres (genera una fuerte: openssl rand -base64 24)
+postgres_password = "cambia-por-una-contrasena-fuerte"
+
+# Opcional: restringir SSH a tu IP (curl https://checkip.amazonaws.com)
+# ssh_cidr         = "1.2.3.4/32"

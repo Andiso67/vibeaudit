@@ -1,0 +1,98 @@
+# Stack de producción de VibeAudit para AWS EC2 (standalone).
+#
+# Despliegue en EC2 (Amazon Linux / Ubuntu con Docker + Compose):
+#   cp .env.prod.example .env
+#   editar .env  (URL DuckDNS, credenciales Postgres, tokens de nube)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml --profile sonar up -d  # + SonarQube (opcional)
+#
+# Prueba local sin chocar con el entorno dev (puertos alternativos):
+#   NEXT_PUBLIC_API_URL=http://localhost:8100 \
+#   VIBEAUDIT_CORS_ORIGINS=http://localhost:3100 \
+#   API_PORT=8100 DASHBOARD_PORT=3100 \
+#   docker compose -f docker-compose.prod.yml -p vibeaudit-prod up -d --build
+#
+# Parar: docker compose -f docker-compose.prod.yml down  (conserva volúmenes)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vibeaudit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vibeaudit}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibeaudit} -d ${POSTGRES_DB:-vibeaudit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VIBEAUDIT_DATABASE_URL: postgresql://${POSTGRES_USER:-vibeaudit}:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@postgres:5432/${POSTGRES_DB:-vibeaudit}
+      VIBEAUDIT_ARTIFACTS: /data/artifacts
+      VIBEAUDIT_HISTORY: /data/history
+      VIBEAUDIT_API_HOST: 0.0.0.0
+      VIBEAUDIT_API_PORT: 8000
+      # Orígenes del dashboard permitidos por CORS (dominio DuckDNS + local)
+      VIBEAUDIT_CORS_ORIGINS: ${VIBEAUDIT_CORS_ORIGINS:-http://localhost:3000}
+      VERCEL_TOKEN: ${VERCEL_TOKEN:-}
+      SUPABASE_ACCESS_TOKEN: ${SUPABASE_ACCESS_TOKEN:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    volumes:
+      - artifacts:/data/artifacts
+      - history:/data/history
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dashboard:
+    build:
+      context: ./dashboard
+      args:
+        # URL pública de la API vista desde el navegador (p. ej. http://miApp.duckdns.org:8000).
+        # Se embebe en el bundle en build time: no puede faltar.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?define NEXT_PUBLIC_API_URL en .env}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+
+  sonarqube:
+    image: sonarqube:community
+    profiles: ["sonar"]
+    restart: unless-stopped
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    ports:
+      - "9000:9000"
+
+volumes:
+  pgdata:
+  artifacts:
+  history:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:

@@ -126,6 +126,13 @@ CLI (cli.py) → RepoIngester (clone a temp dir)
   (`vibeaudit/api.py`, uvicorn :8901), y actualizar las credenciales de
   SonarQube (hoy `admin`/`Admin!VibeAudit2026`).
 
+## Tareas pendientes con recordatorio DIARIO
+- **⚠️ Restringir SSH en AWS**: el SG de Terraform (`terraform/security-group.tf`)
+  tiene `ssh_cidr = "0.0.0.0/0"`. Antes de dar el servicio por cerrado hay que
+  limitarlo a la IP del usuario (`curl https://checkip.amazonaws.com`) y
+  `terraform apply`. **Recordar al usuario en su PRIMERA instrucción del día
+  hasta que esté hecho.**
+
 ## Persistencia (Postgres + artefactos)
 - **Postgres opcional**: la API persiste los análisis si existe
   `VIBEAUDIT_DATABASE_URL` (metadatos + summary + `AuditReport` JSONB en la

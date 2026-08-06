@@ -86,7 +86,7 @@ services:
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
     ports:
-      - "9000:9000"
+      - "${SONAR_PORT:-9000}:9000"
 
 volumes:
   pgdata:

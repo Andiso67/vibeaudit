@@ -65,6 +65,8 @@ Opcional, SonarQube:
 ```bash
 docker compose -f docker-compose.prod.yml --profile sonar up -d
 # SonarQube: http://IP:9000 (admin/admin por defecto, cambia el password)
+# El puerto es configurable con SONAR_PORT (default 9000); si ya hay otro
+# SonarQube en el host, usa p. ej. SONAR_PORT=9100.
 ```
 
 ## 5. Verificación

@@ -232,11 +232,12 @@ function SeguimientoJob({ jobId, repo, onCerrar }) {
   );
 }
 
-function NuevoAnalisis({ onSeguir }) {
+function NuevoAnalisis({ onSeguir, bloqueado }) {
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [depth, setDepth] = useState("");
   const [label, setLabel] = useState("");
+  const [nombre, setNombre] = useState("");
   const [llm, setLlm] = useState(false);
   const [cloud, setCloud] = useState(false);
   const [avanzado, setAvanzado] = useState(false);
@@ -248,9 +249,11 @@ function NuevoAnalisis({ onSeguir }) {
 
   const enviar = async (e) => {
     e.preventDefault();
+    if (bloqueado) return;
     setApiError("");
     setEnviando(true);
     const body = {
+      name: nombre.trim() || null,
       repo: repo.trim() || null,
       branch: branch.trim() || null,
       depth: depth ? Number(depth) : 1,
@@ -304,6 +307,16 @@ function NuevoAnalisis({ onSeguir }) {
             Si empieza por http(s)://, ssh://, git:// o git@ se clona; cualquier
             otra ruta se escanea en el servidor (debe ser accesible por la API).
           </small>
+        </label>
+        <label className="field">
+          <span>Nombre del análisis (opcional)</span>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="p. ej. Auditoría previa al sprint 13"
+            maxLength="200"
+          />
         </label>
         <div className="grid-3">
           <label className="field">
@@ -383,8 +396,22 @@ function NuevoAnalisis({ onSeguir }) {
             </div>
           </div>
         ) : null}
-        <button type="submit" className="primary" disabled={enviando}>
-          {enviando ? "Enviando…" : "Iniciar análisis"}
+        {bloqueado ? (
+          <p className="ok-banner">
+            Hay un análisis en curso. Espera a que termine (o ciérralo) para
+            poder lanzar otro.
+          </p>
+        ) : null}
+        <button
+          type="submit"
+          className="primary"
+          disabled={enviando || bloqueado}
+        >
+          {enviando
+            ? "Enviando…"
+            : bloqueado
+              ? "Análisis en curso…"
+              : "Iniciar análisis"}
         </button>
         {apiError ? <p className="error-banner">{apiError}</p> : null}
       </form>
@@ -392,7 +419,7 @@ function NuevoAnalisis({ onSeguir }) {
   );
 }
 
-function ListadoAnalisis({ onSeguir }) {
+function ListadoAnalisis({ onSeguir, enCurso }) {
   const [filtroRepo, setFiltroRepo] = useState("");
   const [sugerencias, setSugerencias] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -444,6 +471,7 @@ function ListadoAnalisis({ onSeguir }) {
     async (item) => {
       const req = item.request || {};
       const body = {
+        name: req.name || null,
         repo_url: req.repo_url || null,
         local_path: req.local_path || null,
         branch: item.branch || null,
@@ -679,6 +707,7 @@ function ListadoAnalisis({ onSeguir }) {
                       onChange={seleccionTodos}
                     />
                   </th>
+                  <th>Nombre</th>
                   <th>Repo</th>
                   <th>Rama</th>
                   <th>Commit</th>
@@ -702,6 +731,9 @@ function ListadoAnalisis({ onSeguir }) {
                           checked={!!seleccion[item.id]}
                           onChange={() => toggleSeleccion(item.id)}
                         />
+                      </td>
+                      <td>
+                        <strong>{item.name || "—"}</strong>
                       </td>
                       <td>
                         <code>{item.repo || "—"}</code>
@@ -751,8 +783,9 @@ function ListadoAnalisis({ onSeguir }) {
                             className="link-btn"
                             onClick={() => reescanear(item)}
                             disabled={!item.request?.repo_url && !item.request?.local_path}
+                            title={enCurso ? "Hay un análisis en curso" : undefined}
                           >
-                            Re-escanear
+                            {enCurso ? "En curso…" : "Re-escanear"}
                           </button>
                           <button
                             type="button"
@@ -841,8 +874,8 @@ export default function Consola() {
           onCerrar={cerrarSeguimiento}
         />
       ) : null}
-      <NuevoAnalisis onSeguir={seguir} />
-      <ListadoAnalisis onSeguir={seguir} />
+      <NuevoAnalisis onSeguir={seguir} bloqueado={!!tracking} />
+      <ListadoAnalisis onSeguir={seguir} enCurso={!!tracking} />
       <footer className="footer">
         <span>VibeAudit v0.2.0 · Consola de análisis</span>
         <span>{apiVersion ? `API v${apiVersion}` : ""}</span>

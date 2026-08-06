@@ -16,6 +16,9 @@ pyyaml==6.0.1
 # Httpx: cliente HTTP para el motor LLM (API compatible OpenAI, p. ej. Ollama)
 httpx==0.28.1
 
+# ReportLab: generación del entregable PDF one-page (métricas, semáforo y top hallazgos)
+reportlab==5.0.0
+
 # Psycopg 3: persistencia de análisis en PostgreSQL (opcional; API sin BD si no hay DATABASE_URL)
 psycopg[binary]==3.2.13
 

@@ -79,6 +79,11 @@ class ScanRequest(BaseModel):
         None,
         description="Repositorio: URL git o directorio local/remoto con los ficheros (auto-detecta)",
     )
+    name: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Nombre identificativo del análisis (opcional)",
+    )
     repo_url: Optional[str] = Field(
         None, description="URL del repositorio Git a auditar"
     )
@@ -156,6 +161,7 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
             status="running",
             started_at=started.isoformat(),
             repo=repo,
+            name=req.name,
         )
     try:
         if (req.repo_url is None) == (req.local_path is None):
@@ -190,6 +196,7 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
             db_store.save_analysis(
                 {
                     "id": job_id,
+                    "name": req.name,
                     "repo": repo,
                     "branch": req.branch,
                     "commit_hash": project.get("commitHash"),
@@ -204,6 +211,7 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
                     "report": report_dict,
                     "artifacts_dir": str(artifacts),
                     "request": {
+                        "name": req.name,
                         "repo_url": req.repo_url,
                         "local_path": req.local_path,
                         "branch": req.branch,
@@ -226,6 +234,7 @@ def _run_job(job_id: str, req: ScanRequest) -> None:
                 status="error",
                 finished_at=_dt.datetime.now(_dt.timezone.utc).isoformat(),
                 error=str(exc),
+                name=req.name,
             )
 
 
@@ -272,12 +281,38 @@ def create_scan(req: ScanRequest) -> Dict[str, str]:
             status_code=422,
             detail="Indica repo, repo_url o local_path (exactamente uno de los dos)",
         )
+    repo = repo_url or local_path
+    with JOBS_LOCK:
+        for job_id, job in JOBS.items():
+            if (
+                job.get("status") in ("queued", "running")
+                and job.get("repo") == repo
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Ya hay un análisis en curso para este repositorio "
+                        f"(job {job_id}). Espera a que termine o borra el "
+                        "análisis previo."
+                    ),
+                )
+    if db_store.enabled():
+        activo = db_store.active_analysis_id(repo)
+        if activo:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Ya hay un análisis en curso para este repositorio "
+                    f"(id {activo}). Espera a que termine o borra el análisis "
+                    "previo."
+                ),
+            )
     resolved = req.model_copy(
         update={"repo": None, "repo_url": repo_url, "local_path": local_path}
     )
     job_id = uuid.uuid4().hex[:12]
     with JOBS_LOCK:
-        JOBS[job_id] = {"status": "queued", "step": "En cola"}
+        JOBS[job_id] = {"status": "queued", "step": "En cola", "repo": repo}
     threading.Thread(
         target=_run_job, args=(job_id, resolved), name=f"vibeaudit-{job_id}", daemon=True
     ).start()

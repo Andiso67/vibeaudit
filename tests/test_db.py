@@ -55,6 +55,11 @@ class TestEnabled:
         )
         assert db_store.enabled() is True
 
+    def test_active_analysis_id_sin_bd(self, monkeypatch):
+        monkeypatch.delenv("VIBEAUDIT_DATABASE_URL", raising=False)
+        assert db_store.active_analysis_id("/repo/x") is None
+        assert db_store.active_analysis_id("") is None
+
 
 class TestPgJson:
     def test_convierte_dicts_a_json_para_jsonb(self):
@@ -78,6 +83,7 @@ class FakeDB:
         self.rows = [
             {
                 "id": "job1",
+                "name": "Auditoría del dashboard",
                 "repo": "https://github.com/org/demo",
                 "branch": "main",
                 "commit_hash": "abc123",
@@ -115,6 +121,12 @@ class FakeDB:
     def save_analysis(self, analysis):
         return None
 
+    def active_analysis_id(self, repo):
+        activo = getattr(self, "activo_id", None)
+        if activo and repo == getattr(self, "activo_repo", repo):
+            return activo
+        return None
+
     def artifacts_dir(self):
         return "./artifacts"
 
@@ -147,6 +159,7 @@ class TestAnalysesEndpoints:
         body = resp.json()
         assert body["total"] == 1
         assert body["items"][0]["repo"].endswith("demo")
+        assert body["items"][0]["name"] == "Auditoría del dashboard"
 
     def test_analyses_pasa_filtros_a_la_capa_db(self, monkeypatch):
         captured = {}
@@ -184,6 +197,29 @@ class TestAnalysesEndpoints:
         assert resp.headers.get("access-control-allow-origin") == (
             "http://localhost:3000"
         )
+
+    def test_scan_rechaza_409_si_repo_en_curso_en_bd(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        fake.activo_id = "job-en-curso"
+        fake.activo_repo = "https://github.com/org/demo"
+        client = self._client(monkeypatch, fake)
+        resp = client.post(
+            "/api/scan", json={"repo_url": "https://github.com/org/demo"}
+        )
+        assert resp.status_code == 409
+        assert "job-en-curso" in resp.json()["detail"]
+
+    def test_scan_acepta_repo_distinto_al_activo(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        fake.activo_id = "job-en-curso"
+        fake.activo_repo = "https://github.com/org/demo"
+        client = self._client(monkeypatch, fake)
+        resp = client.post(
+            "/api/scan", json={"repo_url": "https://github.com/org/otro"}
+        )
+        assert resp.status_code == 202
 
     def test_startup_aborta_jobs_huerfanos(self, monkeypatch):
         fake = FakeDB()

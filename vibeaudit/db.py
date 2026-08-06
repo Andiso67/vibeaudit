@@ -59,6 +59,7 @@ def init_db() -> None:
                 """
                 CREATE TABLE IF NOT EXISTS analyses (
                     id            TEXT PRIMARY KEY,
+                    name          TEXT,
                     repo          TEXT NOT NULL,
                     branch        TEXT,
                     commit_hash   TEXT,
@@ -74,6 +75,9 @@ def init_db() -> None:
                     error         TEXT
                 )
                 """
+            )
+            cur.execute(
+                "ALTER TABLE analyses ADD COLUMN IF NOT EXISTS name TEXT"
             )
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_analyses_repo ON analyses (repo)"
@@ -95,16 +99,17 @@ def save_analysis(analysis: Dict[str, Any]) -> None:
             cur.execute(
                 """
                 INSERT INTO analyses (
-                    id, repo, branch, commit_hash, status, started_at,
+                    id, name, repo, branch, commit_hash, status, started_at,
                     finished_at, duration_seconds, tool_versions, summary,
                     report, artifacts_dir, request, error
                 ) VALUES (
-                    %(id)s, %(repo)s, %(branch)s, %(commit_hash)s, %(status)s,
-                    %(started_at)s, %(finished_at)s, %(duration_seconds)s,
-                    %(tool_versions)s, %(summary)s, %(report)s,
-                    %(artifacts_dir)s, %(request)s, %(error)s
+                    %(id)s, %(name)s, %(repo)s, %(branch)s, %(commit_hash)s,
+                    %(status)s, %(started_at)s, %(finished_at)s,
+                    %(duration_seconds)s, %(tool_versions)s, %(summary)s,
+                    %(report)s, %(artifacts_dir)s, %(request)s, %(error)s
                 )
                 ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
                     repo = EXCLUDED.repo,
                     branch = EXCLUDED.branch,
                     commit_hash = EXCLUDED.commit_hash,
@@ -130,6 +135,7 @@ def update_status(
     finished_at: Optional[str] = None,
     error: Optional[str] = None,
     repo: Optional[str] = None,
+    name: Optional[str] = None,
 ) -> None:
     """Actualiza el estado de un análisis en curso/fallido."""
     if not enabled():
@@ -138,9 +144,10 @@ def update_status(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO analyses (id, repo, status, started_at, finished_at, error)
-                VALUES (%(id)s, %(repo)s, %(status)s, %(started_at)s, %(finished_at)s, %(error)s)
+                INSERT INTO analyses (id, name, repo, status, started_at, finished_at, error)
+                VALUES (%(id)s, %(name)s, %(repo)s, %(status)s, %(started_at)s, %(finished_at)s, %(error)s)
                 ON CONFLICT (id) DO UPDATE SET
+                    name = COALESCE(EXCLUDED.name, analyses.name),
                     repo = COALESCE(EXCLUDED.repo, analyses.repo),
                     status = EXCLUDED.status,
                     started_at = COALESCE(EXCLUDED.started_at, analyses.started_at),
@@ -149,6 +156,7 @@ def update_status(
                 """,
                 {
                     "id": job_id,
+                    "name": name,
                     "repo": repo or "",
                     "status": status,
                     "started_at": started_at,
@@ -156,6 +164,24 @@ def update_status(
                     "error": error,
                 },
             )
+
+
+def active_analysis_id(repo: str) -> Optional[str]:
+    """Devuelve el id de un análisis en curso (queued/running) de un repo, o None."""
+    if not enabled() or not repo:
+        return None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id FROM analyses
+                WHERE status IN ('queued', 'running') AND repo = %(repo)s
+                LIMIT 1
+                """,
+                {"repo": repo},
+            )
+            row = cur.fetchone()
+    return row[0] if row else None
 
 
 def abort_stale_running() -> int:
@@ -218,7 +244,7 @@ def list_analyses(
             total = cur.fetchone()[0]
             cur.execute(
                 f"""
-                SELECT id, repo, branch, commit_hash, status, started_at,
+                SELECT id, name, repo, branch, commit_hash, status, started_at,
                        finished_at, duration_seconds, tool_versions, summary,
                        artifacts_dir, request, error,
                        (report IS NOT NULL) AS has_report
@@ -245,7 +271,7 @@ def get_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, repo, branch, commit_hash, status, started_at,
+                SELECT id, name, repo, branch, commit_hash, status, started_at,
                        finished_at, duration_seconds, tool_versions, summary,
                        report, artifacts_dir, request, error
                 FROM analyses

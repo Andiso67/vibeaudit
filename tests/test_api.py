@@ -34,6 +34,9 @@ class FakePersistencia:
     def build_summary(self, report_dict):
         return {"total": 0}
 
+    def active_analysis_id(self, repo):
+        return getattr(self, "_activo", None)
+
 
 class FakeReporte:
     def model_dump(self, by_alias=True, exclude_none=True):
@@ -196,6 +199,80 @@ def test_scan_job_registra_repo_en_running_y_save(monkeypatch, proyecto):
     assert running, "no se registró el estado running"
     assert running[0]["repo"] == str(proyecto)
     assert persistencia.saves[0]["repo"] == str(proyecto)
+
+
+def test_scan_guarda_nombre_del_analisis(monkeypatch, proyecto):
+    persistencia = FakePersistencia()
+    monkeypatch.setattr(api_module, "db_store", persistencia)
+    monkeypatch.setattr(
+        api_module, "run_scan", lambda *a, **k: (FakeReporte(), None)
+    )
+    monkeypatch.setattr(
+        api_module, "_persist_artifacts", lambda *a, **k: Path("artifacts/x")
+    )
+
+    resp = client.post(
+        "/api/scan",
+        json={
+            "repo": str(proyecto),
+            "name": "Auditoría pre-sprint 13",
+        },
+    )
+    assert resp.status_code == 202
+    estado = _espera_job(resp.json()["job_id"])
+    assert estado["status"] == "done", estado.get("error")
+
+    running = [u for u in persistencia.updates if u.get("status") == "running"]
+    assert running[0]["name"] == "Auditoría pre-sprint 13"
+    assert persistencia.saves[0]["name"] == "Auditoría pre-sprint 13"
+    assert persistencia.saves[0]["request"]["name"] == "Auditoría pre-sprint 13"
+
+
+def test_scan_sin_nombre_guarda_null(monkeypatch, proyecto):
+    persistencia = FakePersistencia()
+    monkeypatch.setattr(api_module, "db_store", persistencia)
+    monkeypatch.setattr(
+        api_module, "run_scan", lambda *a, **k: (FakeReporte(), None)
+    )
+    monkeypatch.setattr(
+        api_module, "_persist_artifacts", lambda *a, **k: Path("artifacts/x")
+    )
+
+    resp = client.post("/api/scan", json={"repo": str(proyecto)})
+    assert resp.status_code == 202
+    estado = _espera_job(resp.json()["job_id"])
+    assert estado["status"] == "done", estado.get("error")
+    assert persistencia.saves[0]["name"] is None
+    assert persistencia.saves[0]["request"]["name"] is None
+
+
+def test_scan_409_si_repo_ya_en_curso_en_memoria(monkeypatch):
+    monkeypatch.setattr(api_module, "db_store", FakePersistencia())
+    monkeypatch.setattr(api_module, "_run_job", lambda *a, **k: None)
+    repo = "/repo/en-curso"
+    primero = client.post("/api/scan", json={"local_path": repo})
+    assert primero.status_code == 202
+    segundo = client.post("/api/scan", json={"local_path": repo})
+    assert segundo.status_code == 409
+    assert "en curso" in segundo.json()["detail"]
+
+
+def test_scan_409_si_repo_ya_en_curso_en_bd(monkeypatch):
+    persistencia = FakePersistencia()
+    persistencia._activo = "job-previo"
+    monkeypatch.setattr(api_module, "db_store", persistencia)
+    resp = client.post("/api/scan", json={"local_path": "/otro/repo"})
+    assert resp.status_code == 409
+    assert "job-previo" in resp.json()["detail"]
+
+
+def test_scan_409_no_bloquea_repos_distintos(monkeypatch):
+    monkeypatch.setattr(api_module, "db_store", FakePersistencia())
+    monkeypatch.setattr(api_module, "_run_job", lambda *a, **k: None)
+    primero = client.post("/api/scan", json={"local_path": "/repo/a"})
+    assert primero.status_code == 202
+    segundo = client.post("/api/scan", json={"local_path": "/repo/b"})
+    assert segundo.status_code == 202
 
 
 def test_scan_job_falla_sin_path(monkeypatch):

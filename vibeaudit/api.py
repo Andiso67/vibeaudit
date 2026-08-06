@@ -5,7 +5,9 @@ Endpoints:
 - POST /api/scan            lanza un scan en segundo plano (devuelve job_id)
 - GET  /api/scan/{id}       estado/progreso y reporte del scan
 - GET  /api/analyses        lista los análisis guardados (filtros + paginado)
+- DELETE /api/analyses      borra varios análisis (cuerpo {"ids": [...]})
 - GET  /api/analyses/{id}   análisis completo con su reporte
+- DELETE /api/analyses/{id} borra un análisis y sus artefactos
 - GET  /api/repos           repos con análisis guardados (autocompletado)
 - GET  /api/history         lista los snapshots del historial configurado
 
@@ -22,7 +24,7 @@ import shutil
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,8 +65,20 @@ JOBS_LOCK = threading.Lock()
 
 
 class ScanRequest(BaseModel):
-    """Parámetros del scan. Exactamente uno de repo_url o local_path."""
+    """Parámetros del scan.
 
+    El repositorio se indica de una de estas formas (exactamente una):
+    - ``repo``: valor único auto-detectado. Si parece una URL git
+      (http/https/ssh/git/git@) se clona; en caso contrario se trata como
+      directorio local o remoto con los ficheros (accesible por la API).
+    - ``repo_url``: URL git explícita.
+    - ``local_path``: directorio explícito (local o remoto montado).
+    """
+
+    repo: Optional[str] = Field(
+        None,
+        description="Repositorio: URL git o directorio local/remoto con los ficheros (auto-detecta)",
+    )
     repo_url: Optional[str] = Field(
         None, description="URL del repositorio Git a auditar"
     )
@@ -231,19 +245,41 @@ def health() -> Dict[str, str]:
     return {"status": "ok", "service": "vibeaudit-api", "version": "0.1.0"}
 
 
+def _repo_destino(repo: str) -> Tuple[Optional[str], Optional[str]]:
+    """Clasifica un valor ``repo``: URL git (se clona) o directorio con ficheros.
+
+    Devuelve ``(repo_url, local_path)``; ``local_path`` cubre también
+    directorios remotos montados (NFS, SMB, SSHFS, volúmenes…).
+    """
+    if repo.startswith(("http://", "https://", "ssh://", "git://", "git@")):
+        return repo, None
+    return None, repo
+
+
 @app.post("/api/scan", status_code=202)
 def create_scan(req: ScanRequest) -> Dict[str, str]:
     """Lanza un scan en segundo plano; devuelve el job_id para consultar."""
-    if (req.repo_url is None) == (req.local_path is None):
+    repo_url, local_path = req.repo_url, req.local_path
+    if req.repo is not None:
+        if repo_url is not None or local_path is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="Indica repo (auto-detectado) o repo_url/local_path, no ambos",
+            )
+        repo_url, local_path = _repo_destino(req.repo)
+    if (repo_url is None) == (local_path is None):
         raise HTTPException(
             status_code=422,
-            detail="Indica repo_url o local_path (exactamente uno de los dos)",
+            detail="Indica repo, repo_url o local_path (exactamente uno de los dos)",
         )
+    resolved = req.model_copy(
+        update={"repo": None, "repo_url": repo_url, "local_path": local_path}
+    )
     job_id = uuid.uuid4().hex[:12]
     with JOBS_LOCK:
         JOBS[job_id] = {"status": "queued", "step": "En cola"}
     threading.Thread(
-        target=_run_job, args=(job_id, req), name=f"vibeaudit-{job_id}", daemon=True
+        target=_run_job, args=(job_id, resolved), name=f"vibeaudit-{job_id}", daemon=True
     ).start()
     return {"job_id": job_id, "status": "queued"}
 
@@ -308,6 +344,55 @@ def get_analysis(analysis_id: str) -> Dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail="análisis no encontrado")
     return row
+
+
+class DeleteAnalysesRequest(BaseModel):
+    """Cuerpo del borrado en lote: lista de ids de análisis."""
+
+    ids: List[str] = Field(default_factory=list, max_length=500)
+
+
+def _purge_artifacts(artifacts_dirs: List[Optional[str]]) -> None:
+    """Borra los directorios de artefactos, sin salirse del raíz de artefactos."""
+    base = Path(db_store.artifacts_dir()).resolve()
+    for d in artifacts_dirs or []:
+        if not d:
+            continue
+        try:
+            target = Path(d).resolve()
+            if target.is_relative_to(base):
+                shutil.rmtree(target, ignore_errors=True)
+        except (OSError, ValueError):
+            pass
+
+
+@app.delete("/api/analyses/{analysis_id}")
+def delete_analysis(analysis_id: str) -> Dict[str, Any]:
+    """Borra un análisis guardado y sus artefactos."""
+    if not db_store.enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
+        )
+    if db_store.get_analysis(analysis_id) is None:
+        raise HTTPException(status_code=404, detail="análisis no encontrado")
+    deleted, dirs = db_store.delete_analyses([analysis_id])
+    _purge_artifacts(dirs)
+    return {"deleted": deleted, "analysis_id": analysis_id}
+
+
+@app.delete("/api/analyses")
+def delete_analyses(req: DeleteAnalysesRequest) -> Dict[str, Any]:
+    """Borra varios análisis y sus artefactos (en lote)."""
+    if not db_store.enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistencia no configurada: define VIBEAUDIT_DATABASE_URL",
+        )
+    ids = [i for i in req.ids if i]
+    deleted, dirs = db_store.delete_analyses(ids)
+    _purge_artifacts(dirs)
+    return {"deleted": deleted, "analysis_ids": ids}
 
 
 @app.get("/api/analyses/{analysis_id}/artifacts")

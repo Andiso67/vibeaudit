@@ -105,6 +105,71 @@ def test_scan_job_completo(monkeypatch, proyecto, tmp_path):
     assert guard.status_code == 404
 
 
+def _captura_repo(monkeypatch):
+    """Parchea run_scan para capturar cómo se resolvió el repo."""
+    captured = {}
+
+    def fake_run(config, log=None, echo=None):
+        captured["repo_url"] = config.repo_url
+        captured["local_path"] = config.local_path
+        return FakeReporte(), None
+
+    monkeypatch.setattr(api_module, "run_scan", fake_run)
+    monkeypatch.setattr(
+        api_module, "_persist_artifacts", lambda *a, **k: Path("artifacts/x")
+    )
+    return captured
+
+
+def _espera_job(job_id, intentos=50):
+    estado = None
+    for _ in range(intentos):
+        estado = client.get(f"/api/scan/{job_id}").json()
+        if estado["status"] in ("done", "error"):
+            break
+        time.sleep(0.1)
+    return estado
+
+
+def test_scan_repo_autodetecta_url(monkeypatch):
+    captured = _captura_repo(monkeypatch)
+    resp = client.post("/api/scan", json={"repo": "https://github.com/org/demo"})
+    assert resp.status_code == 202
+    estado = _espera_job(resp.json()["job_id"])
+    assert estado["status"] == "done", estado.get("error")
+    assert captured["repo_url"] == "https://github.com/org/demo"
+    assert captured["local_path"] is None
+
+
+def test_scan_repo_autodetecta_ssh(monkeypatch):
+    captured = _captura_repo(monkeypatch)
+    resp = client.post("/api/scan", json={"repo": "git@github.com:org/demo.git"})
+    assert resp.status_code == 202
+    estado = _espera_job(resp.json()["job_id"])
+    assert estado["status"] == "done", estado.get("error")
+    assert captured["repo_url"] == "git@github.com:org/demo.git"
+    assert captured["local_path"] is None
+
+
+def test_scan_repo_autodetecta_directorio(monkeypatch, proyecto):
+    captured = _captura_repo(monkeypatch)
+    resp = client.post("/api/scan", json={"repo": str(proyecto)})
+    assert resp.status_code == 202
+    estado = _espera_job(resp.json()["job_id"])
+    assert estado["status"] == "done", estado.get("error")
+    assert captured["local_path"] == Path(str(proyecto))
+    assert captured["repo_url"] is None
+
+
+def test_scan_repo_y_repo_url_juntos_rechazado():
+    resp = client.post(
+        "/api/scan",
+        json={"repo": "/tmp/x", "repo_url": "https://github.com/a/b"},
+    )
+    assert resp.status_code == 422
+    assert "no ambos" in resp.json()["detail"]
+
+
 def test_scan_job_registra_repo_en_running_y_save(monkeypatch, proyecto):
     persistencia = FakePersistencia()
     monkeypatch.setattr(api_module, "db_store", persistencia)

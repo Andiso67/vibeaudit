@@ -12,7 +12,7 @@ Tabla principal:
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # psycopg es opcional: solo se importa si hay DATABASE_URL configurada.
 _psycopg = None
@@ -258,6 +258,30 @@ def get_analysis(analysis_id: str) -> Optional[Dict[str, Any]]:
                 return None
             columns = [d.name for d in cur.description]
     return dict(zip(columns, row))
+
+
+def delete_analyses(ids: List[str]) -> Tuple[int, List[str]]:
+    """Borra los análisis indicados.
+
+    Devuelve ``(borrados, artifacts_dir)``: cuántas filas se borraron y los
+    directorios de artefactos de esas filas, para que el llamador los elimine
+    (la BD y el sistema de ficheros se mantienen consistentes).
+    """
+    if not enabled() or not ids:
+        return 0, []
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT artifacts_dir FROM analyses WHERE id = ANY(%s)",
+                (list(ids),),
+            )
+            dirs = [row[0] for row in cur.fetchall() if row[0]]
+            cur.execute(
+                "DELETE FROM analyses WHERE id = ANY(%s)",
+                (list(ids),),
+            )
+            deleted = cur.rowcount
+    return deleted, dirs
 
 
 def list_repos() -> List[str]:

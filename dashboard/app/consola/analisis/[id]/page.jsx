@@ -90,7 +90,16 @@ export default function DetalleAnalisis() {
   if (cargando) {
     return (
       <main className="container">
-        <h1>Detalle de análisis</h1>
+        <header className="brand">
+          <img
+            src="/improven-logo.png"
+            alt="Improven"
+            width="171"
+            height="36"
+            style={{ objectFit: "contain" }}
+          />
+          <h1>Detalle de análisis</h1>
+        </header>
         <p className="muted">Cargando…</p>
       </main>
     );
@@ -99,7 +108,16 @@ export default function DetalleAnalisis() {
   if (apiError || !data) {
     return (
       <main className="container">
-        <h1>Detalle de análisis</h1>
+        <header className="brand">
+          <img
+            src="/improven-logo.png"
+            alt="Improven"
+            width="171"
+            height="36"
+            style={{ objectFit: "contain" }}
+          />
+          <h1>Detalle de análisis</h1>
+        </header>
         <p className="error-banner">{apiError}</p>
         <p>
           <a href="/consola">← Volver a la consola</a>
@@ -136,7 +154,16 @@ export default function DetalleAnalisis() {
 
   return (
     <main className="container">
-      <h1>Detalle de análisis</h1>
+      <header className="brand">
+        <img
+          src="/improven-logo.png"
+          alt="Improven"
+          width="171"
+          height="36"
+          style={{ objectFit: "contain" }}
+        />
+        <h1>Detalle de análisis</h1>
+      </header>
       <p>
         <a href="/consola">← Volver a la consola</a>
       </p>

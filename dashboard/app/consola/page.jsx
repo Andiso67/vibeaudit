@@ -54,13 +54,45 @@ function countHallazgos(report) {
   return groups.reduce((sum, g) => sum + (g?.length || 0), 0);
 }
 
-function SeguimientoJob({ jobId, onCerrar }) {
+function SeguimientoJob({ jobId, repo, onCerrar }) {
   const [status, setStatus] = useState("queued");
   const [step, setStep] = useState("En cola");
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [segundos, setSegundos] = useState(0);
+  const [historial, setHistorial] = useState(null);
   const startedAt = useRef(Date.now());
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  useEffect(() => {
+    if (!repo) return;
+    let detenido = false;
+    const params = new URLSearchParams({ limit: "100", status: "done" });
+    params.set("repo", repo);
+    fetch(`${API}/api/analyses?${params}`)
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => {
+        if (detenido) return;
+        const duraciones = (d.items || [])
+          .map((i) => i.duration_seconds)
+          .filter((v) => v != null && v > 0);
+        if (duraciones.length) {
+          setHistorial({
+            media:
+              duraciones.reduce((a, b) => a + b, 0) / duraciones.length,
+            n: duraciones.length,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      detenido = true;
+    };
+  }, [repo]);
 
   useEffect(() => {
     if (status !== "running" && status !== "queued") return;
@@ -95,9 +127,17 @@ function SeguimientoJob({ jobId, onCerrar }) {
   }, [jobId]);
 
   const enCurso = status === "queued" || status === "running";
+  const restante =
+    historial != null && enCurso
+      ? Math.max(0, Math.round(historial.media - segundos))
+      : null;
+  const progreso =
+    historial != null && enCurso
+      ? Math.min(100, Math.round((segundos / historial.media) * 100))
+      : null;
   if (error) {
     return (
-      <div className="project-card">
+      <div className="project-card" ref={cardRef}>
         <p className="error-banner">{error}</p>
         <button type="button" className="primary" onClick={onCerrar}>
           Cerrar
@@ -107,7 +147,7 @@ function SeguimientoJob({ jobId, onCerrar }) {
   }
 
   return (
-    <div className="project-card">
+    <div className="project-card" ref={cardRef}>
       <div className="job-head">
         <span className="job-id">
           Análisis <code>{jobId}</code>
@@ -116,15 +156,42 @@ function SeguimientoJob({ jobId, onCerrar }) {
           className="badge"
           style={{ background: STATUS_STYLE[status] || "#6b7280" }}
         >
-          {STATUS_LABEL[status] || status}{" "}
-          {enCurso ? `· ${formatElapsed(segundos)}` : ""}
+          {STATUS_LABEL[status] || status}
         </span>
       </div>
       {enCurso ? (
-        <p className="step">
-          <span className="spinner" aria-hidden="true" />
-          {step || "Iniciando…"}
-        </p>
+        <>
+          <div className="job-clock">
+            <span className="spinner" aria-hidden="true" />
+            <span className="clock">{formatElapsed(segundos)}</span>
+            <span className="muted">{step || "Iniciando…"}</span>
+          </div>
+          {progreso != null ? (
+            <div className="progress-track">
+              <div
+                className="progress-fill"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+          ) : null}
+          <p className="muted">
+            {restante != null && restante > 0 ? (
+              <>
+                Tiempo restante estimado:{" "}
+                <strong>{formatElapsed(restante)}</strong> según los{" "}
+                {historial.n} análisis anteriores de este repositorio
+              </>
+            ) : historial != null ? (
+              <>
+                Duración media de análisis anteriores:{" "}
+                {formatElapsed(Math.round(historial.media))}. El análisis está
+                en marcha, esto puede tardar unos minutos más.
+              </>
+            ) : (
+              "Primer análisis de este repositorio: sin estimación, pero suele tardar entre 1 y 5 minutos."
+            )}
+          </p>
+        </>
       ) : null}
       {status === "error" ? <p className="error-banner">{step}</p> : null}
       {status === "done" ? (
@@ -166,14 +233,13 @@ function SeguimientoJob({ jobId, onCerrar }) {
 }
 
 function NuevoAnalisis({ onSeguir }) {
-  const [repoUrl, setRepoUrl] = useState("");
+  const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [depth, setDepth] = useState("");
   const [label, setLabel] = useState("");
   const [llm, setLlm] = useState(false);
   const [cloud, setCloud] = useState(false);
   const [avanzado, setAvanzado] = useState(false);
-  const [localPath, setLocalPath] = useState("");
   const [memory, setMemory] = useState("");
   const [sonarJson, setSonarJson] = useState(false);
   const [deliverables, setDeliverables] = useState(false);
@@ -185,8 +251,7 @@ function NuevoAnalisis({ onSeguir }) {
     setApiError("");
     setEnviando(true);
     const body = {
-      repo_url: repoUrl.trim() || null,
-      local_path: avanzado && localPath.trim() ? localPath.trim() : null,
+      repo: repo.trim() || null,
       branch: branch.trim() || null,
       depth: depth ? Number(depth) : 1,
       label: label.trim() || null,
@@ -212,7 +277,8 @@ function NuevoAnalisis({ onSeguir }) {
         setEnviando(false);
         return;
       }
-      onSeguir(data.job_id);
+      onSeguir(data.job_id, repo.trim() || null);
+      setEnviando(false);
     } catch (err) {
       setApiError(
         `No se pudo contactar la API en ${API}. Comprueba la variable ` +
@@ -227,13 +293,17 @@ function NuevoAnalisis({ onSeguir }) {
       <h2>Nuevo análisis</h2>
       <form className="form" onSubmit={enviar}>
         <label className="field">
-          <span>Repositorio (URL git)</span>
+          <span>Repositorio (URL git o directorio local/remoto con los ficheros)</span>
           <input
             type="text"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="https://github.com/organizacion/repositorio"
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            placeholder="https://github.com/org/repo · /ruta/al/directorio · /Volumes/nfs/repo"
           />
+          <small className="muted">
+            Si empieza por http(s)://, ssh://, git:// o git@ se clona; cualquier
+            otra ruta se escanea en el servidor (debe ser accesible por la API).
+          </small>
         </label>
         <div className="grid-3">
           <label className="field">
@@ -285,15 +355,6 @@ function NuevoAnalisis({ onSeguir }) {
         {avanzado ? (
           <div className="advanced">
             <label className="field">
-              <span>Ruta local en el servidor de la API (solo contenedor)</span>
-              <input
-                type="text"
-                value={localPath}
-                onChange={(e) => setLocalPath(e.target.value)}
-                placeholder="/data/proyectos/mi-app"
-              />
-            </label>
-            <label className="field">
               <span>Memoria de recurrencias (directorio o URL Qdrant)</span>
               <input
                 type="text"
@@ -342,6 +403,8 @@ function ListadoAnalisis({ onSeguir }) {
   const [data, setData] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [seleccion, setSeleccion] = useState({});
+  const [borrando, setBorrando] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/api/repos`)
@@ -397,7 +460,7 @@ function ListadoAnalisis({ onSeguir }) {
           window.alert(`No se pudo re-escanear (${resp.status}): ${data.detail || ""}`);
           return;
         }
-        onSeguir(data.job_id);
+        onSeguir(data.job_id, item.repo || null);
       } catch (err) {
         window.alert(`No se pudo contactar la API: ${err.message}`);
       }
@@ -423,6 +486,74 @@ function ListadoAnalisis({ onSeguir }) {
       window.alert(`No se pudo descargar el reporte: ${err.message}`);
     }
   }, []);
+
+  const borrarAnalisis = useCallback(
+    async (ids, descripcion) => {
+      if (!window.confirm(`¿Borrar ${descripcion}? Esta acción no se puede deshacer.`)) {
+        return;
+      }
+      setBorrando(true);
+      try {
+        const resp = await fetch(`${API}/api/analyses`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        const body = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          window.alert(`No se pudo borrar (${resp.status}): ${body.detail || ""}`);
+          return;
+        }
+        const idsSet = new Set(ids);
+        setSeleccion((prev) => {
+          const next = { ...prev };
+          ids.forEach((id) => delete next[id]);
+          return next;
+        });
+        setPagina((p) => {
+          const visibles = data?.items || [];
+          const cuantos = visibles.filter((i) => idsSet.has(i.id)).length;
+          if (cuantos === visibles.length && p > 0) return p - 1;
+          return p;
+        });
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                total: Math.max(0, prev.total - ids.length),
+                items: prev.items.filter((i) => !idsSet.has(i.id)),
+              }
+            : prev
+        );
+      } catch (err) {
+        window.alert(`No se pudo contactar la API: ${err.message}`);
+      } finally {
+        setBorrando(false);
+      }
+    },
+    [data]
+  );
+
+  const toggleSeleccion = useCallback((id) => {
+    setSeleccion((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  const seleccionTodos = useCallback(() => {
+    setSeleccion((prev) => {
+      const ids = (data?.items || []).map((i) => i.id);
+      const todosSeleccionados = ids.length > 0 && ids.every((id) => prev[id]);
+      const next = { ...prev };
+      ids.forEach((id) => {
+        if (todosSeleccionados) delete next[id];
+        else next[id] = true;
+      });
+      return next;
+    });
+  }, [data]);
+
+  const idsSeleccionados = Object.entries(seleccion)
+    .filter(([, v]) => v)
+    .map(([id]) => id);
 
   const totalPaginas = data ? Math.max(1, Math.ceil(data.total / limit)) : 1;
 
@@ -509,9 +640,45 @@ function ListadoAnalisis({ onSeguir }) {
           <p>No hay análisis que coincidan con los filtros.</p>
         ) : (
           <>
+            {idsSeleccionados.length > 0 ? (
+              <div className="sel-bar">
+                <span>
+                  <strong>{idsSeleccionados.length}</strong> seleccionado
+                  {idsSeleccionados.length > 1 ? "s" : ""}
+                </span>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() =>
+                    borrarAnalisis(idsSeleccionados, `${idsSeleccionados.length} análisis seleccionados`)
+                  }
+                  disabled={borrando}
+                >
+                  {borrando ? "Borrando…" : "Borrar seleccionados"}
+                </button>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => setSeleccion({})}
+                >
+                  Limpiar selección
+                </button>
+              </div>
+            ) : null}
             <table>
               <thead>
                 <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      aria-label="Seleccionar todos"
+                      checked={
+                        (data?.items || []).length > 0 &&
+                        (data?.items || []).every((i) => seleccion[i])
+                      }
+                      onChange={seleccionTodos}
+                    />
+                  </th>
                   <th>Repo</th>
                   <th>Rama</th>
                   <th>Commit</th>
@@ -527,7 +694,15 @@ function ListadoAnalisis({ onSeguir }) {
                   const summary = item.summary || {};
                   const label = item.request?.label;
                   return (
-                    <tr key={item.id}>
+                    <tr key={item.id} className={seleccion[item.id] ? "sel-row" : ""}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar ${item.id}`}
+                          checked={!!seleccion[item.id]}
+                          onChange={() => toggleSeleccion(item.id)}
+                        />
+                      </td>
                       <td>
                         <code>{item.repo || "—"}</code>
                         {label ? <div className="chip">{label}</div> : null}
@@ -587,6 +762,14 @@ function ListadoAnalisis({ onSeguir }) {
                           >
                             Descargar JSON
                           </button>
+                          <button
+                            type="button"
+                            className="link-btn danger-link"
+                            onClick={() => borrarAnalisis([item.id], "este análisis")}
+                            disabled={borrando}
+                          >
+                            Borrar
+                          </button>
                         </span>
                       </td>
                     </tr>
@@ -623,21 +806,49 @@ function ListadoAnalisis({ onSeguir }) {
 }
 
 export default function Consola() {
-  const [trackingJobId, setTrackingJobId] = useState(null);
+  const [tracking, setTracking] = useState(null);
+  const [apiVersion, setApiVersion] = useState("");
 
-  const cerrarSeguimiento = useCallback(() => setTrackingJobId(null), []);
+  useEffect(() => {
+    fetch(`${API}/api/health`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => setApiVersion(d.version || ""))
+      .catch(() => {});
+  }, []);
+
+  const cerrarSeguimiento = useCallback(() => setTracking(null), []);
+  const seguir = useCallback((jobId, repo) => setTracking({ jobId, repo }), []);
 
   return (
     <main className="container">
-      <h1>VibeAudit — Consola</h1>
+      <header className="brand">
+        <img
+          src="/improven-logo.png"
+          alt="Improven"
+          width="171"
+          height="36"
+          style={{ objectFit: "contain" }}
+        />
+        <h1>VibeAudit — Consola</h1>
+      </header>
       <p>
         <a href="/">← Volver al dashboard de cliente</a>
       </p>
-      {trackingJobId ? (
-        <SeguimientoJob jobId={trackingJobId} onCerrar={cerrarSeguimiento} />
+      {tracking ? (
+        <SeguimientoJob
+          jobId={tracking.jobId}
+          repo={tracking.repo}
+          onCerrar={cerrarSeguimiento}
+        />
       ) : null}
-      <NuevoAnalisis onSeguir={setTrackingJobId} />
-      <ListadoAnalisis onSeguir={setTrackingJobId} />
+      <NuevoAnalisis onSeguir={seguir} />
+      <ListadoAnalisis onSeguir={seguir} />
+      <footer className="footer">
+        <span>VibeAudit v0.2.0 · Consola de análisis</span>
+        <span>{apiVersion ? `API v${apiVersion}` : ""}</span>
+        <span>© {new Date().getFullYear()} andiso67</span>
+        <span>Pre-auditoría de seguridad con VibeAudit para Improven</span>
+      </footer>
     </main>
   );
 }

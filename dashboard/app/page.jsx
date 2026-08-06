@@ -258,7 +258,16 @@ export default function Page() {
   if (!loaded) {
     return (
       <main className="container">
-        <h1>VibeAudit — Dashboard de cliente</h1>
+        <header className="brand">
+          <img
+            src="/improven-logo.png"
+            alt="Improven"
+            width="171"
+            height="36"
+            style={{ objectFit: "contain" }}
+          />
+          <h1>VibeAudit — Dashboard de cliente</h1>
+        </header>
         <p>
           No se encontró el JSON maestro. Cópialo a{" "}
           <code>public/audit-report.json</code> dentro de{" "}
@@ -297,7 +306,16 @@ export default function Page() {
 
   return (
     <main className="container">
-      <h1>VibeAudit — Dashboard de cliente</h1>
+      <header className="brand">
+        <img
+          src="/improven-logo.png"
+          alt="Improven"
+          width="171"
+          height="36"
+          style={{ objectFit: "contain" }}
+        />
+        <h1>VibeAudit — Dashboard de cliente</h1>
+      </header>
       <p>
         <a href="/consola">Consola de análisis →</a> (pedir nuevos análisis y
         consultar el histórico guardado)

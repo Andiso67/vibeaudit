@@ -1,5 +1,7 @@
 """Tests de la capa de persistencia (Postgres opcional) y sus endpoints."""
 
+import json
+
 from fastapi.testclient import TestClient
 
 from vibeaudit import api as api_module
@@ -112,6 +114,16 @@ class FakeDB:
 
     def save_analysis(self, analysis):
         return None
+
+    def artifacts_dir(self):
+        return "./artifacts"
+
+    def delete_analyses(self, ids):
+        kept = [r for r in self.rows if r["id"] not in set(ids)]
+        deleted = [r for r in self.rows if r["id"] in set(ids)]
+        self.rows = kept
+        dirs = [r.get("artifacts_dir") for r in deleted if r.get("artifacts_dir")]
+        return len(deleted), dirs
 
 
 class TestAnalysesEndpoints:
@@ -257,3 +269,88 @@ class TestAnalysesEndpoints:
         body = resp.json()
         assert body["status"] == "done"
         assert body["report"]["project"]["name"] == "demo"
+
+
+class TestDeleteEndpoints:
+    def _client(self, monkeypatch, fake):
+        monkeypatch.setattr(api_module, "db_store", fake)
+        return TestClient(api_module.app)
+
+    def _delete_lote(self, client, ids):
+        return client.request(
+            "DELETE",
+            "/api/analyses",
+            content=json.dumps({"ids": ids}),
+            headers={"Content-Type": "application/json"},
+        )
+
+    def test_delete_sin_bd_devuelve_503(self, monkeypatch):
+        fake = FakeDB()
+        client = self._client(monkeypatch, fake)
+        assert client.delete("/api/analyses/job1").status_code == 503
+        assert self._delete_lote(client, ["job1"]).status_code == 503
+
+    def test_delete_analisis_desconocido_404(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        client = self._client(monkeypatch, fake)
+        assert client.delete("/api/analyses/nope").status_code == 404
+
+    def test_delete_individual_borra_y_limpia_artefactos(self, monkeypatch, tmp_path):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        dir_job1 = tmp_path / "job1"
+        dir_job1.mkdir()
+        (dir_job1 / "audit-report.json").write_text("{}")
+        fake.rows[0]["artifacts_dir"] = str(dir_job1)
+        fake.artifacts_dir = lambda: str(tmp_path)
+        client = self._client(monkeypatch, fake)
+
+        resp = client.delete("/api/analyses/job1")
+        assert resp.status_code == 200
+        assert resp.json()["deleted"] == 1
+        assert not dir_job1.exists()
+        assert client.get("/api/analyses").json()["total"] == 0
+
+    def test_delete_lote_borra_varios(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        fake.rows.append(
+            {
+                "id": "job2",
+                "repo": "https://github.com/org/demo",
+                "status": "done",
+                "summary": {"total": 0},
+                "artifacts_dir": None,
+                "has_report": True,
+            }
+        )
+        client = self._client(monkeypatch, fake)
+
+        resp = self._delete_lote(client, ["job1", "job2"])
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["deleted"] == 2
+        assert set(body["analysis_ids"]) == {"job1", "job2"}
+        assert client.get("/api/analyses").json()["total"] == 0
+
+    def test_delete_lote_ignora_ids_vacios(self, monkeypatch):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        client = self._client(monkeypatch, fake)
+        resp = self._delete_lote(client, ["", "job1"])
+        assert resp.status_code == 200
+        assert resp.json()["deleted"] == 1
+
+    def test_purge_no_borra_fuera_del_raiz(self, monkeypatch, tmp_path):
+        fake = FakeDB()
+        fake.enabled_flag = True
+        fuera = tmp_path / "fuera"
+        fuera.mkdir()
+        (fuera / "x.txt").write_text("x")
+        fake.rows[0]["artifacts_dir"] = str(fuera)
+        fake.artifacts_dir = lambda: str(tmp_path / "artifacts")
+        client = self._client(monkeypatch, fake)
+
+        client.delete("/api/analyses/job1")
+        assert fuera.exists(), "no debe borrar directorios fuera del raíz"

@@ -37,7 +37,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      VIBEAUDIT_DATABASE_URL: postgresql://${POSTGRES_USER:-vibeaudit}:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@postgres:5432/${POSTGRES_DB:-vibeaudit}
+      VIBEAUDIT_DATABASE_URL: ${VIBEAUDIT_DATABASE_URL:-postgresql://${POSTGRES_USER:-vibeaudit}:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@postgres:5432/${POSTGRES_DB:-vibeaudit}}
       VIBEAUDIT_ARTIFACTS: /data/artifacts
       VIBEAUDIT_HISTORY: /data/history
       VIBEAUDIT_API_HOST: 0.0.0.0

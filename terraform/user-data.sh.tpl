@@ -13,8 +13,8 @@ chmod +x /usr/local/bin/duckdns-update.sh
 (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/duckdns-update.sh") | crontab -
 /usr/local/bin/duckdns-update.sh || true
 
-echo "==> Instalando Docker y git"
-dnf install -y docker git >/dev/null
+echo "==> Instalando Docker, git y cronie"
+dnf install -y docker git cronie >/dev/null
 systemctl enable --now docker
 usermod -aG docker ec2-user
 mkdir -p /usr/local/lib/docker/cli-plugins
@@ -30,12 +30,16 @@ git clone ${git_url} vibeaudit || (cd vibeaudit && git pull)
 cd /home/ec2-user/vibeaudit
 
 echo "==> Generando .env"
+# El password puede contener caracteres especiales (@&:...): se percent-encodes
+# para la URL de conexión de la API (VIBEAUDIT_DATABASE_URL).
+PASS_ENC=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "${postgres_password}")
 cat > .env <<EOF
 POSTGRES_USER=vibeaudit
 POSTGRES_PASSWORD=${postgres_password}
 POSTGRES_DB=vibeaudit
 NEXT_PUBLIC_API_URL=http://${duckdns_host}.duckdns.org:8000
 VIBEAUDIT_CORS_ORIGINS=http://${duckdns_host}.duckdns.org:3000
+VIBEAUDIT_DATABASE_URL=postgresql://vibeaudit:${PASS_ENC}@postgres:5432/vibeaudit
 API_PORT=8000
 DASHBOARD_PORT=3000
 SONAR_PORT=9000

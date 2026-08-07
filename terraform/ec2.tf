@@ -44,6 +44,8 @@ resource "aws_instance" "vibeaudit" {
     duckdns_host      = var.duckdns_host
     duckdns_token     = var.duckdns_token
     postgres_password = var.postgres_password
+    sonar_password    = var.sonar_password
+    pass_enc          = urlencode(var.postgres_password)
     git_url           = var.git_url
   })
 

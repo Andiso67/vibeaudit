@@ -36,12 +36,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    extra_hosts:
+      # Permite a la API llegar al Ollama del host (localhost del contenedor
+      # es el propio contenedor, no la instancia).
+      - "host.docker.internal:host-gateway"
     environment:
       VIBEAUDIT_DATABASE_URL: ${VIBEAUDIT_DATABASE_URL:-postgresql://${POSTGRES_USER:-vibeaudit}:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@postgres:5432/${POSTGRES_DB:-vibeaudit}}
       VIBEAUDIT_ARTIFACTS: /data/artifacts
       VIBEAUDIT_HISTORY: /data/history
       VIBEAUDIT_API_HOST: 0.0.0.0
       VIBEAUDIT_API_PORT: 8000
+      # Motor LLM (Ollama en el host de la instancia)
+      VIBEAUDIT_LLM_BASE_URL: ${VIBEAUDIT_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      VIBEAUDIT_LLM_MODEL: ${VIBEAUDIT_LLM_MODEL:-llama3.1}
+      VIBEAUDIT_LLM_TIMEOUT: ${VIBEAUDIT_LLM_TIMEOUT:-600}
       # Orígenes del dashboard permitidos por CORS (dominio DuckDNS + local)
       VIBEAUDIT_CORS_ORIGINS: ${VIBEAUDIT_CORS_ORIGINS:-http://localhost:3000}
       VERCEL_TOKEN: ${VERCEL_TOKEN:-}

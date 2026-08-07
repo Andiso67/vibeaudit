@@ -56,3 +56,9 @@ variable "postgres_password" {
   type        = string
   sensitive   = true
 }
+
+variable "sonar_password" {
+  description = "Contraseña de admin de SonarQube (sensitive)"
+  type        = string
+  sensitive   = true
+}

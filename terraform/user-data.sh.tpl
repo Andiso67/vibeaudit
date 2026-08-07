@@ -8,6 +8,15 @@ echo "==> Instalando Docker, git y cronie (antes de configurar el cron)"
 dnf install -y docker git cronie >/dev/null
 systemctl enable --now docker crond
 
+echo "==> Swap 4 GiB (el LLM 8B excede la RAM física en t3.large)"
+if ! swapon --show | grep -q /swapfile; then
+  fallocate -l 4G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile >/dev/null
+  swapon /swapfile
+  echo "/swapfile none swap sw 0 0" >> /etc/fstab
+fi
+
 echo "==> DuckDNS: cron de renovación cada 5 min"
 cat > /usr/local/bin/duckdns-update.sh <<'DUCK'
 #!/bin/bash
@@ -28,6 +37,16 @@ docker compose version
 echo "==> Instalando Ollama"
 curl -fsSL https://ollama.com/install.sh | sh
 systemctl enable ollama
+# Ollama accesible desde los contenedores y con memoria contenida
+# (t3.large: 8 GB RAM; swap 4 GB; contexto reducido para evitar OOM)
+mkdir -p /etc/systemd/system/ollama.service.d
+cat > /etc/systemd/system/ollama.service.d/override.conf <<'EOF'
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+Environment="OLLAMA_CONTEXT_LENGTH=8192"
+Environment="OLLAMA_NUM_PARALLEL=1"
+EOF
+systemctl daemon-reload
 ollama pull llama3.1
 
 echo "==> Clonando repositorio"
@@ -46,6 +65,9 @@ POSTGRES_DB=vibeaudit
 NEXT_PUBLIC_API_URL=http://${duckdns_host}.duckdns.org:8000
 VIBEAUDIT_CORS_ORIGINS=http://${duckdns_host}.duckdns.org:3000
 VIBEAUDIT_DATABASE_URL=postgresql://vibeaudit:${pass_enc}@postgres:5432/vibeaudit
+# Motor LLM: Ollama corre en el host; la API lo alcanza por host.docker.internal
+VIBEAUDIT_LLM_BASE_URL=http://host.docker.internal:11434/v1
+VIBEAUDIT_LLM_MODEL=llama3.1
 API_PORT=8000
 DASHBOARD_PORT=3000
 SONAR_PORT=9000
